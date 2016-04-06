@@ -38,12 +38,10 @@ T-streams library is designed to solve the problems, mentioned before and provid
  * relies on Cassandra replication and Aerospike replication for replication and consistency;
  * allows consumers read from most recent offset, arbitrary date-time offset, most ancient offset.
  * provides Kafka-like features:
-
-
-It allows to read data by multiple consumers from one queue;
-It allows to write data by multiple producers t one queue;
-It allows to use streams with one partition or many partitions.
-It stores data until expiration date-time set by stream configuration.
+    * It allows to read data by multiple consumers from one queue;
+    * It allows to write data by multiple producers t one queue;
+    * It allows to use streams with one partition or many partitions.
+    * It stores data until expiration date-time set by stream configuration.
 
 
 
