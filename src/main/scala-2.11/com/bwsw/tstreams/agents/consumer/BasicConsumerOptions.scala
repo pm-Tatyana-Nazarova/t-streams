@@ -1,0 +1,35 @@
+package com.bwsw.tstreams.agents.consumer
+
+import com.bwsw.tstreams.converter.IConverter
+import com.bwsw.tstreams.entities.offsets.IOffset
+import com.bwsw.tstreams.policy.AbstractPolicy
+
+/**
+ * Basic consumer options
+ * @param converter User defined or predefined converter which convert storage type in to usertype
+ * @param offset Offset from which start to read
+ * @param useLastOffset Use or not last offset for specific consumer
+ *                      if last offset not exist, offset will be used
+ * @param transactionsPreload Buffer size of preloaded transactions
+ * @param dataPreload Buffer size of preloaded data for each consumed transaction
+ * @param readPolicy Strategy how to read from concrete stream
+ * @param consumerKeepAliveInterval Concrete consumer update interval
+ * @tparam DATATYPE Storage type
+ * @tparam USERTYPE User type
+ */
+class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
+                                              val dataPreload : Int,
+                                              val consumerKeepAliveInterval : Int,
+                                              val converter : IConverter[DATATYPE,USERTYPE],
+                                              val readPolicy : AbstractPolicy,
+                                              val offset : IOffset,
+                                              val useLastOffset : Boolean = true) {
+  if (transactionsPreload < 1)
+    throw new IllegalArgumentException("incorrect transactionPreload value, should be greater or equal one")
+
+  if (dataPreload < 1)
+    throw new IllegalArgumentException("incorrect transactionDataPreload value, should be greater or equal one")
+
+  if (consumerKeepAliveInterval < 1)
+    throw new IllegalArgumentException("incorrect consumerKeepAliveInterval value, should be greater or equal one")
+}
