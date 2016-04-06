@@ -42,7 +42,7 @@ object CassandraPerformance {
 
     val conf: Config = new Config()
     conf.useSingleServer().setAddress("localhost:6379")
-    val redisLockerFactory = new RedisLockerFactory("unitpath/", conf)
+    val redisLockerFactory = new RedisLockerFactory("/unitpath", conf)
 
     val stream: BasicStream[Array[Byte]] = BasicStreamService.createStream(
       streamName = "test_stream",
