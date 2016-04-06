@@ -66,9 +66,8 @@ object CassandraPerformance {
     val (txnCnt, dataToSend) = {
       assert(args.length == 2, "incorrect app args")
       val dataToSend = new ListBuffer[String]()
-      if (args.length > 1)
-        for (i <- 0 until args(1).toInt)
-          dataToSend += string
+      for (i <- 0 until args(1).toInt)
+        dataToSend += string
 
       (args(0).toInt, dataToSend)
     }
