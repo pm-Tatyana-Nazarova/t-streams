@@ -15,7 +15,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.scala-logging" % "scala-logging_2.11" % "3.1.0",
   "org.scalatest" % "scalatest_2.11" % "3.0.0-M15",
   "io.netty" % "netty-all" % "4.0.34.Final",
-  "com.aerospike" % "aerospike-client" % "3.2.1"
+  "com.aerospike" % "aerospike-client" % "3.2.1",
+  "org.json4s" %% "json4s-jackson" % "3.3.0"
 )
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")

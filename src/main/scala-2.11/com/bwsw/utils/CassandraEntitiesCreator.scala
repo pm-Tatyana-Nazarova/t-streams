@@ -1,4 +1,4 @@
-package performance
+package com.bwsw.utils
 
 import com.datastax.driver.core.Session
 
