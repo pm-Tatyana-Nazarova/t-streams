@@ -57,3 +57,5 @@ assemblyMergeStrategy in assembly := {
 }
 
 
+//SBT TEST
+parallelExecution in ThisBuild := false

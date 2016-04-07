@@ -33,7 +33,7 @@ class LazyBasicProducerAndConsumerWithRedisLockerWithCassandraTest extends FlatS
   }
 
   "two producers and consumer" should "first producer create transaction and start filling it lazily," +
-    " second producer create transaction and start filling it faster than first one," +
+    " second producer create transaction and start filling it faster than the first one," +
     " consumer should start in time when first producer has not finished working but second already has done it job" in {
     val totalElementsInTxn = 10
     val dataToSend1: List[String] = (for (part <- 0 until totalElementsInTxn) yield "data_to_send_pr1_" + part).toList.sorted
