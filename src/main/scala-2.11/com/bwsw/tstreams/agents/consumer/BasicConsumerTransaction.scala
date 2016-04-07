@@ -1,6 +1,8 @@
 package com.bwsw.tstreams.agents.consumer
 
 
+import java.util.UUID
+
 import com.bwsw.tstreams.entities.TransactionSettings
 import scala.collection.mutable
 
@@ -16,6 +18,12 @@ import scala.collection.mutable
 class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATATYPE, USERTYPE],
                                                    partition : Int,
                                                    transaction : TransactionSettings) {
+
+  /**
+   * Return transaction unique number
+   */
+  def getTxnID: UUID = transaction.time
+
   /**
    * Transaction data pointer
    */
