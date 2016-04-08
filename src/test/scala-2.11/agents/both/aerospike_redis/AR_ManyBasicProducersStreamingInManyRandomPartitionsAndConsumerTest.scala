@@ -49,9 +49,9 @@ class AR_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extend
     aerospikeOptions = new AerospikeStorageOptions("test", hosts)
   }
 
-  "Some amount of producers and one consumer" should "send transactions in many partition" +
-    " (each producer send each txn in only one random partition" +
-    " and retrieve them all" in {
+  "Some amount of producers and one consumer" should "producers - send transactions in many partition" +
+    " (each producer send each txn in only one random partition) " +
+    " consumer - retrieve them all" in {
     val timeoutForWaiting = 60*5
     val totalPartitions = 100
     val totalTxn = 10

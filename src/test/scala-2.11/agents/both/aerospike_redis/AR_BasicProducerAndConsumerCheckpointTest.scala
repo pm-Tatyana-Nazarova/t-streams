@@ -150,5 +150,6 @@ class AR_BasicProducerAndConsumerCheckpointTest  extends FlatSpec with Matchers 
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()
+
   }
 }

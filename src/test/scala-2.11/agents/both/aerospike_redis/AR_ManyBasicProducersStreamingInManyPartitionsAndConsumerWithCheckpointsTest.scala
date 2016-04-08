@@ -49,10 +49,10 @@ class AR_ManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTe
     aerospikeOptions = new AerospikeStorageOptions("test", hosts)
   }
 
-  "Some amount of producers and one consumer" should "send transactions in many partition" +
+  "Some amount of producers and one consumer" should "producers - send transactions in many partition" +
     " (each producer send each txn in only one partition without intersection " +
-    " for ex. producer1 in partition1, producer2 in partition2, producer3 in partition3 etc...)" +
-    " and retrieve them all" in {
+    " for ex. producer1 in partition1, producer2 in partition2, producer3 in partition3 etc...) " +
+    " consumer - retrieve them all with reinitialization every 10 transactions" in {
     val timeoutForWaiting = 60*5
     val totalPartitions = 100
     val totalTxn = 10

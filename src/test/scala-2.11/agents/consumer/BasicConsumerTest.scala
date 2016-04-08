@@ -18,17 +18,17 @@ import testutils.{CassandraEntities, RandomStringGen}
 class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
   var randomKeyspace : String = null
-  var temporaryCluster : Cluster = null
-  var temporarySession: Session = null
+  var cluster : Cluster = null
+  var session: Session = null
   var consumer : BasicConsumer[Array[Byte],String] = null
 
   override def beforeAll(): Unit = {
     randomKeyspace = randomString
-    temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
-    temporarySession = temporaryCluster.connect()
-    CassandraEntities.createKeyspace(temporarySession, randomKeyspace)
-    CassandraEntities.createMetadataTables(temporarySession, randomKeyspace)
-    CassandraEntities.createDataTable(temporarySession, randomKeyspace)
+    cluster = Cluster.builder().addContactPoint("localhost").build()
+    session = cluster.connect()
+    CassandraEntities.createKeyspace(session, randomKeyspace)
+    CassandraEntities.createMetadataTables(session, randomKeyspace)
+    CassandraEntities.createDataTable(session, randomKeyspace)
     val metadataStorageFactory = new MetadataStorageFactory
     val storageFactory = new CassandraStorageFactory
     val arrayByteToStringConverter = new ArrayByteToStringConverter
@@ -56,8 +56,8 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   }
 
   override def afterAll(): Unit = {
-    temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
-    temporarySession.close()
-    temporaryCluster.close()
+    session.execute(s"DROP KEYSPACE $randomKeyspace")
+    session.close()
+    cluster.close()
   }
 }

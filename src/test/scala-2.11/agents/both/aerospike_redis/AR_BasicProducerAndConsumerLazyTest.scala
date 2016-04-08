@@ -139,7 +139,7 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     val dataToSend1: List[String] = (for (part <- 0 until totalElementsInTxn) yield "data_to_send_pr1_" + part).toList.sorted
     val dataToSend2: List[String] = (for (part <- 0 until totalElementsInTxn) yield "data_to_send_pr2_" + part).toList.sorted
 
-    val producer1Thread = new Thread( new Runnable {
+    val producer1Thread = new Thread(new Runnable {
       def run() {
         val txn = producer1.newTransaction(false)
         dataToSend1.foreach { x =>

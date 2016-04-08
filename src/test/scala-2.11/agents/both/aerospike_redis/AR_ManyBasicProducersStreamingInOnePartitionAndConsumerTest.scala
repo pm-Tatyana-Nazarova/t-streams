@@ -48,7 +48,7 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
     aerospikeOptions = new AerospikeStorageOptions("test", hosts)
   }
 
-  "Some amount of producers and one consumer" should "send transactions in one partition and retrieve them all" in {
+  "Some amount of producers and one consumer" should "producers - send transactions in one partition and consumer - retrieve them all" in {
     val timeoutForWaiting = 60*5
     val totalTxn = 10
     val totalElementsInTxn = 10
