@@ -1,23 +1,24 @@
 package agents.both.aerospike_redis
 
 import java.net.InetSocketAddress
+
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions}
-import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
+import com.bwsw.tstreams.agents.producer.{BasicProducerOptions, BasicProducer}
+import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
+import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.entities.offsets.Oldest
 import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.{Cluster, Session}
+import com.datastax.driver.core.{Session, Cluster}
 import org.redisson.Config
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{CassandraEntities, RandomStringGen}
 
 
-class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
+class AR_ManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
   var randomKeyspace : String = null
   var cluster : Cluster = null
@@ -48,13 +49,22 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
     aerospikeOptions = new AerospikeStorageOptions("test", hosts)
   }
 
-  "Some amount of producers and one consumer" should "send transactions in one partition and retrieve them all" in {
+  "Some amount of producers and one consumer" should "send transactions in many partition" +
+    " (each producer send each txn in only one partition without intersection " +
+    " for ex. producer1 in partition1, producer2 in partition2, producer3 in partition3 etc...)" +
+    " and retrieve them all" in {
     val timeoutForWaiting = 60*5
+    val totalPartitions = 100
     val totalTxn = 10
     val totalElementsInTxn = 10
     val producersAmount = 15
     val dataToSend: List[String] = (for (part <- 0 until totalElementsInTxn) yield randomString).toList.sorted
-    val producers: List[BasicProducer[String, Array[Byte]]] = (0 until producersAmount).toList.map(x=>getProducer())
+
+    val producers: List[BasicProducer[String, Array[Byte]]] =
+      (0 until producersAmount)
+        .toList
+        .map(x=>getProducer(List(x),totalPartitions))
+
     val producersThreads = producers.map(p =>
       new Thread(new Runnable {
         def run(){
@@ -69,7 +79,7 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
         }
       }))
 
-    val streamInst = getStream()
+    val streamInst = getStream(100)
 
     val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
       transactionsPreload = 10,
@@ -77,30 +87,40 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
       consumerKeepAliveInterval = 5,
       arrayByteToStringConverter,
       PolicyRepository.getRoundRobinPolicy(
-        usedPartitions = List(0),
+        usedPartitions = (0 until 100).toList,
         stream = streamInst),
       Oldest,
-      useLastOffset = false)
+      useLastOffset = true)
 
     var checkVal = true
 
-    val consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
+    var consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
 
     val consumerThread = new Thread(
       new Runnable {
-      Thread.sleep(3000)
+        Thread.sleep(3000)
         def run() = {
-        var i = 0
-        while(i < totalTxn*producersAmount) {
-          val txn = consumer.getTransaction
-          if (txn.isDefined){
-            checkVal &= txn.get.getAll().sorted == dataToSend
-            i+=1
+          var i = 0
+          while(i < totalTxn*producersAmount) {
+
+            //every 10 txns consumer start reinitializing
+            if (i % 10 == 0) {
+              consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
+              Thread.sleep(1000)
+            }
+
+            val txn = consumer.getTransaction
+
+            if (txn.isDefined){
+              checkVal &= txn.get.getAll().sorted == dataToSend
+              consumer.checkpoint()
+              i+=1
+            }
+
+            Thread.sleep(200)
           }
-          Thread.sleep(200)
         }
-      }
-    })
+      })
 
     producersThreads.foreach(x=>x.start())
     consumerThread.start()
@@ -108,7 +128,8 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
     producersThreads.foreach(x=>x.join(timeoutForWaiting * 1000))
 
     //assert that is nothing to read
-    checkVal &= consumer.getTransaction.isEmpty
+    for (i <- 0 until totalPartitions)
+      checkVal &= consumer.getTransaction.isEmpty
 
     checkVal &= !consumerThread.isAlive
     producersThreads.foreach(x=> checkVal &= !x.isAlive)
@@ -116,20 +137,21 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
     checkVal shouldEqual true
   }
 
-  def getProducer() : BasicProducer[String,Array[Byte]] = {
-    val stream = getStream()
+  def getProducer(usedPartitions : List[Int], totalPartitions : Int) : BasicProducer[String,Array[Byte]] = {
+    val stream = getStream(totalPartitions)
+
     val producerOptions = new BasicProducerOptions[String, Array[Byte]](
       transactionTTL = 6,
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,
-      writePolicy = PolicyRepository.getRoundRobinPolicy(stream, List(0)),
+      writePolicy = PolicyRepository.getRoundRobinPolicy(stream, usedPartitions),
       converter = stringToArrayByteConverter)
 
     val producer = new BasicProducer("test_producer1", stream, producerOptions)
     producer
   }
 
-  def getStream(): BasicStream[Array[Byte]] = {
+  def getStream(partitions : Int): BasicStream[Array[Byte]] = {
     //locker factory instance
     val config = new Config()
     config.useSingleServer().setAddress("localhost:6379")
@@ -143,7 +165,7 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
 
     new BasicStream[Array[Byte]](
       name = "stream_name",
-      partitions = 1,
+      partitions = partitions,
       metadataStorage = metadataStorageInst,
       dataStorage = dataStorageInst,
       lockService = lockService,

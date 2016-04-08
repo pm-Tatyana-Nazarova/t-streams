@@ -18,7 +18,7 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{CassandraEntities, RandomStringGen}
 
 
-class AR_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest  extends FlatSpec with Matchers with BeforeAndAfterAll{
+class AR_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
   var randomKeyspace : String = null
   var cluster : Cluster = null
@@ -87,17 +87,18 @@ class AR_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest  extends Fla
       consumerKeepAliveInterval = 5,
       arrayByteToStringConverter,
       PolicyRepository.getRoundRobinPolicy(
-        usedPartitions = List(0),
+        usedPartitions = (0 until 100).toList,
         stream = streamInst),
       Oldest,
       useLastOffset = false)
 
     var checkVal = true
 
+    val consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
+
     val consumerThread = new Thread(
       new Runnable {
         Thread.sleep(3000)
-        val consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
         def run() = {
           var i = 0
           while(i < totalTxn*producersAmount) {
@@ -115,6 +116,11 @@ class AR_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest  extends Fla
     consumerThread.start()
     consumerThread.join(timeoutForWaiting * 1000)
     producersThreads.foreach(x=>x.join(timeoutForWaiting * 1000))
+
+
+    //assert that is nothing to read
+    for (i <- 0 until totalPartitions)
+      checkVal &= consumer.getTransaction.isEmpty
 
     checkVal &= !consumerThread.isAlive
     producersThreads.foreach(x=> checkVal &= !x.isAlive)
