@@ -3,7 +3,7 @@ package agents.both.aerospike_redis
 import java.net.InetSocketAddress
 
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{BasicConsumerTransaction, BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
@@ -11,7 +11,6 @@ import com.bwsw.tstreams.entities.offsets.Oldest
 import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.PolicyRepository
-import com.bwsw.tstreams.services.BasicStreamService
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.{Session, Cluster}
 import org.redisson.Config
@@ -28,6 +27,11 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
   var producer1 : BasicProducer[String,Array[Byte]] = null
   var producer2 : BasicProducer[String,Array[Byte]] = null
   var consumer : BasicConsumer[Array[Byte],String] = null
+  var metadataStorageFactory: MetadataStorageFactory = null
+  var storageFactory: AerospikeStorageFactory = null
+  var lockerFactoryForProducer1 : RedisLockerFactory = null
+  var lockerFactoryForProducer2: RedisLockerFactory = null
+  var lockerFactoryForConsumer: RedisLockerFactory = null
 
   override def beforeAll(): Unit = {
     randomKeyspace = randomString
@@ -38,8 +42,8 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     CassandraEntities.createDataTable(session, randomKeyspace)
 
     //factories for storages creation
-    val metadataStorageFactory = new MetadataStorageFactory
-    val storageFactory = new AerospikeStorageFactory
+    metadataStorageFactory = new MetadataStorageFactory
+    storageFactory = new AerospikeStorageFactory
 
     //converters
     val arrayByteToStringConverter = new ArrayByteToStringConverter
@@ -70,9 +74,9 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     //locker factories
     val config = new Config()
     config.useSingleServer().setAddress("localhost:6379")
-    val lockerFactoryForProducer1 = new RedisLockerFactory("/some_path", config)
-    val lockerFactoryForProducer2 = new RedisLockerFactory("/some_path", config)
-    val lockerFactoryForConsumer = new RedisLockerFactory("/some_path", config)
+    lockerFactoryForProducer1 = new RedisLockerFactory("/some_path", config)
+    lockerFactoryForProducer2 = new RedisLockerFactory("/some_path", config)
+    lockerFactoryForConsumer = new RedisLockerFactory("/some_path", config)
 
     //streams
     val streamForProducer1: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
@@ -203,5 +207,10 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()
+    metadataStorageFactory.closeFactory()
+    storageFactory.closeFactory()
+    lockerFactoryForConsumer.closeFactory()
+    lockerFactoryForProducer1.closeFactory()
+    lockerFactoryForProducer2.closeFactory()
   }
 }

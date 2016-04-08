@@ -27,6 +27,11 @@ class AR_BasicProducerAndConsumerCheckpointTest  extends FlatSpec with Matchers 
   var consumer : BasicConsumer[Array[Byte],String] = null
   var consumerOptions: BasicConsumerOptions[Array[Byte], String] = null
   var streamForConsumer: BasicStream[Array[Byte]] = null
+  var metadataStorageFactory: MetadataStorageFactory = null
+  var storageFactory: AerospikeStorageFactory = null
+  var lockerFactoryForProducer: RedisLockerFactory = null
+  var lockerFactoryForConsumer: RedisLockerFactory = null
+
 
   override def beforeAll(): Unit = {
     randomKeyspace = randomString
@@ -37,8 +42,8 @@ class AR_BasicProducerAndConsumerCheckpointTest  extends FlatSpec with Matchers 
     CassandraEntities.createDataTable(session, randomKeyspace)
 
     //factories for storages creation
-    val metadataStorageFactory = new MetadataStorageFactory
-    val storageFactory = new AerospikeStorageFactory
+    metadataStorageFactory = new MetadataStorageFactory
+    storageFactory = new AerospikeStorageFactory
 
     //converters
     val arrayByteToStringConverter = new ArrayByteToStringConverter
@@ -65,8 +70,8 @@ class AR_BasicProducerAndConsumerCheckpointTest  extends FlatSpec with Matchers 
     //locker factories
     val config = new Config()
     config.useSingleServer().setAddress("localhost:6379")
-    val lockerFactoryForProducer = new RedisLockerFactory("/some_path", config)
-    val lockerFactoryForConsumer = new RedisLockerFactory("/some_path", config)
+    lockerFactoryForProducer = new RedisLockerFactory("/some_path", config)
+    lockerFactoryForConsumer = new RedisLockerFactory("/some_path", config)
 
     //streams
     val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
@@ -150,6 +155,9 @@ class AR_BasicProducerAndConsumerCheckpointTest  extends FlatSpec with Matchers 
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()
-
+    metadataStorageFactory.closeFactory()
+    storageFactory.closeFactory()
+    lockerFactoryForConsumer.closeFactory()
+    lockerFactoryForProducer.closeFactory()
   }
 }

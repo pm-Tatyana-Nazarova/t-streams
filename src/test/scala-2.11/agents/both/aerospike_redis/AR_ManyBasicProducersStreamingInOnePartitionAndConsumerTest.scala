@@ -15,6 +15,7 @@ import com.datastax.driver.core.{Cluster, Session}
 import org.redisson.Config
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{CassandraEntities, RandomStringGen}
+import scala.collection.mutable.ListBuffer
 
 
 class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
@@ -30,6 +31,8 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
   //converters
   val arrayByteToStringConverter = new ArrayByteToStringConverter
   val stringToArrayByteConverter = new StringToArrayByteConverter
+  //all locker factory instances
+  var instances = ListBuffer[RedisLockerFactory]()
 
 
   override def beforeAll(): Unit = {
@@ -134,6 +137,7 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
     val config = new Config()
     config.useSingleServer().setAddress("localhost:6379")
     val lockService = new RedisLockerFactory("/some_path", config)
+    instances += lockService
 
     //storage instances
     val metadataStorageInst = metadataStorageFactory.getInstance(
@@ -155,5 +159,8 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()
+    metadataStorageFactory.closeFactory()
+    storageFactory.closeFactory()
+    instances.foreach(x=>x.closeFactory())
   }
 }
