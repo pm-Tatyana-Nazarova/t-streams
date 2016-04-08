@@ -1,5 +1,7 @@
 package agents.both.aerospike
 
+import java.net.InetSocketAddress
+
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions}
@@ -125,7 +127,7 @@ class SomeAmountOfBasicProducersStreamingInOnePartitionWithAerospikeTest extends
     new BasicStream[Array[Byte]](
       name = "stream_name",
       partitions = 1,
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(aerospikeOptions),
       lockService = lockService1,
       ttl = 60 * 60 * 24,

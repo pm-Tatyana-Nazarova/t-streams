@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.metadata
 
+import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.entities._
 import com.bwsw.tstreams.utils.GeneratorsEntity
 import com.datastax.driver.core.Cluster.Builder
@@ -181,11 +183,11 @@ class MetadataStorageFactory {
     * @param keyspace Keyspace to use for metadata storage
     * @return Instance of MetadataStorage
     */
-  def getInstance(cassandraHosts : List[String], keyspace : String): MetadataStorage = {
+  def getInstance(cassandraHosts : List[InetSocketAddress], keyspace : String): MetadataStorage = {
     logger.info("start MetadataStorage instance creation\n")
 
     val builder: Builder = Cluster.builder()
-    cassandraHosts.foreach(x => builder.addContactPoint(x))
+    cassandraHosts.foreach(x => builder.addContactPointsWithPorts(x))
     val cluster = builder.build()
 
     logger.debug(s"start connecting cluster to keyspace: {$keyspace}\n")

@@ -1,16 +1,17 @@
 package agents.producer
 
+import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.agents.producer.{BasicProducerTransaction, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
-import com.bwsw.tstreams.lockservice.impl.{ZkServer, ZkLockerFactory}
+import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.services.BasicStreamService
 import com.datastax.driver.core.{Session, Cluster}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{CassandraEntities, RandomStringGen}
-
 
 
 
@@ -32,14 +33,14 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     val metadataStorageFactory = new MetadataStorageFactory
     val storageFactory = new CassandraStorageFactory
     val stringToArrayByteConverter = new StringToArrayByteConverter
-    val lockService = new ZkLockerFactory(List(ZkServer("localhost", 2181)), "/some_path", 10)
-    val cassandraOptions = new CassandraStorageOptions(List("localhost"), randomKeyspace)
+    val lockService = new ZkLockerFactory(List(new InetSocketAddress("localhost", 2181)), "/some_path", 10)
+    val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
     val stream = BasicStreamService.createStream(
       streamName = "test_stream",
       partitions = 3,
       ttl = 60 * 60 * 24,
       description = "unit_testing",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(cassandraOptions),
       lockService = lockService)
     val options = new BasicProducerOptions[String, Array[Byte]](

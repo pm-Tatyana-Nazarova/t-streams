@@ -1,5 +1,7 @@
 package agents.both.cassandra
 
+import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -49,24 +51,24 @@ class LazyBasicProducerAndConsumerWithRedisLockerWithCassandraTest extends FlatS
     val lockService1 = new RedisLockerFactory("/some_path", config)
     val lockService2 = new RedisLockerFactory("/some_path", config)
     val lockService3 = new RedisLockerFactory("/some_path", config)
-    val cassandraOptions = new CassandraStorageOptions(List("localhost"), randomKeyspace)
+    val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
 
     val streamConsumer: BasicStream[Array[Byte]] = BasicStreamService.createStream(
       streamName = "test_stream",
       partitions = 3,
       ttl = 60 * 60 * 24,
       description = "unit_testing",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(cassandraOptions), lockService1)
 
     val streamProducer1: BasicStream[Array[Byte]] = BasicStreamService.loadStream(
       streamName = "test_stream",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(cassandraOptions), lockService2).get
 
     val streamProducer2: BasicStream[Array[Byte]] = BasicStreamService.loadStream(
       streamName = "test_stream",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(cassandraOptions), lockService3).get
 
     val consumerOptions = new BasicConsumerOptions[Array[Byte], String](

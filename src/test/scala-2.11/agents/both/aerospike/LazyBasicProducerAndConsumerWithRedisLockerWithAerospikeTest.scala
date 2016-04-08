@@ -1,5 +1,7 @@
 package agents.both.aerospike
 
+import java.net.InetSocketAddress
+
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions}
@@ -57,17 +59,17 @@ class LazyBasicProducerAndConsumerWithRedisLockerWithAerospikeTest extends FlatS
       partitions = 3,
       ttl = 60 * 60 * 24,
       description = "unit_testing",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(aerospikeOptions), lockService1)
 
     val streamProducer1: BasicStream[Array[Byte]] = BasicStreamService.loadStream(
       streamName = "test_stream",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(aerospikeOptions), lockService2).get
 
     val streamProducer2: BasicStream[Array[Byte]] = BasicStreamService.loadStream(
       streamName = "test_stream",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(aerospikeOptions), lockService3).get
 
     val consumerOptions = new BasicConsumerOptions[Array[Byte], String](

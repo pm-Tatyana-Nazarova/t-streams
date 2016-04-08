@@ -1,9 +1,11 @@
 package agents.producer
 
+import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.agents.producer.{BasicProducerTransaction, BasicProducerOptions, BasicProducer}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory, CassandraStorage}
-import com.bwsw.tstreams.lockservice.impl.{ZkServer, ZkLockerFactory}
+import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
 import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.services.BasicStreamService
@@ -34,10 +36,10 @@ class BasicProducerTransactionTest extends FlatSpec with Matchers with BeforeAnd
     val metadataStorageFactory = new MetadataStorageFactory
     val storageFactory = new CassandraStorageFactory
     val stringToArrayByteConverter = new StringToArrayByteConverter
-    val lockService = new ZkLockerFactory(List(ZkServer("localhost", 2181)), "/some_path", 10)
-    val cassandraOptions = new CassandraStorageOptions(List("localhost"), randomKeyspace)
+    val lockService = new ZkLockerFactory(List(new InetSocketAddress("localhost", 2181)), "/some_path", 10)
+    val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
 
-    mstorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace)
+    mstorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
     storage = storageFactory.getInstance(cassandraOptions)
 
     val stream = BasicStreamService.createStream("test_stream", 3, 60*60*24, "unit_testing", mstorage, storage, lockService)

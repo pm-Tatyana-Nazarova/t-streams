@@ -1,12 +1,14 @@
 package agents.both.aerospike
 
+import java.net.InetSocketAddress
+
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumerTransaction, BasicConsumerOptions, BasicConsumer}
 import com.bwsw.tstreams.agents.producer.{BasicProducerOptions, BasicProducer}
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
 import com.bwsw.tstreams.entities.offsets.Oldest
-import com.bwsw.tstreams.lockservice.impl.{ZkServer, ZkLockerFactory}
+import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.services.BasicStreamService
@@ -40,19 +42,19 @@ class BasicProducerAndConsumerWithAerospikeTest extends FlatSpec with Matchers w
     val stringToArrayByteConverter = new StringToArrayByteConverter
     val hosts = List(new Host("localhost",3000),new Host("localhost",3001),new Host("localhost",3002),new Host("localhost",3003))
     val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
-    val lockService = new ZkLockerFactory(List(ZkServer("localhost", 2181)), "/some_path", 10)
+    val lockService = new ZkLockerFactory(List(new InetSocketAddress("localhost", 2181)), "/some_path", 10)
     val streamForProducer: BasicStream[Array[Byte]] = BasicStreamService.createStream(
       streamName = "test_stream",
       partitions = 3,
       ttl = 60 * 60 * 24,
       description = "unit_testing",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(aerospikeOptions),
       lockService = lockService)
 
     val streamForConsumer: BasicStream[Array[Byte]] = BasicStreamService.loadStream(
       streamName = "test_stream",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(aerospikeOptions),
       lockService = null).get
 

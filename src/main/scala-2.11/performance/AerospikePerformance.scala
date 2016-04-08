@@ -1,5 +1,7 @@
 package performance
 
+import java.net.InetSocketAddress
+
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
@@ -53,7 +55,7 @@ object AerospikePerformance {
       partitions = 5,
       ttl = 60 * 60 * 24,
       description = "unit_testing",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(aerospikeOptions),
       lockService = redisLockerFactory)
 

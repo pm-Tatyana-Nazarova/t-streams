@@ -1,5 +1,7 @@
 package agents.consumer
 
+import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.agents.consumer.{BasicConsumerTransaction, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.converter.ArrayByteToStringConverter
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory, CassandraStorage}
@@ -30,8 +32,8 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     val metadataStorageFactory = new MetadataStorageFactory
     val storageFactory = new CassandraStorageFactory
     val arrayByteToStringConverter = new ArrayByteToStringConverter
-    val mstorage: MetadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace)
-    val cassandraOptions = new CassandraStorageOptions(List("localhost"), randomKeyspace)
+    val mstorage: MetadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
+    val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
     val storage: CassandraStorage = storageFactory.getInstance(cassandraOptions)
 
     val stream: BasicStream[Array[Byte]] = BasicStreamService.createStream("test_stream", 3, 60*60*24, "unit_testing", mstorage, storage, null)

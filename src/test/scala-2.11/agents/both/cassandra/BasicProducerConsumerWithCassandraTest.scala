@@ -1,11 +1,13 @@
 package agents.both.cassandra
 
+import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
 import com.bwsw.tstreams.entities.offsets.Oldest
-import com.bwsw.tstreams.lockservice.impl.{ZkLockerFactory, ZkServer}
+import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.services.BasicStreamService
@@ -36,21 +38,21 @@ class BasicProducerConsumerWithCassandraTest extends FlatSpec with Matchers with
     val storageFactory = new CassandraStorageFactory
     val arrayByteToStringConverter = new ArrayByteToStringConverter
     val stringToArrayByteConverter = new StringToArrayByteConverter
-    val lockService = new ZkLockerFactory(List(ZkServer("localhost", 2181)), "/some_path", 10)
-    val cassandraOptions = new CassandraStorageOptions(List("localhost"), randomKeyspace)
+    val lockService = new ZkLockerFactory(List(new InetSocketAddress("localhost", 2181)), "/some_path", 10)
+    val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
 
     val streamForProducer: BasicStream[Array[Byte]] = BasicStreamService.createStream(
       streamName = "test_stream",
       partitions = 3,
       ttl = 60 * 60 * 24,
       description = "unit_testing",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(cassandraOptions),
       lockService = lockService)
 
     val streamForConsumer: BasicStream[Array[Byte]] = BasicStreamService.loadStream(
       streamName = "test_stream",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(cassandraOptions),
       lockService = null).get
 

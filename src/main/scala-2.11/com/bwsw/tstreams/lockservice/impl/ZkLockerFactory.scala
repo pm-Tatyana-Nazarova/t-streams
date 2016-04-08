@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.lockservice.impl
 
-import java.lang.Iterable
 import java.net.InetSocketAddress
 import com.bwsw.tstreams.lockservice.traits.ILockerFactory
 import com.twitter.common.quantity.Amount
@@ -11,18 +10,11 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 
 /**
- * Zk server params
- * @param host Zookeeper host
- * @param port Zookeeper port
- */
-case class ZkServer(host : String, port : Int)
-
-/**
  * Service for exactly one access to some resource
  * @param zkServers Zk service params
  * @param rootPath Path to handle
  */
-class ZkLockerFactory(zkServers : List[ZkServer], rootPath : String, zkSessionTimeout : Int) extends ILockerFactory{
+class ZkLockerFactory(zkServers : List[InetSocketAddress], rootPath : String, zkSessionTimeout : Int) extends ILockerFactory{
   /**
    * ZkLockerFactory logger for logging
    */
@@ -39,14 +31,9 @@ class ZkLockerFactory(zkServers : List[ZkServer], rootPath : String, zkSessionTi
   private val instances = scala.collection.mutable.Map[String, ZkLocker]()
 
   /**
-   * Zk hosts to connect
-   */
-  private val hosts: Iterable[InetSocketAddress] = zkServers.map{x=> new InetSocketAddress(x.host,x.port)}.toIterable.asJava
-
-  /**
    * Zk client instance
    */
-  private val zkClient: ZooKeeperClient = new ZooKeeperClient(sessionTimeout, hosts)
+  private val zkClient: ZooKeeperClient = new ZooKeeperClient(sessionTimeout, zkServers.asJava)
 
   /**
    * Create Locker instance

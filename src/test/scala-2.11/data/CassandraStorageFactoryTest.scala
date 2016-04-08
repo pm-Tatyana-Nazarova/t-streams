@@ -1,5 +1,7 @@
 package data
 
+import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory, CassandraStorage}
 import com.datastax.driver.core.{Session, Cluster}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
@@ -21,7 +23,7 @@ class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndA
 
       CassandraEntities.createKeyspace(temporarySession, randomKeyspace)
       CassandraEntities.createDataTable(temporarySession, randomKeyspace)
-      cassandraOptions = new CassandraStorageOptions(List("localhost"), randomKeyspace)
+      cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
     }
 
     "CassandraStorageFactory.getInstance()" should "return CassandraStorage instance" in {

@@ -1,5 +1,7 @@
 package performance
 
+import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
@@ -38,7 +40,7 @@ object CassandraPerformance {
     val metadataStorageFactory = new MetadataStorageFactory
     val storageFactory = new CassandraStorageFactory
     val stringToArrayByteConverter = new StringToArrayByteConverter
-    val cassandraOptions = new CassandraStorageOptions(List("localhost"), randomKeyspace)
+    val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
 
     val conf: Config = new Config()
     conf.useSingleServer().setAddress("localhost:6379")
@@ -49,7 +51,7 @@ object CassandraPerformance {
       partitions = 5,
       ttl = 60 * 60 * 24,
       description = "unit_testing",
-      metadataStorage = metadataStorageFactory.getInstance(List("localhost"), randomKeyspace),
+      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
       dataStorage = storageFactory.getInstance(cassandraOptions),
       lockService = redisLockerFactory)
 
