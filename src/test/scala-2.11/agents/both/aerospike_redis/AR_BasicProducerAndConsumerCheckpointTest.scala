@@ -107,7 +107,7 @@ class AR_BasicProducerAndConsumerCheckpointTest  extends FlatSpec with Matchers 
       arrayByteToStringConverter,
       PolicyRepository.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
       Oldest,
-      useLastOffset = false)
+      useLastOffset = true)
 
     //agents
     producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
@@ -147,6 +147,10 @@ class AR_BasicProducerAndConsumerCheckpointTest  extends FlatSpec with Matchers 
       val data = txn.getAll().sorted
       checkVal &= data == dataToSend
     }
+
+    //assert that is nothing to read
+    for(i <- 0 until streamForConsumer.getPartitions)
+      checkVal &= consumer.getTransaction.isEmpty
 
     checkVal shouldBe true
   }

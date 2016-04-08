@@ -200,6 +200,10 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     checkVal &= !producer2Thread.isAlive
     checkVal &= !consumerThread.isAlive
 
+    //assert that is nothing to read
+    for(i <- 0 until consumer.stream.getPartitions)
+      checkVal &= consumer.getTransaction.isEmpty
+
     checkVal shouldEqual true
   }
 

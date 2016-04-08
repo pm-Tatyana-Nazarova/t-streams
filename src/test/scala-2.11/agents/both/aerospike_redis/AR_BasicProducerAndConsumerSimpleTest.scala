@@ -122,9 +122,15 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
     }
     producerTransaction.close()
     val txnOpt = consumer.getTransaction
-    assert(txnOpt.isDefined)
     val txn = txnOpt.get
-    txn.getAll().sorted shouldEqual sendData
+
+    var checkVal = txn.getAll().sorted == sendData
+
+    //assert that is nothing to read
+    for(i <- 0 until consumer.stream.getPartitions)
+      checkVal &= consumer.getTransaction.isEmpty
+
+    checkVal shouldEqual true
   }
 
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it using iterator" in {
@@ -143,7 +149,16 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
     while(txn.hasNext()){
       dataToAssert += txn.next()
     }
-    dataToAssert.toList.sorted shouldEqual sendData
+
+    var checkVal = true
+
+    //assert that is nothing to read
+    for(i <- 0 until consumer.stream.getPartitions)
+      checkVal &= consumer.getTransaction.isEmpty
+
+    checkVal &= dataToAssert.toList.sorted == sendData
+
+    checkVal shouldEqual true
   }
 
   "producer, consumer" should "producer - generate some set of transactions, consumer - retrieve them all" in {
@@ -167,6 +182,10 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
         checkVal &= txn.nonEmpty
         checkVal &= txn.get.getAll().sorted == sendData
     }
+
+    //assert that is nothing to read
+    for(i <- 0 until consumer.stream.getPartitions)
+      checkVal &= consumer.getTransaction.isEmpty
 
     checkVal shouldBe true
   }
@@ -210,6 +229,10 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
 
     checkVal &= !producerThread.isAlive
     checkVal &= !consumerThread.isAlive
+
+    //assert that is nothing to read
+    for(i <- 0 until consumer.stream.getPartitions)
+      checkVal &= consumer.getTransaction.isEmpty
 
     checkVal shouldEqual true
   }
