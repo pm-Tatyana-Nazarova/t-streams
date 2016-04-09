@@ -110,7 +110,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   "BasicStreamService.deleteStream()" should "delete created stream" in {
     val name = randomString
 
-    val stream: BasicStream[_] = BasicStreamService.createStream(
+    BasicStreamService.createStream(
       streamName = name,
       partitions = 3,
       ttl = 100,
