@@ -14,7 +14,7 @@ import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.{Cluster, Session}
 import org.redisson.Config
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{CassandraEntities, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringGen}
 import scala.collection.mutable.ListBuffer
 
 
@@ -39,9 +39,9 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
     randomKeyspace = randomString
     cluster = Cluster.builder().addContactPoint("localhost").build()
     session = cluster.connect()
-    CassandraEntities.createKeyspace(session, randomKeyspace)
-    CassandraEntities.createMetadataTables(session, randomKeyspace)
-    CassandraEntities.createDataTable(session, randomKeyspace)
+    CassandraHelper.createKeyspace(session, randomKeyspace)
+    CassandraHelper.createMetadataTables(session, randomKeyspace)
+    CassandraHelper.createDataTable(session, randomKeyspace)
 
     val hosts = List(
       new Host("localhost",3000),

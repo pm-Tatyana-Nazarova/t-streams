@@ -3,23 +3,21 @@ package testutils
 import com.datastax.driver.core.Session
 
 
-object CassandraEntities {
+object CassandraHelper {
 
   /**
-   * Keyspace creator
-   * @param session session instance which will be used for keyspace creation
-   * @param keyspace keyspace name
-   * @return Unit
+   * Keyspace creator helper
+   * @param session Session instance which will be used for keyspace creation
+   * @param keyspace Keyspace name
    */
   def createKeyspace(session: Session, keyspace : String) = session.execute(s"CREATE KEYSPACE $keyspace WITH replication = " +
                                                                   s" {'class': 'SimpleStrategy', 'replication_factor': '1'} " +
                                                                   s" AND durable_writes = true")
 
   /**
-   * Metadata tables creator
-   * @param session session instance which will be used for tables creation
-   * @param keyspace keyspace name
-   * @return Unit
+   * Metadata tables creator helper
+   * @param session Session
+   * @param keyspace Keyspace name
    */
   def createMetadataTables(session : Session, keyspace : String) = {
     
@@ -60,10 +58,9 @@ object CassandraEntities {
   }
 
   /**
-   * Cassandra data table creator
-   * @param session session instance which will use for table creation
-   * @param keyspace keyspace name
-   * @return Unit
+   * Cassandra data table creator helper
+   * @param session Session
+   * @param keyspace Keyspace name
    */
   def createDataTable(session: Session, keyspace: String) = {
 
@@ -76,10 +73,20 @@ object CassandraEntities {
       s"PRIMARY KEY ((stream, partition), transaction, seq))")
   }
 
+  /**
+   * Cassandra storage table dropper helper
+   * @param session Session
+   * @param keyspace Keyspace name
+   */
   def dropDataTable(session: Session, keyspace : String) = {
     session.execute(s"DROP TABLE $keyspace.data_queue")
   }
 
+  /**
+   * Cassandra metadata storage table dropper helper
+   * @param session Session
+   * @param keyspace Keyspace name
+   */
   def dropMetadataTables(session: Session, keyspace : String) = {
     session.execute(s"DROP TABLE $keyspace.stream_commit_last")
 
@@ -92,11 +99,24 @@ object CassandraEntities {
     session.execute(s"DROP TABLE $keyspace.generators")
   }
 
-
-  def clearTables(session: Session, keyspace : String) = {
-    dropDataTable(session, keyspace)
-    createDataTable(session, keyspace)
+  /**
+   * Metadata table flushing helper
+   * @param session Session
+   * @param keyspace Keyspace name
+   */
+  def clearMetadataTables(session: Session, keyspace : String) = {
     dropMetadataTables(session, keyspace)
     createMetadataTables(session, keyspace)
+  }
+
+
+  /**
+   * Cassandra data table creator helper
+   * @param session Session
+   * @param keyspace Keyspace name
+   */
+  def clearDataTable(session: Session, keyspace : String) = {
+    dropDataTable(session, keyspace)
+    createDataTable(session, keyspace)
   }
 }

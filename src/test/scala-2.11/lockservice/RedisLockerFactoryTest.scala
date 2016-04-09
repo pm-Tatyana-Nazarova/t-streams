@@ -22,6 +22,9 @@ class RedisLockerFactoryTest extends FlatSpec with Matchers with BeforeAndAfterA
 
     val checkVal = lockerForStream1.isInstanceOf[RedisLocker] &&
       lockerForStream2.isInstanceOf[RedisLocker] && lockerForStream3.isInstanceOf[RedisLocker]
+
+    factory.closeFactory()
+
     checkVal shouldEqual true
   }
 }

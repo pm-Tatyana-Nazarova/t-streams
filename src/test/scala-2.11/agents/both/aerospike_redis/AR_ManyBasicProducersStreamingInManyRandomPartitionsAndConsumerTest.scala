@@ -1,7 +1,6 @@
 package agents.both.aerospike_redis
 
 import java.net.InetSocketAddress
-
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.{BasicProducerOptions, BasicProducer}
@@ -15,7 +14,7 @@ import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.{Session, Cluster}
 import org.redisson.Config
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraEntities, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringGen}
 import scala.collection.mutable.ListBuffer
 
 
@@ -40,9 +39,9 @@ class AR_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extend
     randomKeyspace = randomString
     cluster = Cluster.builder().addContactPoint("localhost").build()
     session = cluster.connect()
-    CassandraEntities.createKeyspace(session, randomKeyspace)
-    CassandraEntities.createMetadataTables(session, randomKeyspace)
-    CassandraEntities.createDataTable(session, randomKeyspace)
+    CassandraHelper.createKeyspace(session, randomKeyspace)
+    CassandraHelper.createMetadataTables(session, randomKeyspace)
+    CassandraHelper.createDataTable(session, randomKeyspace)
 
     val hosts = List(
       new Host("localhost",3000),

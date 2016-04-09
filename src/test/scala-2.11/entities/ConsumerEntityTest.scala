@@ -6,7 +6,7 @@ import com.bwsw.tstreams.entities.ConsumerEntity
 import com.datastax.driver.core.{Session, Cluster}
 import com.gilt.timeuuid.TimeUuid
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraEntities, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringGen}
 
 
 class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
@@ -22,8 +22,8 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
     temporarySession = temporaryCluster.connect()
 
-    CassandraEntities.createKeyspace(temporarySession, randomKeyspace)
-    CassandraEntities.createMetadataTables(temporarySession, randomKeyspace)
+    CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
+    CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
 
     connectedSession = temporaryCluster.connect(randomKeyspace)
   }

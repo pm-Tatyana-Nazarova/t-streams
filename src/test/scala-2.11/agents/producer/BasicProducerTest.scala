@@ -11,7 +11,7 @@ import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.services.BasicStreamService
 import com.datastax.driver.core.{Session, Cluster}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraEntities, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringGen}
 
 
 
@@ -21,19 +21,23 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   var temporaryCluster : Cluster = null
   var temporarySession: Session = null
   var producer : BasicProducer[String,Array[Byte]] = null
+  var metadataStorageFactory: MetadataStorageFactory = null
+  var storageFactory: CassandraStorageFactory = null
+  var lockService: ZkLockerFactory = null
 
   override def beforeAll(): Unit = {
     randomKeyspace = randomString
     temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
     temporarySession = temporaryCluster.connect()
-    CassandraEntities.createKeyspace(temporarySession, randomKeyspace)
-    CassandraEntities.createMetadataTables(temporarySession, randomKeyspace)
-    CassandraEntities.createDataTable(temporarySession, randomKeyspace)
+    CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
+    CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
+    CassandraHelper.createDataTable(temporarySession, randomKeyspace)
 
-    val metadataStorageFactory = new MetadataStorageFactory
-    val storageFactory = new CassandraStorageFactory
+    metadataStorageFactory = new MetadataStorageFactory
+    storageFactory = new CassandraStorageFactory
+    lockService = new ZkLockerFactory(List(new InetSocketAddress("localhost", 2181)), "/some_path", 10)
+
     val stringToArrayByteConverter = new StringToArrayByteConverter
-    val lockService = new ZkLockerFactory(List(new InetSocketAddress("localhost", 2181)), "/some_path", 10)
     val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
     val stream = BasicStreamService.createStream(
       streamName = "test_stream",
@@ -74,6 +78,9 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
 
   override def afterAll(): Unit = {
+    lockService.closeFactory()
+    metadataStorageFactory.closeFactory()
+    storageFactory.closeFactory()
     temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
     temporarySession.close()
     temporaryCluster.close()

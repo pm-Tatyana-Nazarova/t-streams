@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
 import com.datastax.driver.core.{Session, Cluster}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{RandomStringGen, CassandraEntities}
+import testutils.{RandomStringGen, CassandraHelper}
 
 
 class MetadataStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll {
@@ -21,8 +21,8 @@ class MetadataStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAf
     temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
     temporarySession = temporaryCluster.connect()
 
-    CassandraEntities.createKeyspace(temporarySession, randomKeyspace)
-    CassandraEntities.createMetadataTables(temporarySession, randomKeyspace)
+    CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
+    CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
   }
 
   "MetadataStorageFactory.getInstance()" should "return MetadataStorage instance" in {

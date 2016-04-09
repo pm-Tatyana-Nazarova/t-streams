@@ -21,6 +21,9 @@ class ZkLockerFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     val lockerForStream3 = factory.getLocker("/stream3")
 
     val checkVal = lockerForStream1.isInstanceOf[ZkLocker] && lockerForStream2.isInstanceOf[ZkLocker] && lockerForStream3.isInstanceOf[ZkLocker]
+
+    factory.closeFactory()
+
     checkVal shouldEqual true
   }
 }

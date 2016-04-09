@@ -3,7 +3,7 @@ package services
 import com.bwsw.tstreams.services.{CassandraStorageService, CassandraStrategies}
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RandomStringGen, CassandraEntities}
+import testutils.{RandomStringGen, CassandraHelper}
 
 import scala.collection.mutable.ListBuffer
 
@@ -67,7 +67,7 @@ class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndA
     val session = cluster.connect()
 
     //helper method invoke
-    CassandraEntities.createKeyspace(session, randomKeyspace)
+    CassandraHelper.createKeyspace(session, randomKeyspace)
 
     //testing method
     CassandraStorageService.dropKeyspace(List("localhost"),

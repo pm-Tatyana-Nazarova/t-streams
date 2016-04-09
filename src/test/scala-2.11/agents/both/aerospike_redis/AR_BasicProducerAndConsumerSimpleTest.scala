@@ -14,7 +14,7 @@ import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.{Session, Cluster}
 import org.redisson.Config
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraEntities, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringGen}
 import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks._
 
@@ -35,9 +35,8 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
     randomKeyspace = randomString
     cluster = Cluster.builder().addContactPoint("localhost").build()
     session = cluster.connect()
-    CassandraEntities.createKeyspace(session, randomKeyspace)
-    CassandraEntities.createMetadataTables(session, randomKeyspace)
-    CassandraEntities.createDataTable(session, randomKeyspace)
+    CassandraHelper.createKeyspace(session, randomKeyspace)
+    CassandraHelper.createMetadataTables(session, randomKeyspace)
 
     //factories for storages creation
     metadataStorageFactory = new MetadataStorageFactory
@@ -113,10 +112,10 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
   }
 
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it with getAll method" in {
-    CassandraEntities.clearTables(session, randomKeyspace)
+    CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val totalDataInTxn = 10
     val producerTransaction = producer.newTransaction(false)
-    val sendData: List[String] = (for (part <- 0 until totalDataInTxn) yield "data_part_" + part).toList.sorted
+    val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
     sendData.foreach{ x=>
       producerTransaction.send(x)
     }
@@ -134,10 +133,10 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
   }
 
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it using iterator" in {
-    CassandraEntities.clearTables(session, randomKeyspace)
+    CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val totalDataInTxn = 10
     val producerTransaction = producer.newTransaction(false)
-    val sendData: List[String] = (for (part <- 0 until totalDataInTxn) yield "data_part_" + part).toList.sorted
+    val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
     sendData.foreach{ x=>
       producerTransaction.send(x)
     }
@@ -162,10 +161,10 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
   }
 
   "producer, consumer" should "producer - generate some set of transactions, consumer - retrieve them all" in {
-    CassandraEntities.clearTables(session, randomKeyspace)
+    CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val totalTxn = 10
     val totalDataInTxn = 10000
-    val sendData: List[String] = (for (part <- 0 until totalDataInTxn) yield "data_part_" + part).toList.sorted
+    val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
 
     (0 until totalTxn).foreach { _=>
         val producerTransaction = producer.newTransaction(false)
@@ -191,10 +190,10 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
   }
 
   "producer, consumer" should "producer - generate transaction async, consumer retrieve it async" in {
-    CassandraEntities.clearTables(session, randomKeyspace)
+    CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val timeoutForWaiting = 120
     val totalDataInTxn = 10
-    val sendData: List[String] = (for (part <- 0 until totalDataInTxn) yield "data_part_" + part).toList.sorted
+    val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + part).sorted
 
     val producerThread = new Thread(new Runnable {
       def run() {

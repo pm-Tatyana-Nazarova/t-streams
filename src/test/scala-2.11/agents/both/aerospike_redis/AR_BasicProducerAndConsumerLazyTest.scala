@@ -1,7 +1,6 @@
 package agents.both.aerospike_redis
 
 import java.net.InetSocketAddress
-
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions}
@@ -15,7 +14,7 @@ import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.{Session, Cluster}
 import org.redisson.Config
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraEntities, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringGen}
 import scala.util.control.Breaks._
 
 
@@ -37,9 +36,8 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     randomKeyspace = randomString
     cluster = Cluster.builder().addContactPoint("localhost").build()
     session = cluster.connect()
-    CassandraEntities.createKeyspace(session, randomKeyspace)
-    CassandraEntities.createMetadataTables(session, randomKeyspace)
-    CassandraEntities.createDataTable(session, randomKeyspace)
+    CassandraHelper.createKeyspace(session, randomKeyspace)
+    CassandraHelper.createMetadataTables(session, randomKeyspace)
 
     //factories for storages creation
     metadataStorageFactory = new MetadataStorageFactory
@@ -140,8 +138,8 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     " than the first one but with pause at the very beginning, consumer - retrieve all transactions which was sent" in {
     val timeoutForWaiting = 120
     val totalElementsInTxn = 10
-    val dataToSend1: List[String] = (for (part <- 0 until totalElementsInTxn) yield "data_to_send_pr1_" + part).toList.sorted
-    val dataToSend2: List[String] = (for (part <- 0 until totalElementsInTxn) yield "data_to_send_pr2_" + part).toList.sorted
+    val dataToSend1: List[String] = (for (part <- 0 until totalElementsInTxn) yield "data_to_send_pr1_" + randomString).toList.sorted
+    val dataToSend2: List[String] = (for (part <- 0 until totalElementsInTxn) yield "data_to_send_pr2_" + randomString).toList.sorted
 
     val producer1Thread = new Thread(new Runnable {
       def run() {
@@ -201,8 +199,9 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     checkVal &= !consumerThread.isAlive
 
     //assert that is nothing to read
-    for(i <- 0 until consumer.stream.getPartitions)
+    (0 until consumer.stream.getPartitions) foreach { _=>
       checkVal &= consumer.getTransaction.isEmpty
+    }
 
     checkVal shouldEqual true
   }

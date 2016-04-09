@@ -14,11 +14,11 @@ import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.{Session, Cluster}
 import org.redisson.Config
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraEntities, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringGen}
 
 
 
-class AR_BasicProducerAndConsumerCheckpointTest  extends FlatSpec with Matchers with BeforeAndAfterAll{
+class AR_BasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
   var randomKeyspace : String = null
   var cluster : Cluster = null
@@ -37,9 +37,8 @@ class AR_BasicProducerAndConsumerCheckpointTest  extends FlatSpec with Matchers 
     randomKeyspace = randomString
     cluster = Cluster.builder().addContactPoint("localhost").build()
     session = cluster.connect()
-    CassandraEntities.createKeyspace(session, randomKeyspace)
-    CassandraEntities.createMetadataTables(session, randomKeyspace)
-    CassandraEntities.createDataTable(session, randomKeyspace)
+    CassandraHelper.createKeyspace(session, randomKeyspace)
+    CassandraHelper.createMetadataTables(session, randomKeyspace)
 
     //factories for storages creation
     metadataStorageFactory = new MetadataStorageFactory
@@ -149,8 +148,9 @@ class AR_BasicProducerAndConsumerCheckpointTest  extends FlatSpec with Matchers 
     }
 
     //assert that is nothing to read
-    for(i <- 0 until streamForConsumer.getPartitions)
+    (0 until streamForConsumer.getPartitions) foreach { _=>
       checkVal &= consumer.getTransaction.isEmpty
+    }
 
     checkVal shouldBe true
   }

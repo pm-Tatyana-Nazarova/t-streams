@@ -38,6 +38,13 @@ class ZkLockerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
     threads.foreach(t=>t.start())
     threads.foreach(t=>t.join())
+
+    factory1.closeFactory()
+    factory2.closeFactory()
+    factory3.closeFactory()
+    factory4.closeFactory()
+    factory5.closeFactory()
+
     checkVal.get() shouldEqual true
   }
 

@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory, CassandraStorage}
 import com.datastax.driver.core.{Session, Cluster}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraEntities, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringGen}
 
 
 class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll{
@@ -21,8 +21,8 @@ class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndA
       temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
       temporarySession = temporaryCluster.connect()
 
-      CassandraEntities.createKeyspace(temporarySession, randomKeyspace)
-      CassandraEntities.createDataTable(temporarySession, randomKeyspace)
+      CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
+      CassandraHelper.createDataTable(temporarySession, randomKeyspace)
       cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
     }
 
@@ -31,6 +31,8 @@ class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndA
       val factory = new CassandraStorageFactory
       val instance = factory.getInstance(cassandraOptions)
       val checkVal = instance.isInstanceOf[CassandraStorage]
+      factory.closeFactory()
+
       checkVal shouldEqual true
     }
 
@@ -39,8 +41,8 @@ class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndA
       val factory: CassandraStorageFactory = new CassandraStorageFactory
       val instance1 = factory.getInstance(cassandraOptions)
       val instance2 = factory.getInstance(cassandraOptions)
-      factory.closeFactory()
       val checkVal = instance1.isClosed && instance2.isClosed
+      factory.closeFactory()
 
       checkVal shouldEqual true
     }

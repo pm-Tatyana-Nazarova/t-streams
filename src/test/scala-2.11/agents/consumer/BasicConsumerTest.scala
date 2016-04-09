@@ -12,7 +12,7 @@ import com.bwsw.tstreams.services.BasicStreamService
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.{Session, Cluster}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraEntities, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringGen}
 
 
 class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
@@ -21,16 +21,19 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   var cluster : Cluster = null
   var session: Session = null
   var consumer : BasicConsumer[Array[Byte],String] = null
+  var metadataStorageFactory: MetadataStorageFactory = null
+  var storageFactory: CassandraStorageFactory = null
 
   override def beforeAll(): Unit = {
     randomKeyspace = randomString
     cluster = Cluster.builder().addContactPoint("localhost").build()
     session = cluster.connect()
-    CassandraEntities.createKeyspace(session, randomKeyspace)
-    CassandraEntities.createMetadataTables(session, randomKeyspace)
-    CassandraEntities.createDataTable(session, randomKeyspace)
-    val metadataStorageFactory = new MetadataStorageFactory
-    val storageFactory = new CassandraStorageFactory
+    CassandraHelper.createKeyspace(session, randomKeyspace)
+    CassandraHelper.createMetadataTables(session, randomKeyspace)
+    CassandraHelper.createDataTable(session, randomKeyspace)
+
+    metadataStorageFactory = new MetadataStorageFactory
+    storageFactory = new CassandraStorageFactory
     val arrayByteToStringConverter = new ArrayByteToStringConverter
     val mstorage: MetadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace)
     val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
@@ -56,6 +59,8 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   }
 
   override def afterAll(): Unit = {
+    metadataStorageFactory.closeFactory()
+    storageFactory.closeFactory()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

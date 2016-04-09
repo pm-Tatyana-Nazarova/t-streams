@@ -3,7 +3,7 @@ package metadata
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.datastax.driver.core.{Session, Cluster}
 import org.scalatest._
-import testutils.{RandomStringGen, CassandraEntities}
+import testutils.{RandomStringGen, CassandraHelper}
 
 
 class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll {
@@ -20,8 +20,8 @@ class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     cluster = Cluster.builder().addContactPoint("localhost").build()
     session = cluster.connect()
 
-    CassandraEntities.createKeyspace(session,randomKeyspace)
-    CassandraEntities.createMetadataTables(session,randomKeyspace)
+    CassandraHelper.createKeyspace(session,randomKeyspace)
+    CassandraHelper.createMetadataTables(session,randomKeyspace)
 
     connectedSession = cluster.connect(randomKeyspace)
   }

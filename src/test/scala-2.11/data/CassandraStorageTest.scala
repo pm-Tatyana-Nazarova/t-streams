@@ -5,7 +5,7 @@ import com.bwsw.tstreams.data.cassandra.CassandraStorage
 import com.datastax.driver.core.{Session, Cluster}
 import com.gilt.timeuuid.TimeUuid
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraEntities, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringGen}
 import scala.concurrent.duration._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -26,8 +26,8 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
     cluster = Cluster.builder().addContactPoint("localhost").build()
     session = cluster.connect()
 
-    CassandraEntities.createKeyspace(session,randomKeyspace)
-    CassandraEntities.createDataTable(session,randomKeyspace)
+    CassandraHelper.createKeyspace(session,randomKeyspace)
+    CassandraHelper.createDataTable(session,randomKeyspace)
 
     connectedSession = cluster.connect(randomKeyspace)
   }
