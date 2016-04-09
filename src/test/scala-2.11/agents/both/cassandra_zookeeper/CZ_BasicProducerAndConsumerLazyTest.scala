@@ -10,7 +10,7 @@ import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.{Cluster, Session}
+import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{CassandraHelper, RandomStringGen}
 import scala.util.control.Breaks._
@@ -18,113 +18,101 @@ import scala.util.control.Breaks._
 
 class CZ_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
-  var randomKeyspace : String = null
-  var cluster : Cluster = null
-  var session: Session = null
-  var producer1 : BasicProducer[String,Array[Byte]] = null
-  var producer2 : BasicProducer[String,Array[Byte]] = null
-  var consumer : BasicConsumer[Array[Byte],String] = null
-  var metadataStorageFactory: MetadataStorageFactory = null
-  var storageFactory: CassandraStorageFactory = null
-  var lockerFactoryForProducer1 : ZkLockerFactory = null
-  var lockerFactoryForProducer2: ZkLockerFactory = null
-  var lockerFactoryForConsumer: ZkLockerFactory = null
 
-  override def beforeAll(): Unit = {
-    randomKeyspace = randomString
-    cluster = Cluster.builder().addContactPoint("localhost").build()
-    session = cluster.connect()
-    CassandraHelper.createKeyspace(session, randomKeyspace)
-    CassandraHelper.createMetadataTables(session, randomKeyspace)
-    CassandraHelper.createDataTable(session, randomKeyspace)
+  val randomKeyspace = randomString
+  val cluster = Cluster.builder().addContactPoint("localhost").build()
+  val session = cluster.connect()
+  CassandraHelper.createKeyspace(session, randomKeyspace)
+  CassandraHelper.createMetadataTables(session, randomKeyspace)
+  CassandraHelper.createDataTable(session, randomKeyspace)
 
-    //factories for storages creation
-    metadataStorageFactory = new MetadataStorageFactory
-    storageFactory = new CassandraStorageFactory
+  //factories for storages creation
+  val metadataStorageFactory = new MetadataStorageFactory
+  val storageFactory = new CassandraStorageFactory
 
-    //converters
-    val arrayByteToStringConverter = new ArrayByteToStringConverter
-    val stringToArrayByteConverter = new StringToArrayByteConverter
+  //converters
+  val arrayByteToStringConverter = new ArrayByteToStringConverter
+  val stringToArrayByteConverter = new StringToArrayByteConverter
 
-    //cassandra storages
-    val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
-    val cassandraInstForProducer1 = storageFactory.getInstance(cassandraStorageOptions)
-    val cassandraInstForProducer2 = storageFactory.getInstance(cassandraStorageOptions)
-    val cassandraInstForConsumer = storageFactory.getInstance(cassandraStorageOptions)
+  //cassandra storages
+  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
+  val cassandraInstForProducer1 = storageFactory.getInstance(cassandraStorageOptions)
+  val cassandraInstForProducer2 = storageFactory.getInstance(cassandraStorageOptions)
+  val cassandraInstForConsumer = storageFactory.getInstance(cassandraStorageOptions)
 
-    //metadata storages
-    val metadataStorageInstForProducer1 = metadataStorageFactory.getInstance(
-      cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-      keyspace = randomKeyspace)
-    val metadataStorageInstForProducer2 = metadataStorageFactory.getInstance(
-      cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-      keyspace = randomKeyspace)
-    val metadataStorageInstForConsumer = metadataStorageFactory.getInstance(
-      cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-      keyspace = randomKeyspace)
+  //metadata storages
+  val metadataStorageInstForProducer1 = metadataStorageFactory.getInstance(
+    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
+    keyspace = randomKeyspace)
+  val metadataStorageInstForProducer2 = metadataStorageFactory.getInstance(
+    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
+    keyspace = randomKeyspace)
+  val metadataStorageInstForConsumer = metadataStorageFactory.getInstance(
+    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
+    keyspace = randomKeyspace)
 
-    //locker factories
-    lockerFactoryForProducer1 = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
-    lockerFactoryForProducer2 = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
-    lockerFactoryForConsumer = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
+  //locker factories
+  val lockerFactoryForProducer1 = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
+  val lockerFactoryForProducer2 = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
+  val lockerFactoryForConsumer = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
 
-    //streams
-    val streamForProducer1: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
-      name = "test_stream",
-      partitions = 3,
-      metadataStorage = metadataStorageInstForProducer1,
-      dataStorage = cassandraInstForProducer1,
-      lockService = lockerFactoryForProducer1,
-      ttl = 60 * 60 * 24,
-      description = "some_description")
+  //streams
+  val streamForProducer1: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
+    name = "test_stream",
+    partitions = 3,
+    metadataStorage = metadataStorageInstForProducer1,
+    dataStorage = cassandraInstForProducer1,
+    lockService = lockerFactoryForProducer1,
+    ttl = 60 * 10,
+    description = "some_description")
 
-    val streamForProducer2: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
-      name = "test_stream",
-      partitions = 3,
-      metadataStorage = metadataStorageInstForProducer2,
-      dataStorage = cassandraInstForProducer2,
-      lockService = lockerFactoryForProducer2,
-      ttl = 60 * 60 * 24,
-      description = "some_description")
+  val streamForProducer2: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
+    name = "test_stream",
+    partitions = 3,
+    metadataStorage = metadataStorageInstForProducer2,
+    dataStorage = cassandraInstForProducer2,
+    lockService = lockerFactoryForProducer2,
+    ttl = 60 * 10,
+    description = "some_description")
 
-    val streamForConsumer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
-      name = "test_stream",
-      partitions = 3,
-      metadataStorage = metadataStorageInstForConsumer,
-      dataStorage = cassandraInstForConsumer,
-      lockService = lockerFactoryForConsumer,
-      ttl = 60 * 60 * 24,
-      description = "some_description")
+  val streamForConsumer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
+    name = "test_stream",
+    partitions = 3,
+    metadataStorage = metadataStorageInstForConsumer,
+    dataStorage = cassandraInstForConsumer,
+    lockService = lockerFactoryForConsumer,
+    ttl = 60 * 10,
+    description = "some_description")
 
-    //options
-    val producerOptions1 = new BasicProducerOptions[String, Array[Byte]](
-      transactionTTL = 6,
-      transactionKeepAliveInterval = 2,
-      producerKeepAliveInterval = 1,
-      PolicyRepository.getRoundRobinPolicy(streamForProducer1, List(0,1,2)),
-      stringToArrayByteConverter)
+  //options
+  val producerOptions1 = new BasicProducerOptions[String, Array[Byte]](
+    transactionTTL = 6,
+    transactionKeepAliveInterval = 2,
+    producerKeepAliveInterval = 1,
+    PolicyRepository.getRoundRobinPolicy(streamForProducer1, List(0,1,2)),
+    stringToArrayByteConverter)
 
-    val producerOptions2 = new BasicProducerOptions[String, Array[Byte]](
-      transactionTTL = 6,
-      transactionKeepAliveInterval = 2,
-      producerKeepAliveInterval = 1,
-      PolicyRepository.getRoundRobinPolicy(streamForProducer2, List(0,1,2)),
-      stringToArrayByteConverter)
+  val producerOptions2 = new BasicProducerOptions[String, Array[Byte]](
+    transactionTTL = 6,
+    transactionKeepAliveInterval = 2,
+    producerKeepAliveInterval = 1,
+    PolicyRepository.getRoundRobinPolicy(streamForProducer2, List(0,1,2)),
+    stringToArrayByteConverter)
 
-    val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
-      transactionsPreload = 10,
-      dataPreload = 7,
-      consumerKeepAliveInterval = 5,
-      arrayByteToStringConverter,
-      PolicyRepository.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
-      Oldest,
-      useLastOffset = false)
+  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
+    transactionsPreload = 10,
+    dataPreload = 7,
+    consumerKeepAliveInterval = 5,
+    arrayByteToStringConverter,
+    PolicyRepository.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    Oldest,
+    useLastOffset = false)
 
-    //agents
-    producer1 = new BasicProducer("test_producer", streamForProducer1, producerOptions1)
-    producer2 = new BasicProducer("test_producer", streamForProducer2, producerOptions2)
-    consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
-  }
+  //agents
+  val producer1 = new BasicProducer("test_producer", streamForProducer1, producerOptions1)
+  val producer2 = new BasicProducer("test_producer", streamForProducer2, producerOptions2)
+  val consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
+
 
   "two producers, consumer" should "first producer - generate transactions lazily, second producer - generate transactions faster" +
     " than the first one but with pause at the very beginning, consumer - retrieve all transactions which was sent" in {

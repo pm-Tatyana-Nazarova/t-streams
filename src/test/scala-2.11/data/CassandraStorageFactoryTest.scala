@@ -2,27 +2,21 @@ package data
 
 import java.net.InetSocketAddress
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory, CassandraStorage}
-import com.datastax.driver.core.{Session, Cluster}
+import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{CassandraHelper, RandomStringGen}
 
 
 class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
-  var randomKeyspace : String = null
-  var temporaryCluster : Cluster = null
-  var temporarySession: Session = null
-  var cassandraOptions : CassandraStorageOptions = null
 
-  override def beforeAll(): Unit = {
-    randomKeyspace = randomString
-    temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
-    temporarySession = temporaryCluster.connect()
+  val randomKeyspace = randomString
+  val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
+  val temporarySession = temporaryCluster.connect()
 
-    CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
-    CassandraHelper.createDataTable(temporarySession, randomKeyspace)
-    cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
-  }
+  CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
+  CassandraHelper.createDataTable(temporarySession, randomKeyspace)
+  val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
 
   "CassandraStorageFactory.getInstance()" should "return CassandraStorage instance" in {
 

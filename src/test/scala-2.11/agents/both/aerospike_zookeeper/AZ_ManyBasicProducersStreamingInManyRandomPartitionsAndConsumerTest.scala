@@ -11,7 +11,7 @@ import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.{Cluster, Session}
+import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{CassandraHelper, RandomStringGen}
 import scala.collection.mutable.ListBuffer
@@ -19,11 +19,6 @@ import scala.collection.mutable.ListBuffer
 
 class AZ_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
    def randomString: String = RandomStringGen.randomAlphaString(10)
-   var randomKeyspace : String = null
-   var cluster : Cluster = null
-   var session: Session = null
-   //storage options
-   var aerospikeOptions : AerospikeStorageOptions = null
    //factories
    val metadataStorageFactory = new MetadataStorageFactory
    val storageFactory = new AerospikeStorageFactory
@@ -33,21 +28,18 @@ class AZ_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extend
    //all locker factory instances
    var instances = ListBuffer[ZkLockerFactory]()
 
+   val randomKeyspace = randomString
+   val cluster = Cluster.builder().addContactPoint("localhost").build()
+   val session = cluster.connect()
+   CassandraHelper.createKeyspace(session, randomKeyspace)
+   CassandraHelper.createMetadataTables(session, randomKeyspace)
 
-   override def beforeAll(): Unit = {
-     randomKeyspace = randomString
-     cluster = Cluster.builder().addContactPoint("localhost").build()
-     session = cluster.connect()
-     CassandraHelper.createKeyspace(session, randomKeyspace)
-     CassandraHelper.createMetadataTables(session, randomKeyspace)
-
-     val hosts = List(
-       new Host("localhost",3000),
-       new Host("localhost",3001),
-       new Host("localhost",3002),
-       new Host("localhost",3003))
-     aerospikeOptions = new AerospikeStorageOptions("test", hosts)
-   }
+   val hosts = List(
+     new Host("localhost",3000),
+     new Host("localhost",3001),
+     new Host("localhost",3002),
+     new Host("localhost",3003))
+   val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
 
    "Some amount of producers and one consumer" should "producers - send transactions in many partition" +
      " (each producer send each txn in only one random partition) " +
@@ -158,7 +150,7 @@ class AZ_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extend
        metadataStorage = metadataStorageInst,
        dataStorage = dataStorageInst,
        lockService = lockService,
-       ttl = 60 * 60 * 24,
+       ttl = 60 * 10,
        description = "some_description")
    }
 

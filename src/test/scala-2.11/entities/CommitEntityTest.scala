@@ -1,29 +1,22 @@
 package entities
 
 import com.bwsw.tstreams.entities.{TransactionSettings, CommitEntity}
-import com.datastax.driver.core.{Session, Cluster}
+import com.datastax.driver.core.Cluster
 import com.gilt.timeuuid.TimeUuid
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{CassandraHelper, RandomStringGen}
-
 import scala.collection.mutable
 
 
 class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
-  var randomKeyspace : String = null
-  var temporaryCluster : Cluster = null
-  var temporarySession: Session = null
-  var connectedSession : Session = null
 
-  override def beforeAll(): Unit = {
-    randomKeyspace = randomString
-    temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
-    temporarySession = temporaryCluster.connect()
-    CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
-    CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
-    connectedSession = temporaryCluster.connect(randomKeyspace)
-  }
+  val randomKeyspace = randomString
+  val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
+  val temporarySession = temporaryCluster.connect()
+  CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
+  CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
+  val connectedSession = temporaryCluster.connect(randomKeyspace)
 
   "CommitEntity.commit() CommitEntity.getTransactionAmount()" should
     "commit - add new commit in commit metadata table and it should expire after some time(ttl param)," +

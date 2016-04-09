@@ -10,7 +10,7 @@ import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.{Cluster, Session}
+import com.datastax.driver.core.Cluster
 import org.redisson.Config
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{CassandraHelper, RandomStringGen}
@@ -19,11 +19,6 @@ import scala.collection.mutable.ListBuffer
 
 class СR_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
    def randomString: String = RandomStringGen.randomAlphaString(10)
-   var randomKeyspace : String = null
-   var cluster : Cluster = null
-   var session: Session = null
-   //storage options
-   var cassandraOptions : CassandraStorageOptions = null
    //factories
    val metadataStorageFactory = new MetadataStorageFactory
    val storageFactory = new CassandraStorageFactory
@@ -33,17 +28,14 @@ class СR_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest exten
    //all locker factory instances
    var instances = ListBuffer[RedisLockerFactory]()
 
+   val randomKeyspace = randomString
+   val cluster = Cluster.builder().addContactPoint("localhost").build()
+   val session = cluster.connect()
+   CassandraHelper.createKeyspace(session, randomKeyspace)
+   CassandraHelper.createMetadataTables(session, randomKeyspace)
+   CassandraHelper.createDataTable(session, randomKeyspace)
 
-   override def beforeAll(): Unit = {
-     randomKeyspace = randomString
-     cluster = Cluster.builder().addContactPoint("localhost").build()
-     session = cluster.connect()
-     CassandraHelper.createKeyspace(session, randomKeyspace)
-     CassandraHelper.createMetadataTables(session, randomKeyspace)
-     CassandraHelper.createDataTable(session, randomKeyspace)
-
-     cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
-   }
+   val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
 
    "Some amount of producers and one consumer" should "producers - send transactions in many partition" +
      " (each producer send each txn in only one random partition) " +
@@ -156,7 +148,7 @@ class СR_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest exten
        metadataStorage = metadataStorageInst,
        dataStorage = dataStorageInst,
        lockService = lockService,
-       ttl = 60 * 60 * 24,
+       ttl = 60 * 10,
        description = "some_description")
    }
 

@@ -2,32 +2,23 @@ package data
 
 import java.util.UUID
 import com.bwsw.tstreams.data.cassandra.CassandraStorage
-import com.datastax.driver.core.{Session, Cluster}
+import com.datastax.driver.core.Cluster
 import com.gilt.timeuuid.TimeUuid
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{CassandraHelper, RandomStringGen}
-import scala.concurrent.duration._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 
 
 class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
-  var randomKeyspace : String = null
-  var cluster: Cluster = null
-  var session: Session = null
-  var connectedSession : Session = null
-
-  override def beforeAll(): Unit = {
-    randomKeyspace = randomString
-    cluster = Cluster.builder().addContactPoint("localhost").build()
-    session = cluster.connect()
-    CassandraHelper.createKeyspace(session,randomKeyspace)
-    CassandraHelper.createDataTable(session,randomKeyspace)
-    connectedSession = cluster.connect(randomKeyspace)
-  }
+  val randomKeyspace = randomString
+  var cluster = Cluster.builder().addContactPoint("localhost").build()
+  var session = cluster.connect()
+  CassandraHelper.createKeyspace(session,randomKeyspace)
+  CassandraHelper.createDataTable(session,randomKeyspace)
+  var connectedSession = cluster.connect(randomKeyspace)
 
   "CassandraStorage.close()" should "close session and cluster connection" in {
 

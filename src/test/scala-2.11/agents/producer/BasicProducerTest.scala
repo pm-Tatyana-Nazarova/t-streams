@@ -8,53 +8,44 @@ import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.services.BasicStreamService
-import com.datastax.driver.core.{Session, Cluster}
+import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{CassandraHelper, RandomStringGen}
 
 
-
 class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
-  var randomKeyspace : String = null
-  var temporaryCluster : Cluster = null
-  var temporarySession: Session = null
-  var producer : BasicProducer[String,Array[Byte]] = null
-  var metadataStorageFactory: MetadataStorageFactory = null
-  var storageFactory: CassandraStorageFactory = null
-  var lockService: ZkLockerFactory = null
 
-  override def beforeAll(): Unit = {
-    randomKeyspace = randomString
-    temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
-    temporarySession = temporaryCluster.connect()
-    CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
-    CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
-    CassandraHelper.createDataTable(temporarySession, randomKeyspace)
+  val randomKeyspace = randomString
+  val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
+  val temporarySession = temporaryCluster.connect()
+  CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
+  CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
+  CassandraHelper.createDataTable(temporarySession, randomKeyspace)
 
-    metadataStorageFactory = new MetadataStorageFactory
-    storageFactory = new CassandraStorageFactory
-    lockService = new ZkLockerFactory(List(new InetSocketAddress("localhost", 2181)), "/some_path", 10)
+  val metadataStorageFactory = new MetadataStorageFactory
+  val storageFactory = new CassandraStorageFactory
+  val lockService = new ZkLockerFactory(List(new InetSocketAddress("localhost", 2181)), "/some_path", 10)
 
-    val stringToArrayByteConverter = new StringToArrayByteConverter
-    val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
-    val stream = BasicStreamService.createStream(
-      streamName = "test_stream",
-      partitions = 3,
-      ttl = 60 * 60 * 24,
-      description = "unit_testing",
-      metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
-      dataStorage = storageFactory.getInstance(cassandraOptions),
-      lockService = lockService)
-    val options = new BasicProducerOptions[String, Array[Byte]](
-      transactionTTL = 10,
-      transactionKeepAliveInterval = 2,
-      producerKeepAliveInterval = 1,
-      PolicyRepository.getRoundRobinPolicy(stream, List(0,1,2)),
-      stringToArrayByteConverter)
+  val stringToArrayByteConverter = new StringToArrayByteConverter
+  val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
+  val stream = BasicStreamService.createStream(
+    streamName = "test_stream",
+    partitions = 3,
+    ttl = 60 * 10,
+    description = "unit_testing",
+    metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
+    dataStorage = storageFactory.getInstance(cassandraOptions),
+    lockService = lockService)
+  val options = new BasicProducerOptions[String, Array[Byte]](
+    transactionTTL = 10,
+    transactionKeepAliveInterval = 2,
+    producerKeepAliveInterval = 1,
+    PolicyRepository.getRoundRobinPolicy(stream, List(0,1,2)),
+    stringToArrayByteConverter)
 
-    producer = new BasicProducer("test_producer", stream, options)
-  }
+  val producer = new BasicProducer("test_producer", stream, options)
+
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
     val txn: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(false)

@@ -10,7 +10,7 @@ import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.streams.BasicStream
-import com.datastax.driver.core.{Cluster, Session}
+import com.datastax.driver.core.Cluster
 import org.redisson.Config
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{CassandraHelper, RandomStringGen}
@@ -20,91 +20,80 @@ import scala.util.control.Breaks._
 
 class CR_BasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
-  var randomKeyspace : String = null
-  var cluster : Cluster = null
-  var session: Session = null
-  var producer : BasicProducer[String,Array[Byte]] = null
-  var consumer : BasicConsumer[Array[Byte],String] = null
-  var metadataStorageFactory: MetadataStorageFactory = null
-  var storageFactory: CassandraStorageFactory = null
-  var lockerFactoryForProducer: RedisLockerFactory = null
-  var lockerFactoryForConsumer: RedisLockerFactory = null
 
-  override def beforeAll(): Unit = {
-    randomKeyspace = randomString
-    cluster = Cluster.builder().addContactPoint("localhost").build()
-    session = cluster.connect()
-    CassandraHelper.createKeyspace(session, randomKeyspace)
-    CassandraHelper.createMetadataTables(session, randomKeyspace)
-    CassandraHelper.createDataTable(session, randomKeyspace)
+  val randomKeyspace = randomString
+  val cluster = Cluster.builder().addContactPoint("localhost").build()
+  val session = cluster.connect()
+  CassandraHelper.createKeyspace(session, randomKeyspace)
+  CassandraHelper.createMetadataTables(session, randomKeyspace)
+  CassandraHelper.createDataTable(session, randomKeyspace)
 
-    //factories for storages creation
-    metadataStorageFactory = new MetadataStorageFactory
-    storageFactory = new CassandraStorageFactory
+  //factories for storages creation
+  val metadataStorageFactory = new MetadataStorageFactory
+  val storageFactory = new CassandraStorageFactory
 
-    //converters
-    val arrayByteToStringConverter = new ArrayByteToStringConverter
-    val stringToArrayByteConverter = new StringToArrayByteConverter
+  //converters
+  val arrayByteToStringConverter = new ArrayByteToStringConverter
+  val stringToArrayByteConverter = new StringToArrayByteConverter
 
-    //cassandra storages
-    val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
-    val cassandraInstForProducer = storageFactory.getInstance(cassandraStorageOptions)
-    val cassandraInstForConsumer = storageFactory.getInstance(cassandraStorageOptions)
+  //cassandra storages
+  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
+  val cassandraInstForProducer = storageFactory.getInstance(cassandraStorageOptions)
+  val cassandraInstForConsumer = storageFactory.getInstance(cassandraStorageOptions)
 
-    //metadata storages
-    val metadataStorageInstForProducer = metadataStorageFactory.getInstance(
-      cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-      keyspace = randomKeyspace)
-    val metadataStorageInstForConsumer = metadataStorageFactory.getInstance(
-      cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
-      keyspace = randomKeyspace)
+  //metadata storages
+  val metadataStorageInstForProducer = metadataStorageFactory.getInstance(
+    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
+    keyspace = randomKeyspace)
+  val metadataStorageInstForConsumer = metadataStorageFactory.getInstance(
+    cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
+    keyspace = randomKeyspace)
 
-    //locker factories
-    val config = new Config()
-    config.useSingleServer().setAddress("localhost:6379")
-    lockerFactoryForProducer = new RedisLockerFactory("/some_path", config)
-    lockerFactoryForConsumer = new RedisLockerFactory("/some_path", config)
+  //locker factories
+  val config = new Config()
+  config.useSingleServer().setAddress("localhost:6379")
+  val lockerFactoryForProducer = new RedisLockerFactory("/some_path", config)
+  val lockerFactoryForConsumer = new RedisLockerFactory("/some_path", config)
 
-    //streams
-    val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
-      name = "test_stream",
-      partitions = 3,
-      metadataStorage = metadataStorageInstForProducer,
-      dataStorage = cassandraInstForProducer,
-      lockService = lockerFactoryForProducer,
-      ttl = 60 * 60 * 24,
-      description = "some_description")
+  //streams
+  val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
+    name = "test_stream",
+    partitions = 3,
+    metadataStorage = metadataStorageInstForProducer,
+    dataStorage = cassandraInstForProducer,
+    lockService = lockerFactoryForProducer,
+    ttl = 60 * 10,
+    description = "some_description")
 
-    val streamForConsumer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
-      name = "test_stream",
-      partitions = 3,
-      metadataStorage = metadataStorageInstForConsumer,
-      dataStorage = cassandraInstForConsumer,
-      lockService = lockerFactoryForConsumer,
-      ttl = 60 * 60 * 24,
-      description = "some_description")
+  val streamForConsumer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
+    name = "test_stream",
+    partitions = 3,
+    metadataStorage = metadataStorageInstForConsumer,
+    dataStorage = cassandraInstForConsumer,
+    lockService = lockerFactoryForConsumer,
+    ttl = 60 * 10,
+    description = "some_description")
 
-    //options
-    val producerOptions = new BasicProducerOptions[String, Array[Byte]](
-      transactionTTL = 6,
-      transactionKeepAliveInterval = 2,
-      producerKeepAliveInterval = 1,
-      PolicyRepository.getRoundRobinPolicy(streamForProducer, List(0,1,2)),
-      stringToArrayByteConverter)
+  //options
+  val producerOptions = new BasicProducerOptions[String, Array[Byte]](
+    transactionTTL = 6,
+    transactionKeepAliveInterval = 2,
+    producerKeepAliveInterval = 1,
+    PolicyRepository.getRoundRobinPolicy(streamForProducer, List(0,1,2)),
+    stringToArrayByteConverter)
 
-    val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
-      transactionsPreload = 10,
-      dataPreload = 7,
-      consumerKeepAliveInterval = 5,
-      arrayByteToStringConverter,
-      PolicyRepository.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
-      Oldest,
-      useLastOffset = false)
+  val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
+    transactionsPreload = 10,
+    dataPreload = 7,
+    consumerKeepAliveInterval = 5,
+    arrayByteToStringConverter,
+    PolicyRepository.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    Oldest,
+    useLastOffset = false)
 
-    //agents
-    producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
-    consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
-  }
+  //agents
+  val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
+  val consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
 
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it with getAll method" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
