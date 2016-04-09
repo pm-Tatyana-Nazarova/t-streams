@@ -46,16 +46,16 @@ class AZ_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends Flat
     " for ex. producer1 in partition1, producer2 in partition2, producer3 in partition3 etc...)," +
     " consumer - retrieve them all" in {
     val timeoutForWaiting = 60*5
-    val totalPartitions = 100
+    val totalPartitions = 4
     val totalTxn = 10
-    val totalElementsInTxn = 10
-    val producersAmount = 15
+    val totalElementsInTxn = 3
+    val producersAmount = 10
     val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
 
     val producers: List[BasicProducer[String, Array[Byte]]] =
       (0 until producersAmount)
         .toList
-        .map(x=>getProducer(List(x),totalPartitions))
+        .map(x=>getProducer(List(x%totalPartitions),totalPartitions))
 
     val producersThreads = producers.map(p =>
       new Thread(new Runnable {
@@ -71,7 +71,7 @@ class AZ_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends Flat
         }
       }))
 
-    val streamInst = getStream(100)
+    val streamInst = getStream(totalPartitions)
 
     val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
       transactionsPreload = 10,
@@ -79,7 +79,7 @@ class AZ_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends Flat
       consumerKeepAliveInterval = 5,
       arrayByteToStringConverter,
       PolicyRepository.getRoundRobinPolicy(
-        usedPartitions = (0 until 100).toList,
+        usedPartitions = (0 until totalPartitions).toList,
         stream = streamInst),
       Oldest,
       useLastOffset = false)

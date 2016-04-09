@@ -45,10 +45,10 @@ class AZ_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extend
      " (each producer send each txn in only one random partition) " +
      " consumer - retrieve them all" in {
      val timeoutForWaiting = 60*5
-     val totalPartitions = 100
+     val totalPartitions = 4
      val totalTxn = 10
-     val totalElementsInTxn = 10
-     val producersAmount = 15
+     val totalElementsInTxn = 3
+     val producersAmount = 10
      val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
 
      val producers: List[BasicProducer[String, Array[Byte]]] =
@@ -70,7 +70,7 @@ class AZ_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extend
          }
        }))
 
-     val streamInst = getStream(100)
+     val streamInst = getStream(totalPartitions)
 
      val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
        transactionsPreload = 10,
@@ -78,7 +78,7 @@ class AZ_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extend
        consumerKeepAliveInterval = 5,
        arrayByteToStringConverter,
        PolicyRepository.getRoundRobinPolicy(
-         usedPartitions = (0 until 100).toList,
+         usedPartitions = (0 until totalPartitions).toList,
          stream = streamInst),
        Oldest,
        useLastOffset = false)

@@ -148,8 +148,8 @@ class CR_BasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with
 
   "producer, consumer" should "producer - generate some set of transactions, consumer - retrieve them all" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
-    val totalTxn = 10
-    val totalDataInTxn = 10000
+    val totalTxn = 100
+    val totalDataInTxn = 10
     val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
 
     (0 until totalTxn).foreach { _=>
