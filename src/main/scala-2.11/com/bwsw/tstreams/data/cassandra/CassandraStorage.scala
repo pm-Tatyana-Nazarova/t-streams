@@ -156,4 +156,20 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
    * @return Closed concrete storage or not
    */
   override def isClosed(): Boolean = session.isClosed && cluster.isClosed
+
+  /**
+   * Put data in buffer to save it later
+   * @param streamName Name of the stream
+   * @param partition Number of stream partitions
+   * @param transaction Number of stream transactions
+   * @param data Data which will be put
+   * @param partNum Data unique number
+   * @param ttl Time of records expiration in seconds
+   */
+  override def putInBuffer(streamName: String, partition: Int, transaction: UUID, ttl: Int, data: Array[Byte], partNum: Int): Unit = ???
+
+  /**
+   * Save all info from buffer in IStorage
+   */
+  override def saveBuffer(): Unit = ???
 }

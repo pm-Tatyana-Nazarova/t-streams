@@ -114,4 +114,20 @@ class AerospikeStorage(options : AerospikeStorageOptions) extends IStorage[Array
    */
   override def close(): Unit =
     client.close()
+
+  /**
+   * Put data in buffer to save it later
+   * @param streamName Name of the stream
+   * @param partition Number of stream partitions
+   * @param transaction Number of stream transactions
+   * @param data Data which will be put
+   * @param partNum Data unique number
+   * @param ttl Time of records expiration in seconds
+   */
+  override def putInBuffer(streamName: String, partition: Int, transaction: UUID, ttl: Int, data: Array[Byte], partNum: Int): Unit = ???
+
+  /**
+   * Save all info from buffer in IStorage
+   */
+  override def saveBuffer(): Unit = ???
 }

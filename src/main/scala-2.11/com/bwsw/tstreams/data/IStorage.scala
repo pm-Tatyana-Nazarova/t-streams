@@ -59,4 +59,22 @@ trait IStorage[T] {
    * @return Queue of object which have storage type
    */
   def get(streamName : String, partition : Int, transaction : java.util.UUID, from : Int, to : Int) : scala.collection.mutable.Queue[T]
+
+
+  /**
+   * Put data in buffer to save it later
+   * @param streamName Name of the stream
+   * @param partition Number of stream partitions
+   * @param transaction Number of stream transactions
+   * @param data Data which will be put
+   * @param partNum Data unique number
+   * @param ttl Time of records expiration in seconds
+   */
+  def putInBuffer(streamName : String, partition : Int, transaction : java.util.UUID, ttl : Int, data : T, partNum : Int) : Unit
+
+
+  /**
+   * Save all info from buffer in IStorage
+   */
+  def saveBuffer() : Unit
 }
