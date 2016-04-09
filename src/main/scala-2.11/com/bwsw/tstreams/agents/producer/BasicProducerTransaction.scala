@@ -46,7 +46,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   /**
    * All inserts (can be async) in storage (must be waited before closing this transaction)
    */
-  private var jobs = ListBuffer[Future[Unit]]()
+  private var jobs = ListBuffer[() => Unit]()
 
   /**
    * Queue to figure out moment when transaction is going to close
@@ -90,8 +90,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     if (closed)
       throw new IllegalStateException("transaction is closed")
 
-    //TODO future limit investigation
-    val job: Future[Unit] = basicProducer.stream.dataStorage.put(
+    val job: () => Unit = basicProducer.stream.dataStorage.put(
       basicProducer.stream.getName,
       partition,
       transaction,
@@ -112,7 +111,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     if (closed)
       throw new IllegalStateException("transaction is already closed")
 
-    jobs.foreach(x=>Await.ready(x, TIMEOUT)) // wait all async jobs done before commit
+    jobs.foreach(x=>x()) // wait all async jobs done before commit
 
     updateQueue.put(true)
 
@@ -130,7 +129,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     if (closed)
       throw new IllegalStateException("transaction is already closed")
 
-    jobs.foreach(x => Await.ready(x, TIMEOUT)) // wait all async jobs done before commit
+    jobs.foreach(x => x()) // wait all async jobs done before commit
 
     updateQueue.put(true)
 

@@ -41,7 +41,6 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
     session = cluster.connect()
     CassandraHelper.createKeyspace(session, randomKeyspace)
     CassandraHelper.createMetadataTables(session, randomKeyspace)
-    CassandraHelper.createDataTable(session, randomKeyspace)
 
     val hosts = List(
       new Host("localhost",3000),

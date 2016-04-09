@@ -1,7 +1,5 @@
 package com.bwsw.tstreams.data
 
-import scala.concurrent.Future
-
 /**
   * Interface for data storage
   * @tparam T Storage data type
@@ -47,9 +45,9 @@ trait IStorage[T] {
    * @param data Data which will be put
    * @param partNum Data unique number
    * @param ttl Time of records expiration in seconds
-   * @return Future which indicate done or not putting request(if request was async) null else
+   * @return lambda which indicate done or not putting request(if request was async) null else
    */
-  def put(streamName : String, partition : Int, transaction : java.util.UUID, ttl : Int, data : T, partNum : Int) : Future[Unit]
+  def put(streamName : String, partition : Int, transaction : java.util.UUID, ttl : Int, data : T, partNum : Int) : () => Unit
 
   /**
    * Get data from storage

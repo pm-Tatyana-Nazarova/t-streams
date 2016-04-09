@@ -72,9 +72,9 @@ class AerospikeStorage(options : AerospikeStorageOptions) extends IStorage[Array
    * @param data Data which will be put
    * @param partNum Data unique number
    * @param ttl Time of records expiration in seconds
-   * @return Future which indicate done or not putting request
+   * @return Null instead of wait lambda because client.put is not async
    */
-  override def put(streamName: String, partition: Int, transaction: UUID, ttl: Int, data: Array[Byte], partNum: Int): Future[Unit] = {
+  override def put(streamName: String, partition: Int, transaction: UUID, ttl: Int, data: Array[Byte], partNum: Int): () => Unit = {
     options.writePolicy.expiration = ttl
     val key: Key = new Key(options.namespace, s"$streamName/$partition", transaction.toString)
     val bin = new Bin(partNum.toString, data)

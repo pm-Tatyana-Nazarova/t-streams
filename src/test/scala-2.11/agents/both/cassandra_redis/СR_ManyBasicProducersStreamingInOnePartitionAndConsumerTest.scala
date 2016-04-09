@@ -1,37 +1,37 @@
-package agents.both.aerospike_zookeeper
+package agents.both.cassandra_redis
 
 import java.net.InetSocketAddress
-import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
+import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.entities.offsets.Oldest
-import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
+import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.{Cluster, Session}
+import org.redisson.Config
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{CassandraHelper, RandomStringGen}
 import scala.collection.mutable.ListBuffer
 
 
-class AZ_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
+class СR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
   var randomKeyspace : String = null
   var cluster : Cluster = null
   var session: Session = null
   //storage options
-  var aerospikeOptions : AerospikeStorageOptions = null
+  var cassandraOptions : CassandraStorageOptions = null
   //factories
   val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new AerospikeStorageFactory
+  val storageFactory = new CassandraStorageFactory
   //converters
   val arrayByteToStringConverter = new ArrayByteToStringConverter
   val stringToArrayByteConverter = new StringToArrayByteConverter
   //all locker factory instances
-  var instances = ListBuffer[ZkLockerFactory]()
+  var instances = ListBuffer[RedisLockerFactory]()
 
 
   override def beforeAll(): Unit = {
@@ -40,13 +40,9 @@ class AZ_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
     session = cluster.connect()
     CassandraHelper.createKeyspace(session, randomKeyspace)
     CassandraHelper.createMetadataTables(session, randomKeyspace)
+    CassandraHelper.createDataTable(session, randomKeyspace)
 
-    val hosts = List(
-      new Host("localhost",3000),
-      new Host("localhost",3001),
-      new Host("localhost",3002),
-      new Host("localhost",3003))
-    aerospikeOptions = new AerospikeStorageOptions("test", hosts)
+    cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
   }
 
   "Some amount of producers and one consumer" should "producers - send transactions in one partition and consumer - retrieve them all" in {
@@ -132,14 +128,16 @@ class AZ_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
 
   def getStream(): BasicStream[Array[Byte]] = {
     //locker factory instance
-    val lockService = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
+    val config = new Config()
+    config.useSingleServer().setAddress("localhost:6379")
+    val lockService = new RedisLockerFactory("/some_path", config)
     instances += lockService
 
     //storage instances
     val metadataStorageInst = metadataStorageFactory.getInstance(
       cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
       keyspace = randomKeyspace)
-    val dataStorageInst = storageFactory.getInstance(aerospikeOptions)
+    val dataStorageInst = storageFactory.getInstance(cassandraOptions)
 
     new BasicStream[Array[Byte]](
       name = "stream_name",

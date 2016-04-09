@@ -86,16 +86,15 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
     val transaction: UUID = TimeUuid()
     val data = "some_data"
     val cnt = 1000
-    val timeout = 10 seconds
 
-    val jobs = ListBuffer[Future[Unit]]()
+    val jobs = ListBuffer[() => Unit]()
 
     for (i <- 0 until 1000) {
       val future = cassandraStorage.put(streamName, partition, transaction, 60*60*24, data.getBytes, i)
       jobs += future
     }
 
-    jobs.foreach(x=> Await.ready(x, timeout))
+    jobs.foreach(x=> x())
 
     val queue: mutable.Queue[Array[Byte]] = cassandraStorage.get(streamName, partition, transaction, 0, cnt-1)
     val emptyQueueForLeftBound = cassandraStorage.get(streamName, partition, transaction, -100, -1)

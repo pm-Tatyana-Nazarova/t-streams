@@ -3,6 +3,7 @@ package com.bwsw.tstreams.data.cassandra
 import java.nio.ByteBuffer
 import java.util
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 import com.bwsw.tstreams.data.IStorage
 import com.datastax.driver.core._
@@ -42,14 +43,14 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
    * @param transaction Number of stream transactions
    * @param data Data which will be put
    * @param partNum Data unique part number
-   * @return Wait future (if insertion was not async wait future will complete instantly)
+   * @return Wait lambda
    */
   override def put(streamName : String,
                    partition : Int,
                    transaction: UUID,
                    ttl : Int,
                    data: Array[Byte],
-                   partNum: Int) : Future[Unit] = {
+                   partNum: Int) : () => Unit = {
 
     val values = List(streamName, new Integer(partition), transaction, new Integer(partNum), ByteBuffer.wrap(data), new Integer(ttl))
 
@@ -60,9 +61,7 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
       .executeAsync(statementWithBindings)
     logger.debug(s"finished inserting data for stream:{$streamName}, partition:{$partition}, partNum:{$partNum}\n")
 
-    val job: Future[Unit] = Future {
-      res.getUninterruptibly
-    }
+    val job: () => Unit = () => res.getUninterruptibly(1, TimeUnit.SECONDS)
     job
   }
 
