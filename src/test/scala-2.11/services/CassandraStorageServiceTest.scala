@@ -90,5 +90,4 @@ class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndA
     cluster.close()
     session.close()
   }
-
 }

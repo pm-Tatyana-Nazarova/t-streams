@@ -1,7 +1,6 @@
 package utils
 
 import java.util.UUID
-
 import com.bwsw.tstreams.utils.GeneratorsEntity
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
