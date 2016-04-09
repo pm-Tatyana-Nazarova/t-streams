@@ -1,28 +1,22 @@
 package metadata
 
 import com.bwsw.tstreams.metadata.MetadataStorage
-import com.datastax.driver.core.{Session, Cluster}
+import com.datastax.driver.core.Cluster
 import org.scalatest._
 import testutils.{RandomStringGen, CassandraHelper}
 
 
 class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll {
   def randomString: String = RandomStringGen.randomAlphaString(10)
-  var randomKeyspace : String = null
-  var cluster: Cluster = null
-  var session: Session = null
-  var connectedSession : Session = null
 
-  override def beforeAll(): Unit = {
-    randomKeyspace = randomString
-    cluster = Cluster.builder().addContactPoint("localhost").build()
-    session = cluster.connect()
+  val randomKeyspace = randomString
+  val cluster = Cluster.builder().addContactPoint("localhost").build()
+  val session = cluster.connect()
 
-    CassandraHelper.createKeyspace(session,randomKeyspace)
-    CassandraHelper.createMetadataTables(session,randomKeyspace)
+  CassandraHelper.createKeyspace(session,randomKeyspace)
+  CassandraHelper.createMetadataTables(session,randomKeyspace)
 
-    connectedSession = cluster.connect(randomKeyspace)
-  }
+  val connectedSession = cluster.connect(randomKeyspace)
 
   "MetadataStorage.init(), MetadataStorage.truncate() and MetadataStorage.remove()" should "create, truncate and remove metadata tables" in {
 
