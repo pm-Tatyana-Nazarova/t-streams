@@ -36,7 +36,6 @@ class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     checkIfOk shouldEqual true
   }
 
-
   override def afterAll() : Unit = {
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     cluster.close()
