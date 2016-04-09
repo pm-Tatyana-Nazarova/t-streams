@@ -60,7 +60,7 @@ class AR_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends Flat
     val totalTxn = 10
     val totalElementsInTxn = 10
     val producersAmount = 15
-    val dataToSend: List[String] = (for (part <- 0 until totalElementsInTxn) yield randomString).toList.sorted
+    val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
 
     val producers: List[BasicProducer[String, Array[Byte]]] =
       (0 until producersAmount)
@@ -121,8 +121,9 @@ class AR_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends Flat
 
 
     //assert that is nothing to read
-    for (i <- 0 until totalPartitions)
+    (0 until totalPartitions) foreach { _=>
       checkVal &= consumer.getTransaction.isEmpty
+    }
 
     checkVal &= !consumerThread.isAlive
     producersThreads.foreach(x=> checkVal &= !x.isAlive)

@@ -1,7 +1,6 @@
 package lockservice
 
 import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.lockservice.impl.{ZkLockerFactory, ZkLocker}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 

@@ -1,7 +1,6 @@
 package agents.producer
 
 import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.agents.producer.{BasicProducerTransaction, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
@@ -63,7 +62,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     txn.isInstanceOf[BasicProducerTransaction[_,_]] shouldEqual true
   }
 
-  "BasicProducer.newTransaction(false)" should "throw exception if previous transaction not closed" in {
+  "BasicProducer.newTransaction(false)" should "throw exception if previous transaction was not closed" in {
     val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(false)
     intercept[IllegalStateException] {
        val txn2 = producer.newTransaction(false)
@@ -71,18 +70,18 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     txn1.close()
   }
 
-  "BasicProducer.newTransaction(true)" should "not throw exception if previous transaction not closed" in {
+  "BasicProducer.newTransaction(true)" should "not throw exception if previous transaction was not closed" in {
     val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(false)
     val txn2 = producer.newTransaction(true)
   }
 
 
   override def afterAll(): Unit = {
-    lockService.closeFactory()
-    metadataStorageFactory.closeFactory()
-    storageFactory.closeFactory()
     temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
     temporarySession.close()
     temporaryCluster.close()
+    lockService.closeFactory()
+    metadataStorageFactory.closeFactory()
+    storageFactory.closeFactory()
   }
 }

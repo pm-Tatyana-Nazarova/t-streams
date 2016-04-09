@@ -8,7 +8,6 @@ import com.bwsw.tstreams.entities.StreamEntity
 
 class StreamEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
-
   var randomKeyspace : String = null
   var temporaryCluster : Cluster = null
   var temporarySession: Session = null
@@ -25,7 +24,7 @@ class StreamEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     connectedSession = temporaryCluster.connect(randomKeyspace)
   }
 
-  "StreamEntity.createStream(); StreamEntity.getStream()" should "create and retrieve created stream from metadata tables" in {
+  "StreamEntity.createStream() StreamEntity.getStream()" should "create and retrieve created stream from metadata tables" in {
     val streamEntity = new StreamEntity("streams", connectedSession)
     val streamName = randomString
     val partitions = 3
@@ -40,7 +39,7 @@ class StreamEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
       && streamSettings.ttl == ttl)
   }
 
-  "StreamEntity.createStream(); StreamEntity.alternate(); StreamEntity.getStream()" should
+  "StreamEntity.createStream() StreamEntity.alternate() StreamEntity.getStream()" should
     "create, alternate and retrieve created stream from metadata tables" in {
 
     val streamEntity = new StreamEntity("streams", connectedSession)
@@ -60,7 +59,7 @@ class StreamEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
       && streamSettings.ttl == ttl+1)
   }
 
-  "StreamEntity.createStream(); StreamEntity.delete(); StreamEntity.isExist()" should
+  "StreamEntity.createStream() StreamEntity.delete() StreamEntity.isExist()" should
     "create, delete and checking existence of stream from metadata tables" in {
 
     val streamEntity = new StreamEntity("streams", connectedSession)
@@ -75,7 +74,7 @@ class StreamEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   }
 
 
-  "StreamEntity.createStream(); StreamEntity.createStream()" should
+  "StreamEntity.createStream() StreamEntity.createStream()" should
     "throw exception because two streams with equivalent name can't exist" in {
 
     val streamEntity = new StreamEntity("streams", connectedSession)
@@ -104,17 +103,9 @@ class StreamEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   }
 
   override def afterAll(): Unit = {
-    val newCluster = Cluster.builder().addContactPoint("localhost").build()
-    val newSession: Session = newCluster.connect()
-    newSession.execute(s"DROP KEYSPACE $randomKeyspace")
-    newCluster.close()
-    newSession.close()
-
-    if (!connectedSession.isClosed)
-      connectedSession.close()
-    if (!temporarySession.isClosed)
-      temporarySession.close()
-    if(!temporaryCluster.isClosed)
-      temporaryCluster.close()
+    temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
+    connectedSession.close()
+    temporarySession.close()
+    temporaryCluster.close()
   }
 }

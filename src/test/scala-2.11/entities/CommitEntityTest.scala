@@ -11,7 +11,6 @@ import scala.collection.mutable
 
 class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
-
   var randomKeyspace : String = null
   var temporaryCluster : Cluster = null
   var temporarySession: Session = null
@@ -21,16 +20,14 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     randomKeyspace = randomString
     temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
     temporarySession = temporaryCluster.connect()
-
     CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
     CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
-
     connectedSession = temporaryCluster.connect(randomKeyspace)
   }
 
   "CommitEntity.commit() CommitEntity.getTransactionAmount()" should
-    "commit -> add new commit in commit metadata table and it should expire after some time(ttl param)," +
-    "getTransactionAmount -> retrieve this transaction amount from commit_log" in {
+    "commit - add new commit in commit metadata table and it should expire after some time(ttl param)," +
+    "getTransactionAmount - retrieve this transaction amount from commit_log" in {
 
     val commitEntity = new CommitEntity("commit_log", connectedSession)
     val stream = randomString
@@ -52,8 +49,8 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   }
 
   "CommitEntity.commit() CommitEntity.getTransactions()" should
-    "commit -> add new commit in commit metadata table" +
-      "getTransactions -> retrieve this transactions from commit_log" in {
+    "commit - add new commit in commit metadata table" +
+      "getTransactions - retrieve this transactions from commit_log" in {
 
     val commitEntity = new CommitEntity("commit_log", connectedSession)
     val stream = randomString
@@ -76,17 +73,9 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   }
 
   override def afterAll(): Unit = {
-    val newCluster = Cluster.builder().addContactPoint("localhost").build()
-    val newSession: Session = newCluster.connect()
-    newSession.execute(s"DROP KEYSPACE $randomKeyspace")
-    newCluster.close()
-    newSession.close()
-
-    if (!connectedSession.isClosed)
-      connectedSession.close()
-    if (!temporarySession.isClosed)
-      temporarySession.close()
-    if(!temporaryCluster.isClosed)
-      temporaryCluster.close()
+    temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
+    connectedSession.close()
+    temporarySession.close()
+    temporaryCluster.close()
   }
 }

@@ -15,7 +15,6 @@ import scala.language.postfixOps
 
 class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
-
   var randomKeyspace : String = null
   var cluster: Cluster = null
   var session: Session = null
@@ -25,16 +24,15 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
     randomKeyspace = randomString
     cluster = Cluster.builder().addContactPoint("localhost").build()
     session = cluster.connect()
-
     CassandraHelper.createKeyspace(session,randomKeyspace)
     CassandraHelper.createDataTable(session,randomKeyspace)
-
     connectedSession = cluster.connect(randomKeyspace)
   }
 
   "CassandraStorage.close()" should "close session and cluster connection" in {
 
-    val cassandraStorage = new CassandraStorage(cluster = cluster,
+    val cassandraStorage = new CassandraStorage(
+      cluster = cluster,
       session = connectedSession,
       keyspace = randomKeyspace)
 
@@ -56,7 +54,8 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
 
   "CassandraStorage.init(), CassandraStorage.truncate() and CassandraStorage.remove()" should "create, truncate and remove data table" in {
 
-    val cassandraStorage = new CassandraStorage(cluster = cluster,
+    val cassandraStorage = new CassandraStorage(
+      cluster = cluster,
       session = connectedSession,
       keyspace = randomKeyspace)
 
@@ -75,9 +74,10 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
     checkIfOk shouldEqual true
   }
 
-  "CassandraStorage.put() CassandraStorage.get()" should "insert data in cassandra storage and receive it" in {
+  "CassandraStorage.put() CassandraStorage.get()" should "insert data in cassandra storage and retrieve it" in {
 
-    val cassandraStorage = new CassandraStorage(cluster = cluster,
+    val cassandraStorage = new CassandraStorage(
+      cluster = cluster,
       session = connectedSession,
       keyspace = randomKeyspace)
 
@@ -117,17 +117,9 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
 
 
   override def afterAll() : Unit = {
-    val newCluster = Cluster.builder().addContactPoint("localhost").build()
-    val newSession: Session = newCluster.connect()
-    newSession.execute(s"DROP KEYSPACE $randomKeyspace")
-    newCluster.close()
-    newSession.close()
-
-    if (!cluster.isClosed)
-      cluster.close()
-    if (!session.isClosed)
-      session.close()
-    if (!connectedSession.isClosed)
-      connectedSession.close()
+    session.execute(s"DROP KEYSPACE $randomKeyspace")
+    cluster.close()
+    session.close()
+    connectedSession.close()
   }
 }

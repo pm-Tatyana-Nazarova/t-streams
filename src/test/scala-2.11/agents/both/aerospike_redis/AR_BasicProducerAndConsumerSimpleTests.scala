@@ -19,7 +19,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks._
 
 
-class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with BeforeAndAfterAll{
+class AR_BasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
   var randomKeyspace : String = null
   var cluster : Cluster = null
@@ -126,8 +126,9 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
     var checkVal = txn.getAll().sorted == sendData
 
     //assert that is nothing to read
-    for(i <- 0 until consumer.stream.getPartitions)
+    (0 until consumer.stream.getPartitions) foreach { _=>
       checkVal &= consumer.getTransaction.isEmpty
+    }
 
     checkVal shouldEqual true
   }
@@ -152,8 +153,9 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
     var checkVal = true
 
     //assert that is nothing to read
-    for(i <- 0 until consumer.stream.getPartitions)
+    (0 until consumer.stream.getPartitions) foreach { _ =>
       checkVal &= consumer.getTransaction.isEmpty
+    }
 
     checkVal &= dataToAssert.toList.sorted == sendData
 
@@ -183,13 +185,14 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
     }
 
     //assert that is nothing to read
-    for(i <- 0 until consumer.stream.getPartitions)
+    (0 until consumer.stream.getPartitions) foreach { _ =>
       checkVal &= consumer.getTransaction.isEmpty
+    }
 
     checkVal shouldBe true
   }
 
-  "producer, consumer" should "producer - generate transaction async, consumer retrieve it async" in {
+  "producer, consumer" should "producer - generate transaction, consumer retrieve it (both start async)" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val timeoutForWaiting = 120
     val totalDataInTxn = 10
@@ -230,8 +233,9 @@ class AR_BasicProducerAndConsumerSimpleTest extends FlatSpec with Matchers with 
     checkVal &= !consumerThread.isAlive
 
     //assert that is nothing to read
-    for(i <- 0 until consumer.stream.getPartitions)
+    (0 until consumer.stream.getPartitions) foreach { _ =>
       checkVal &= consumer.getTransaction.isEmpty
+    }
 
     checkVal shouldEqual true
   }

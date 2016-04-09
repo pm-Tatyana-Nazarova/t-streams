@@ -1,7 +1,6 @@
 package entities
 
 import java.util.UUID
-
 import com.bwsw.tstreams.entities.ConsumerEntity
 import com.datastax.driver.core.{Session, Cluster}
 import com.gilt.timeuuid.TimeUuid
@@ -11,7 +10,6 @@ import testutils.{CassandraHelper, RandomStringGen}
 
 class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
-
   var randomKeyspace : String = null
   var temporaryCluster : Cluster = null
   var temporarySession: Session = null
@@ -21,14 +19,12 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     randomKeyspace = randomString
     temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
     temporarySession = temporaryCluster.connect()
-
     CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
     CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
-
     connectedSession = temporaryCluster.connect(randomKeyspace)
   }
 
-  "ConsumerEntity.saveSingleOffset(); ConsumerEntity.exist(); ConsumerEntity.getOffset()" should "create new consumer with particular offset," +
+  "ConsumerEntity.saveSingleOffset() ConsumerEntity.exist() ConsumerEntity.getOffset()" should "create new consumer with particular offset," +
     " then check consumer existence, then get this consumer offset" in {
 
     val consumerEntity = new ConsumerEntity("consumers", connectedSession)
@@ -40,7 +36,8 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     val checkExist: Boolean = consumerEntity.exist(consumer)
     val retValOffset: UUID = consumerEntity.getOffset(consumer, stream, partition)
 
-    assert(checkExist && retValOffset == offset)
+    val checkVal = checkExist && retValOffset == offset
+    checkVal shouldBe true
   }
 
   "ConsumerEntity.exist()" should "return false if consumer not exist" in {
@@ -71,25 +68,19 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
     consumerEntity.saveBatchOffset(consumer,stream,offsets)
 
+    var checkVal = true
+
     for (i <- 0 to 100){
       val uuid: UUID = consumerEntity.getOffset(consumer, stream, i)
-      uuid shouldEqual offsets(i)
+      checkVal &= uuid == offsets(i)
     }
-
+    checkVal shouldBe true
   }
 
   override def afterAll(): Unit = {
-    val newCluster = Cluster.builder().addContactPoint("localhost").build()
-    val newSession: Session = newCluster.connect()
-    newSession.execute(s"DROP KEYSPACE $randomKeyspace")
-    newCluster.close()
-    newSession.close()
-
-    if (!connectedSession.isClosed)
-      connectedSession.close()
-    if (!temporarySession.isClosed)
-      temporarySession.close()
-    if(!temporaryCluster.isClosed)
-      temporaryCluster.close()
+    temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
+    connectedSession.close()
+    temporarySession.close()
+    temporaryCluster.close()
   }
 }

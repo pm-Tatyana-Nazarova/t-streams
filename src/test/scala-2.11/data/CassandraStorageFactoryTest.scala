@@ -1,7 +1,6 @@
 package data
 
 import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory, CassandraStorage}
 import com.datastax.driver.core.{Session, Cluster}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
@@ -10,7 +9,6 @@ import testutils.{CassandraHelper, RandomStringGen}
 
 class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     def randomString: String = RandomStringGen.randomAlphaString(10)
-
     var randomKeyspace : String = null
     var temporaryCluster : Cluster = null
     var temporarySession: Session = null

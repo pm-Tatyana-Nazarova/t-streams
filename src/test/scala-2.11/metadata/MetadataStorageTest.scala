@@ -7,9 +7,7 @@ import testutils.{RandomStringGen, CassandraHelper}
 
 
 class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll {
-
   def randomString: String = RandomStringGen.randomAlphaString(10)
-
   var randomKeyspace : String = null
   var cluster: Cluster = null
   var session: Session = null
@@ -41,24 +39,14 @@ class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     catch{
       case e : Exception => checkIfOk = false
     }
-
     checkIfOk shouldEqual true
   }
 
 
   override def afterAll() : Unit = {
-    val newCluster = Cluster.builder().addContactPoint("localhost").build()
-    val newSession: Session = newCluster.connect()
-    newSession.execute(s"DROP KEYSPACE $randomKeyspace")
-    newCluster.close()
-    newSession.close()
-
-    if (!cluster.isClosed)
-      cluster.close()
-    if (!session.isClosed)
-      session.close()
-    if (!connectedSession.isClosed)
-      connectedSession.close()
+    session.execute(s"DROP KEYSPACE $randomKeyspace")
+    cluster.close()
+    session.close()
+    connectedSession.close()
   }
-
 }

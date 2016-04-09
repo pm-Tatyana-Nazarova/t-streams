@@ -56,7 +56,7 @@ class AR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSp
     val totalTxn = 10
     val totalElementsInTxn = 10
     val producersAmount = 15
-    val dataToSend: List[String] = (for (part <- 0 until totalElementsInTxn) yield randomString).toList.sorted
+    val dataToSend = (for (part <- 0 until totalElementsInTxn) yield randomString).sorted
     val producers: List[BasicProducer[String, Array[Byte]]] = (0 until producersAmount).toList.map(x=>getProducer())
     val producersThreads = producers.map(p =>
       new Thread(new Runnable {
