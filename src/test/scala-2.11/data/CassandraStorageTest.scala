@@ -32,7 +32,7 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
     val equation1 = cluster.isClosed
     val equation2 = connectedSession.isClosed
 
-    //using for future tests
+    //used for future tests
     if (cluster.isClosed || session.isClosed || connectedSession.isClosed){
       cluster = Cluster.builder().addContactPoint("localhost").build()
       session = cluster.connect()
