@@ -128,6 +128,7 @@ class AerospikeStorage(options : AerospikeStorageOptions) extends IStorage[Array
 
   /**
    * Save all info from buffer in IStorage
+   * @return Lambda which indicate done or not putting request(if request was async) null else
    */
-  override def saveBuffer(): Unit = ???
+  override def saveBuffer(): () => Unit = ???
 }

@@ -45,7 +45,7 @@ trait IStorage[T] {
    * @param data Data which will be put
    * @param partNum Data unique number
    * @param ttl Time of records expiration in seconds
-   * @return lambda which indicate done or not putting request(if request was async) null else
+   * @return Lambda which indicate done or not putting request(if request was async) null else
    */
   def put(streamName : String, partition : Int, transaction : java.util.UUID, ttl : Int, data : T, partNum : Int) : () => Unit
 
@@ -75,6 +75,7 @@ trait IStorage[T] {
 
   /**
    * Save all info from buffer in IStorage
+   * @return Lambda which indicate done or not putting request(if request was async) null else
    */
-  def saveBuffer() : Unit
+  def saveBuffer() : () => Unit
 }
