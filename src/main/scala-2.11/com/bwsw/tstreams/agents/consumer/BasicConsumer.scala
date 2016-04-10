@@ -1,10 +1,9 @@
 package com.bwsw.tstreams.agents.consumer
 
 import java.util.UUID
-
 import com.bwsw.tstreams.entities.TransactionSettings
-import com.bwsw.tstreams.entities.offsets.{Oldest, DateTime, Newest}
 import com.bwsw.tstreams.streams.BasicStream
+import com.gilt.timeuuid.TimeUuid
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
@@ -43,7 +42,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       options.offset match {
         case Oldest =>
           for (i <- 0 until stream.getPartitions)
-            currentOffsets(i) = Oldest.value
+            currentOffsets(i) = TimeUuid(0)
 
         case Newest =>
           val newestUuid = stream.metadataStorage.generatorEntity.getTimeUUID()
@@ -52,7 +51,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
 
         case offset : DateTime =>
           for (i <- 0 until stream.getPartitions)
-            currentOffsets(i) = offset.value
+            currentOffsets(i) = TimeUuid(offset.startTime.getTime)
 
         case _ => throw new IllegalStateException("offset cannot be resolved")
       }

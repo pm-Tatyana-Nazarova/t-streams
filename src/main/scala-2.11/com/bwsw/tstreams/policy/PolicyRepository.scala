@@ -3,7 +3,7 @@ package com.bwsw.tstreams.policy
 import com.bwsw.tstreams.streams.BasicStream
 
 /**
- * Repo for creating some defined policy
+ * Repo for creating some defined policies
  */
 object PolicyRepository {
   /**

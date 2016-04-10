@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.agents.consumer
 
 import com.bwsw.tstreams.converter.IConverter
-import com.bwsw.tstreams.entities.offsets.IOffset
 import com.bwsw.tstreams.policy.AbstractPolicy
 
 /**
