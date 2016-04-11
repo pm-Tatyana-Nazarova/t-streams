@@ -4,14 +4,11 @@ import java.nio.ByteBuffer
 import java.util
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-
 import com.bwsw.tstreams.data.IStorage
 import com.datastax.driver.core._
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 /**
  * Cassandra storage impl of IStorage
@@ -34,7 +31,6 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
    */
   private val selectStatement = session
     .prepare(s"select data from data_queue where stream=? AND partition=? AND transaction=? AND seq>=? AND seq<=? LIMIT ?")
-
 
   /**
    * Put data in the cassandra storage
@@ -158,19 +154,24 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
   override def isClosed(): Boolean = session.isClosed && cluster.isClosed
 
   /**
-   * Put data in buffer to save it later
-   * @param streamName Name of the stream
-   * @param partition Number of stream partitions
-   * @param transaction Number of stream transactions
-   * @param data Data which will be put
-   * @param partNum Data unique number
-   * @param ttl Time of records expiration in seconds
-   */
-  override def putInBuffer(streamName: String, partition: Int, transaction: UUID, ttl: Int, data: Array[Byte], partNum: Int): Unit = ???
-
-  /**
    * Save all info from buffer in IStorage
    * @return Lambda which indicate done or not putting request(if request was async) null else
    */
-  override def saveBuffer(): () => Unit = ???
+  override def saveBuffer(): () => Unit = {
+    val batchStatement = new BatchStatement()
+    buffer foreach {x =>
+      val statementWithBindings = insertStatement.bind(
+        x.streamName,
+        new Integer(x.partition),
+        x.transaction,
+        new Integer(x.partNum),
+        ByteBuffer.wrap(x.data),
+        new Integer(x.ttl))
+
+      batchStatement.add(statementWithBindings)
+    }
+    session.execute(batchStatement)
+
+    null
+  }
 }

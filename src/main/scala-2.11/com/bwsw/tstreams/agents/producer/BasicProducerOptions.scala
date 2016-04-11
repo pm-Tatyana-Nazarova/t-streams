@@ -10,6 +10,7 @@ import com.bwsw.tstreams.policy.AbstractPolicy
  * @param producerKeepAliveInterval Update producer interval for updating producer info
  * @param writePolicy Strategy for selecting next partition
  * @param converter User defined or basic converter for converting USERTYPE objects to DATATYPE objects(storage object type)
+ * @param insertType Insertion Type (only BatchInsert and SingleElementInsert are allowed now)
  * @tparam USERTYPE User object type
  * @tparam DATATYPE Storage object type
  */
@@ -17,6 +18,7 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
                                               val transactionKeepAliveInterval : Int,
                                               val producerKeepAliveInterval : Int,
                                               val writePolicy : AbstractPolicy,
+                                              val insertType: InsertType,
                                               val converter : IConverter[USERTYPE,DATATYPE]) {
 
   /**
@@ -38,4 +40,16 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
 
     if (producerKeepAliveInterval < 1)
       throw new IllegalArgumentException("producerKeepAlive interval should be greater or equal than 1")
+
+
+    insertType match {
+      case SingleElementInsert =>
+
+      case BatchInsert(size) =>
+        if (size <= 0)
+          throw new IllegalArgumentException("batch size must be greater or equal 1")
+
+      case _ =>
+        throw new IllegalArgumentException("Insert type can't be resolved")
+    }
 }

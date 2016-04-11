@@ -1,7 +1,7 @@
 package agents.producer
 
 import java.net.InetSocketAddress
-import com.bwsw.tstreams.agents.producer.{BasicProducerTransaction, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{SingleElementInsert, BasicProducerTransaction, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
 import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
@@ -42,6 +42,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,
     PolicyRepository.getRoundRobinPolicy(stream, List(0,1,2)),
+    SingleElementInsert,
     stringToArrayByteConverter)
 
   val producer = new BasicProducer("test_producer", stream, options)

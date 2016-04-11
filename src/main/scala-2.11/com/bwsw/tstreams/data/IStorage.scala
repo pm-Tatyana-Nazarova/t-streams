@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.data
 
+import java.util.UUID
+
 /**
   * Interface for data storage
   * @tparam T Storage data type
@@ -70,7 +72,8 @@ trait IStorage[T] {
    * @param partNum Data unique number
    * @param ttl Time of records expiration in seconds
    */
-  def putInBuffer(streamName : String, partition : Int, transaction : java.util.UUID, ttl : Int, data : T, partNum : Int) : Unit
+  def putInBuffer(streamName : String, partition : Int, transaction : java.util.UUID, ttl : Int, data : T, partNum : Int) : Unit =
+    buffer += dataToPush(streamName, partition, transaction, ttl, data, partNum)
 
 
   /**
@@ -78,4 +81,35 @@ trait IStorage[T] {
    * @return Lambda which indicate done or not putting request(if request was async) null else
    */
   def saveBuffer() : () => Unit
+
+
+  /**
+   * Clear current producer buffer
+   */
+  def clearBuffer() : Unit =
+    buffer.clear()
+
+
+  /**
+   * @return Buffer size
+   */
+  def getBufferSize() : Int =
+    buffer.size
+
+  /**
+   * Buffer for buffering data to push it with saveBuffer()
+   */
+  protected val buffer = scala.collection.mutable.ListBuffer[dataToPush]()
+
+  /**
+   * Helper class for buffering data
+   * @param streamName Name of the stream to push data
+   * @param partition Number of the partition
+   * @param transaction Number of the transaction
+   * @param ttl Ttl of how long data will exist
+   * @param data User data
+   * @param partNum Part number of data(in single txn can be >1 parts of userdata)
+   */
+  protected case class dataToPush(streamName: String, partition: Int, transaction: UUID, ttl: Int, data: T, partNum: Int)
+
 }

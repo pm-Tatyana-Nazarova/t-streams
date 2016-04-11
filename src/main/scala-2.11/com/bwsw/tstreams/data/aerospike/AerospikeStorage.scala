@@ -116,19 +116,21 @@ class AerospikeStorage(options : AerospikeStorageOptions) extends IStorage[Array
     client.close()
 
   /**
-   * Put data in buffer to save it later
-   * @param streamName Name of the stream
-   * @param partition Number of stream partitions
-   * @param transaction Number of stream transactions
-   * @param data Data which will be put
-   * @param partNum Data unique number
-   * @param ttl Time of records expiration in seconds
-   */
-  override def putInBuffer(streamName: String, partition: Int, transaction: UUID, ttl: Int, data: Array[Byte], partNum: Int): Unit = ???
-
-  /**
    * Save all info from buffer in IStorage
    * @return Lambda which indicate done or not putting request(if request was async) null else
    */
-  override def saveBuffer(): () => Unit = ???
+  override def saveBuffer(): () => Unit = {
+    val elem = buffer.head
+    options.writePolicy.expiration = elem.ttl
+    val key: Key = new Key(options.namespace, s"${elem.streamName}/${elem.partition}", elem.transaction.toString)
+
+    val mapped = buffer map {elem =>
+      new Bin(elem.partNum.toString, elem.data)
+    }
+
+    logger.debug(s"Start putting data in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
+    client.put(options.writePolicy, key, mapped:_*)
+    logger.debug(s"Finished putting data in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
+    null
+  }
 }
