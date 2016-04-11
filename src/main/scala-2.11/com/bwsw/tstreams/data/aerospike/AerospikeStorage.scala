@@ -103,11 +103,7 @@ class AerospikeStorage(options : AerospikeStorageOptions) extends IStorage[Array
   /**
    * @return Correctness of created data storage(not supported now)
    */
-  override def validate(): Boolean = {
-    //TODO review
-    logger.warn("this method always return true for aerospike")
-    true
-  }
+  override def validate(): Boolean = ???
 
   /**
    * Close storage
