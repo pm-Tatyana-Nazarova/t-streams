@@ -6,11 +6,10 @@ import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
 import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
-import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.services.BasicStreamService
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{LocalGeneratorCreator, CassandraHelper, RandomStringGen}
+import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringGen}
 
 
 class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
@@ -41,7 +40,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     transactionTTL = 10,
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,
-    PolicyRepository.getRoundRobinPolicy(stream, List(0,1,2)),
+    RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0,1,2)),
     SingleElementInsert,
     LocalGeneratorCreator.getGen(),
     stringToArrayByteConverter)

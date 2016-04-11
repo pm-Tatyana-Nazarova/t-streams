@@ -5,12 +5,11 @@ import com.bwsw.tstreams.agents.consumer.{Oldest, BasicConsumerTransaction, Basi
 import com.bwsw.tstreams.converter.ArrayByteToStringConverter
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory, CassandraStorage}
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
-import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.services.BasicStreamService
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{LocalGeneratorCreator, CassandraHelper, RandomStringGen}
+import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringGen}
 
 
 class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
@@ -42,7 +41,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     dataPreload = 7,
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
-    PolicyRepository.getRoundRobinPolicy(stream, List(0,1,2)),
+    RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0,1,2)),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = false)

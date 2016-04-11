@@ -10,11 +10,10 @@ import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByt
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
-import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{LocalGeneratorCreator, CassandraHelper, RandomStringGen}
+import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringGen}
 
 import scala.collection.mutable.ListBuffer
 
@@ -80,7 +79,7 @@ class AZ_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends Flat
       dataPreload = 7,
       consumerKeepAliveInterval = 5,
       arrayByteToStringConverter,
-      PolicyRepository.getRoundRobinPolicy(
+      RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = (0 until totalPartitions).toList,
         stream = streamInst),
       Oldest,
@@ -131,7 +130,7 @@ class AZ_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends Flat
       transactionTTL = 6,
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,
-      writePolicy = PolicyRepository.getRoundRobinPolicy(stream, usedPartitions),
+      writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions),
       BatchInsert(batchSizeVal),
       LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter)

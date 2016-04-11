@@ -1,11 +1,12 @@
-package com.bwsw.tstreams.policy
+package testutils
 
+import com.bwsw.tstreams.policy.RoundRobinPolicy
 import com.bwsw.tstreams.streams.BasicStream
 
 /**
  * Repo for creating some defined policies
  */
-object PolicyRepository {
+object RoundRobinPolicyCreator {
   /**
    *
    * @param stream Stream instance

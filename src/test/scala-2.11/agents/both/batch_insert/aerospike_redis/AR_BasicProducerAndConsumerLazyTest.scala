@@ -10,12 +10,11 @@ import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByt
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
-import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.redisson.Config
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{LocalGeneratorCreator, CassandraHelper, RandomStringGen}
+import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringGen}
 
 import scala.util.control.Breaks._
 
@@ -99,7 +98,7 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     transactionTTL = 6,
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,
-    PolicyRepository.getRoundRobinPolicy(streamForProducer1, List(0,1,2)),
+    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer1, List(0,1,2)),
     BatchInsert(batchSizeVal),
     LocalGeneratorCreator.getGen(),
     stringToArrayByteConverter)
@@ -108,7 +107,7 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     transactionTTL = 6,
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,
-    PolicyRepository.getRoundRobinPolicy(streamForProducer2, List(0,1,2)),
+    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer2, List(0,1,2)),
     BatchInsert(batchSizeVal),
     LocalGeneratorCreator.getGen(),
     stringToArrayByteConverter)
@@ -118,7 +117,7 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     dataPreload = 7,
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
-    PolicyRepository.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = false)
