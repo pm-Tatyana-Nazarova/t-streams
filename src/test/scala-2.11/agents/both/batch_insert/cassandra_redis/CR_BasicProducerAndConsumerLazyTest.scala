@@ -13,7 +13,7 @@ import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.redisson.Config
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{CassandraHelper, RandomStringGen}
+import testutils.{LocalGeneratorCreator, CassandraHelper, RandomStringGen}
 import scala.util.control.Breaks._
 
 
@@ -94,6 +94,7 @@ class CR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     producerKeepAliveInterval = 1,
     PolicyRepository.getRoundRobinPolicy(streamForProducer1, List(0,1,2)),
     BatchInsert(batchSizeVal),
+    LocalGeneratorCreator.getGen(),
     stringToArrayByteConverter)
 
   val producerOptions2 = new BasicProducerOptions[String, Array[Byte]](
@@ -102,6 +103,7 @@ class CR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     producerKeepAliveInterval = 1,
     PolicyRepository.getRoundRobinPolicy(streamForProducer2, List(0,1,2)),
     BatchInsert(batchSizeVal),
+    LocalGeneratorCreator.getGen(),
     stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
@@ -111,6 +113,7 @@ class CR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     arrayByteToStringConverter,
     PolicyRepository.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
     Oldest,
+    LocalGeneratorCreator.getGen(),
     useLastOffset = false)
 
   //agents

@@ -3,7 +3,7 @@ package com.bwsw.tstreams.metadata
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.entities._
-import com.bwsw.tstreams.utils.GeneratorsEntity
+import com.bwsw.tstreams.utils.LocalTimeTxnGenerator
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core._
 import scala.collection.mutable.ListBuffer
@@ -27,27 +27,22 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
   /**
    * Stream entity instance
    */
-  val streamEntity = new StreamEntity("streams", session)
+  lazy val streamEntity = new StreamEntity("streams", session)
 
   /**
    * Commit entity instance
    */
-  val commitEntity = new CommitEntity("commit_log", session)
+  lazy val commitEntity = new CommitEntity("commit_log", session)
 
   /**
    * Commit entity instance for producer async txn update
    */
-  val producerCommitEntity = new CommitEntity("commit_log", session)
-
-  /**
-   * Generator entity instance
-   */
-  val generatorEntity = new GeneratorsEntity
+  lazy val producerCommitEntity = new CommitEntity("commit_log", session)
 
   /**
    * Consumer entity instance
    */
-  val consumerEntity = new ConsumerEntity("consumers", session)
+  lazy val consumerEntity = new ConsumerEntity("consumers", session)
 
   /**
    * @return Keyspace

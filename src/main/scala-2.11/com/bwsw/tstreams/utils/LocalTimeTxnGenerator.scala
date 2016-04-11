@@ -6,7 +6,7 @@ import com.datastax.driver.core.utils.UUIDs
 /**
  * Entity for generating new transaction time
  */
-class GeneratorsEntity {
+class LocalTimeTxnGenerator extends ITxnGenerator{
   /**
    * @return Transaction UUID
    */

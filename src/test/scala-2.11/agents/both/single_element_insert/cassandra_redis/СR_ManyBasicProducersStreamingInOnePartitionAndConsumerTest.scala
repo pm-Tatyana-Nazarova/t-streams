@@ -12,7 +12,7 @@ import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.redisson.Config
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{CassandraHelper, RandomStringGen}
+import testutils.{LocalGeneratorCreator, CassandraHelper, RandomStringGen}
 import scala.collection.mutable.ListBuffer
 
 
@@ -68,6 +68,7 @@ class СR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatS
         usedPartitions = List(0),
         stream = streamInst),
       Oldest,
+      LocalGeneratorCreator.getGen(),
       useLastOffset = false)
 
     var checkVal = true
@@ -112,6 +113,7 @@ class СR_ManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatS
       producerKeepAliveInterval = 1,
       writePolicy = PolicyRepository.getRoundRobinPolicy(stream, List(0)),
       SingleElementInsert,
+      LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter)
 
     val producer = new BasicProducer("test_producer1", stream, producerOptions)

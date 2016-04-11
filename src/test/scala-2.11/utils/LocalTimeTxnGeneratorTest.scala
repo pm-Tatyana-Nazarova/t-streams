@@ -1,13 +1,13 @@
 package utils
 
 import java.util.UUID
-import com.bwsw.tstreams.utils.GeneratorsEntity
+import com.bwsw.tstreams.utils.LocalTimeTxnGenerator
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 
-class GeneratorsEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
+class LocalTimeTxnGeneratorTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   "Generators.getTimeUUID()" should "return unique UUID" in {
-    val gen = new GeneratorsEntity
+    val gen = new LocalTimeTxnGenerator
     var uniqElements = Set[UUID]()
     for (i <- 0 until 100) {
       val prevSize = uniqElements.size

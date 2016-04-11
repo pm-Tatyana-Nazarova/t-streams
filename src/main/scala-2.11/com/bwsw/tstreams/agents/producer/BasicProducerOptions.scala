@@ -2,6 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.policy.AbstractPolicy
+import com.bwsw.tstreams.utils.{LocalTimeTxnGenerator, ITxnGenerator}
 
 /**
  * Class for Basic Producer Options
@@ -11,6 +12,7 @@ import com.bwsw.tstreams.policy.AbstractPolicy
  * @param writePolicy Strategy for selecting next partition
  * @param converter User defined or basic converter for converting USERTYPE objects to DATATYPE objects(storage object type)
  * @param insertType Insertion Type (only BatchInsert and SingleElementInsert are allowed now)
+ * @param txnGenerator Generator for generating UUIDs
  * @tparam USERTYPE User object type
  * @tparam DATATYPE Storage object type
  */
@@ -19,6 +21,7 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
                                               val producerKeepAliveInterval : Int,
                                               val writePolicy : AbstractPolicy,
                                               val insertType: InsertType,
+                                              val txnGenerator: ITxnGenerator,
                                               val converter : IConverter[USERTYPE,DATATYPE]) {
 
   /**

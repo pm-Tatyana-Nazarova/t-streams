@@ -10,7 +10,7 @@ import com.bwsw.tstreams.services.BasicStreamService
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraHelper, RandomStringGen}
+import testutils.{LocalGeneratorCreator, CassandraHelper, RandomStringGen}
 
 
 class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
@@ -44,6 +44,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     arrayByteToStringConverter,
     PolicyRepository.getRoundRobinPolicy(stream, List(0,1,2)),
     Oldest,
+    LocalGeneratorCreator.getGen(),
     useLastOffset = false)
 
   val consumer = new BasicConsumer("test_consumer", stream, options)

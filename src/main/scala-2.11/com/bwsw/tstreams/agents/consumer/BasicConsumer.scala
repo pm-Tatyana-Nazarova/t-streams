@@ -45,7 +45,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
             currentOffsets(i) = TimeUuid(0)
 
         case Newest =>
-          val newestUuid = stream.metadataStorage.generatorEntity.getTimeUUID()
+          val newestUuid = options.txnGenerator.getTimeUUID()
           for (i <- 0 until stream.getPartitions)
             currentOffsets(i) = newestUuid
 

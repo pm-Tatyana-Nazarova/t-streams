@@ -63,7 +63,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
   lockerRef.lock()
 
-  private val transaction = basicProducer.stream.metadataStorage.generatorEntity.getTimeUUID()
+  private val transaction = basicProducer.producerOptions.txnGenerator.getTimeUUID()
   basicProducer.stream.metadataStorage.commitEntity.commit(
     basicProducer.stream.getName,
     partition,

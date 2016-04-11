@@ -10,7 +10,7 @@ import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.services.BasicStreamService
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraHelper, RandomStringGen}
+import testutils.{LocalGeneratorCreator, CassandraHelper, RandomStringGen}
 
 
 class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
@@ -43,6 +43,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     producerKeepAliveInterval = 1,
     PolicyRepository.getRoundRobinPolicy(stream, List(0,1,2)),
     SingleElementInsert,
+    LocalGeneratorCreator.getGen(),
     stringToArrayByteConverter)
 
   val producer = new BasicProducer("test_producer", stream, options)

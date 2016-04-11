@@ -12,7 +12,7 @@ import com.bwsw.tstreams.policy.PolicyRepository
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{CassandraHelper, RandomStringGen}
+import testutils.{LocalGeneratorCreator, CassandraHelper, RandomStringGen}
 
 
 class СZ_BasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
@@ -76,6 +76,7 @@ class СZ_BasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers 
      producerKeepAliveInterval = 1,
      PolicyRepository.getRoundRobinPolicy(streamForProducer, List(0,1,2)),
      BatchInsert(batchSizeVal),
+     LocalGeneratorCreator.getGen(),
      stringToArrayByteConverter)
 
    val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
@@ -85,6 +86,7 @@ class СZ_BasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers 
      arrayByteToStringConverter,
      PolicyRepository.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
      Oldest,
+     LocalGeneratorCreator.getGen(),
      useLastOffset = true)
 
    //agents
