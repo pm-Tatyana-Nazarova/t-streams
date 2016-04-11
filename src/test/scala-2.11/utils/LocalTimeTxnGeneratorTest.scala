@@ -1,7 +1,7 @@
 package utils
 
 import java.util.UUID
-import com.bwsw.tstreams.utils.LocalTimeTxnGenerator
+import com.bwsw.tstreams.txngenerator.LocalTimeTxnGenerator
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 

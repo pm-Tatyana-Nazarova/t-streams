@@ -3,7 +3,7 @@ package com.bwsw.tstreams.metadata
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.entities._
-import com.bwsw.tstreams.utils.LocalTimeTxnGenerator
+import com.bwsw.tstreams.txngenerator.LocalTimeTxnGenerator
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core._
 import scala.collection.mutable.ListBuffer

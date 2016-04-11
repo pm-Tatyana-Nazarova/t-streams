@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.utils
+package com.bwsw.tstreams.txngenerator
 
 import java.util.UUID
 

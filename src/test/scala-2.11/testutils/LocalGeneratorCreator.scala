@@ -1,6 +1,6 @@
 package testutils
 
-import com.bwsw.tstreams.utils.LocalTimeTxnGenerator
+import com.bwsw.tstreams.txngenerator.LocalTimeTxnGenerator
 
 /**
  * Helper object for creating LocalTimeTxnGenerator
