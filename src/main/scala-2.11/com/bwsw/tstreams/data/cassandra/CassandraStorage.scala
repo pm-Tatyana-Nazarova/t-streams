@@ -170,7 +170,10 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
 
       batchStatement.add(statementWithBindings)
     }
+
+    logger.debug(s"Start putting batch of data with size:${getBufferSize()} in cassandra for streamName: {${buffer.head.streamName}}, partition: {${buffer.head.streamName}")
     session.execute(batchStatement)
+    logger.debug(s"Finished putting batch of data with size:${getBufferSize()} in cassandra for streamName: {${buffer.head.streamName}}, partition: {${buffer.head.streamName}")
 
     null
   }

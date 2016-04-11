@@ -128,9 +128,10 @@ class AerospikeStorage(options : AerospikeStorageOptions) extends IStorage[Array
       new Bin(elem.partNum.toString, elem.data)
     }
 
-    logger.debug(s"Start putting data in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
+    logger.debug(s"Start putting batch of data with size:${getBufferSize()} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
     client.put(options.writePolicy, key, mapped:_*)
-    logger.debug(s"Finished putting data in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
+    logger.debug(s"Finished putting batch of data with size:${getBufferSize()} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
+
     null
   }
 }
