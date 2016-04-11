@@ -105,7 +105,6 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
   /**
    * Validate that data storage created successfully
    */
-  //@TODO implement validate and then delete deprecated annotation
   override def validate(): Boolean = ???
 
   /**

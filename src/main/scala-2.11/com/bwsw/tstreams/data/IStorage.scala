@@ -16,7 +16,7 @@ trait IStorage[T] {
   /**
    * @return Correctness of created data storage(not supported now)
    */
-  @deprecated("now not available","1.0")
+  @deprecated("will be available in future releases","1.0")
   def validate() : Boolean
 
   /**

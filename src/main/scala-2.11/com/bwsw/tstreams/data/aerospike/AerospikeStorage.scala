@@ -101,7 +101,7 @@ class AerospikeStorage(options : AerospikeStorageOptions) extends IStorage[Array
   }
 
   /**
-   * @return Correctness of created data storage(not supported now)
+   * Validate that data storage created successfully
    */
   override def validate(): Boolean = ???
 
