@@ -1,8 +1,8 @@
 package com.bwsw.tstreams.agents.consumer
 
 import com.bwsw.tstreams.converter.IConverter
-import com.bwsw.tstreams.entities.offsets.IOffset
 import com.bwsw.tstreams.policy.AbstractPolicy
+import com.bwsw.tstreams.txngenerator.{LocalTimeTxnGenerator, ITxnGenerator}
 
 /**
  * Basic consumer options
@@ -14,6 +14,7 @@ import com.bwsw.tstreams.policy.AbstractPolicy
  * @param dataPreload Buffer size of preloaded data for each consumed transaction
  * @param readPolicy Strategy how to read from concrete stream
  * @param consumerKeepAliveInterval Concrete consumer update interval
+ * @param txnGenerator Generator for generating UUIDs
  * @tparam DATATYPE Storage type
  * @tparam USERTYPE User type
  */
@@ -23,6 +24,7 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
                                               val converter : IConverter[DATATYPE,USERTYPE],
                                               val readPolicy : AbstractPolicy,
                                               val offset : IOffset,
+                                              val txnGenerator: ITxnGenerator,
                                               val useLastOffset : Boolean = true) {
   if (transactionsPreload < 1)
     throw new IllegalArgumentException("incorrect transactionPreload value, should be greater or equal one")

@@ -1,7 +1,9 @@
 package com.bwsw.tstreams.metadata
 
+import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.entities._
-import com.bwsw.tstreams.utils.GeneratorsEntity
+import com.bwsw.tstreams.txngenerator.LocalTimeTxnGenerator
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core._
 import scala.collection.mutable.ListBuffer
@@ -25,27 +27,22 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
   /**
    * Stream entity instance
    */
-  val streamEntity = new StreamEntity("streams", session)
+  lazy val streamEntity = new StreamEntity("streams", session)
 
   /**
    * Commit entity instance
    */
-  val commitEntity = new CommitEntity("commit_log", session)
+  lazy val commitEntity = new CommitEntity("commit_log", session)
 
   /**
    * Commit entity instance for producer async txn update
    */
-  val producerCommitEntity = new CommitEntity("commit_log", session)
-
-  /**
-   * Generator entity instance
-   */
-  val generatorEntity = new GeneratorsEntity
+  lazy val producerCommitEntity = new CommitEntity("commit_log", session)
 
   /**
    * Consumer entity instance
    */
-  val consumerEntity = new ConsumerEntity("consumers", session)
+  lazy val consumerEntity = new ConsumerEntity("consumers", session)
 
   /**
    * @return Keyspace
@@ -181,11 +178,11 @@ class MetadataStorageFactory {
     * @param keyspace Keyspace to use for metadata storage
     * @return Instance of MetadataStorage
     */
-  def getInstance(cassandraHosts : List[String], keyspace : String): MetadataStorage = {
+  def getInstance(cassandraHosts : List[InetSocketAddress], keyspace : String): MetadataStorage = {
     logger.info("start MetadataStorage instance creation\n")
 
     val builder: Builder = Cluster.builder()
-    cassandraHosts.foreach(x => builder.addContactPoint(x))
+    cassandraHosts.foreach(x => builder.addContactPointsWithPorts(x))
     val cluster = builder.build()
 
     logger.debug(s"start connecting cluster to keyspace: {$keyspace}\n")

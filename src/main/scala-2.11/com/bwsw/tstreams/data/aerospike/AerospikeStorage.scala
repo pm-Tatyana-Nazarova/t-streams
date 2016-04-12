@@ -72,9 +72,9 @@ class AerospikeStorage(options : AerospikeStorageOptions) extends IStorage[Array
    * @param data Data which will be put
    * @param partNum Data unique number
    * @param ttl Time of records expiration in seconds
-   * @return Future which indicate done or not putting request
+   * @return Null instead of wait lambda because client.put is not async
    */
-  override def put(streamName: String, partition: Int, transaction: UUID, ttl: Int, data: Array[Byte], partNum: Int): Future[Unit] = {
+  override def put(streamName: String, partition: Int, transaction: UUID, ttl: Int, data: Array[Byte], partNum: Int): () => Unit = {
     options.writePolicy.expiration = ttl
     val key: Key = new Key(options.namespace, s"$streamName/$partition", transaction.toString)
     val bin = new Bin(partNum.toString, data)
@@ -101,17 +101,33 @@ class AerospikeStorage(options : AerospikeStorageOptions) extends IStorage[Array
   }
 
   /**
-   * @return Correctness of created data storage(not supported now)
+   * Validate that data storage created successfully
    */
-  override def validate(): Boolean = {
-    //TODO review
-    logger.warn("this method always return true for aerospike")
-    true
-  }
+  override def validate(): Boolean = ???
 
   /**
    * Close storage
    */
   override def close(): Unit =
     client.close()
+
+  /**
+   * Save all info from buffer in IStorage
+   * @return Lambda which indicate done or not putting request(if request was async) null else
+   */
+  override def saveBuffer(): () => Unit = {
+    val elem = buffer.head
+    options.writePolicy.expiration = elem.ttl
+    val key: Key = new Key(options.namespace, s"${elem.streamName}/${elem.partition}", elem.transaction.toString)
+
+    val mapped = buffer map {elem =>
+      new Bin(elem.partNum.toString, elem.data)
+    }
+
+    logger.debug(s"Start putting batch of data with size:${getBufferSize()} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
+    client.put(options.writePolicy, key, mapped:_*)
+    logger.debug(s"Finished putting batch of data with size:${getBufferSize()} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
+
+    null
+  }
 }

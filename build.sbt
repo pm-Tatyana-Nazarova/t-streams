@@ -38,7 +38,7 @@ libraryDependencies += ("org.redisson" % "redisson" % "2.2.10")
   .exclude("io.netty", "netty-handler")
 
 
-//ASSEMBLY BUILD
+//ASSEMBLY STRATEGY
 assemblyJarName in assembly := "t-streams.jar"
 
 assemblyMergeStrategy in assembly := {
@@ -58,5 +58,5 @@ assemblyMergeStrategy in assembly := {
 }
 
 
-//SBT TEST
+//TEST
 parallelExecution in ThisBuild := false

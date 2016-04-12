@@ -22,6 +22,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  */
 class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
                                                   basicProducer: BasicProducer[USERTYPE,DATATYPE]) {
+
   /**
    * BasicProducerTransaction logger for logging
    */
@@ -46,7 +47,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   /**
    * All inserts (can be async) in storage (must be waited before closing this transaction)
    */
-  private var jobs = ListBuffer[Future[Unit]]()
+  private var jobs = ListBuffer[() => Unit]()
 
   /**
    * Queue to figure out moment when transaction is going to close
@@ -62,7 +63,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
   lockerRef.lock()
 
-  private val transaction = basicProducer.stream.metadataStorage.generatorEntity.getTimeUUID()
+  private val transaction = basicProducer.producerOptions.txnGenerator.getTimeUUID()
   basicProducer.stream.metadataStorage.commitEntity.commit(
     basicProducer.stream.getName,
     partition,
@@ -90,17 +91,36 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     if (closed)
       throw new IllegalStateException("transaction is closed")
 
-    //TODO future limit investigation
-    val job: Future[Unit] = basicProducer.stream.dataStorage.put(
-      basicProducer.stream.getName,
-      partition,
-      transaction,
-      basicProducer.stream.getTTL,
-      basicProducer.producerOptions.converter.convert(obj),
-      part)
+    basicProducer.producerOptions.insertType match {
+      case BatchInsert(size) =>
+        basicProducer.stream.dataStorage.putInBuffer(
+          basicProducer.stream.getName,
+          partition,
+          transaction,
+          basicProducer.stream.getTTL,
+          basicProducer.producerOptions.converter.convert(obj),
+          part)
+        if (basicProducer.stream.dataStorage.getBufferSize() == size) {
+          val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer()
+          if (job != null)
+            jobs += job
+          basicProducer.stream.dataStorage.clearBuffer()
+        }
 
-    if (job != null)
-      jobs += job
+      case SingleElementInsert =>
+        val job: () => Unit = basicProducer.stream.dataStorage.put(
+          basicProducer.stream.getName,
+          partition,
+          transaction,
+          basicProducer.stream.getTTL,
+          basicProducer.producerOptions.converter.convert(obj),
+          part)
+        if (job != null)
+          jobs += job
+
+      case _ =>
+        throw new IllegalStateException("InsertType can't be resolved")
+    }
 
     part += 1
   }
@@ -112,7 +132,17 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     if (closed)
       throw new IllegalStateException("transaction is already closed")
 
-    jobs.foreach(x=>Await.ready(x, TIMEOUT)) // wait all async jobs done before commit
+    basicProducer.producerOptions.insertType match {
+      case SingleElementInsert =>
+
+      case BatchInsert(_) =>
+        basicProducer.stream.dataStorage.clearBuffer()
+
+      case _ =>
+        throw new IllegalStateException("Insert Type can't be resolved")
+    }
+
+    jobs.foreach(x=>x()) // wait all async jobs done before commit
 
     updateQueue.put(true)
 
@@ -130,7 +160,22 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     if (closed)
       throw new IllegalStateException("transaction is already closed")
 
-    jobs.foreach(x => Await.ready(x, TIMEOUT)) // wait all async jobs done before commit
+    basicProducer.producerOptions.insertType match {
+      case SingleElementInsert =>
+
+      case BatchInsert(size) =>
+        if (basicProducer.stream.dataStorage.getBufferSize() > 0) {
+          val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer()
+          if (job != null)
+            jobs += job
+          basicProducer.stream.dataStorage.clearBuffer()
+        }
+
+      case _ =>
+        throw new IllegalStateException("Insert Type can't be resolved")
+    }
+
+    jobs.foreach(x => x()) // wait all async jobs done before commit
 
     updateQueue.put(true)
 

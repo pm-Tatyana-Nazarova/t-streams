@@ -1,30 +1,22 @@
 package metadata
 
 import com.bwsw.tstreams.metadata.MetadataStorage
-import com.datastax.driver.core.{Session, Cluster}
+import com.datastax.driver.core.Cluster
 import org.scalatest._
-import testutils.{RandomStringGen, CassandraEntities}
+import testutils.{RandomStringGen, CassandraHelper}
 
 
 class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll {
-
   def randomString: String = RandomStringGen.randomAlphaString(10)
 
-  var randomKeyspace : String = null
-  var cluster: Cluster = null
-  var session: Session = null
-  var connectedSession : Session = null
+  val randomKeyspace = randomString
+  val cluster = Cluster.builder().addContactPoint("localhost").build()
+  val session = cluster.connect()
 
-  override def beforeAll(): Unit = {
-    randomKeyspace = randomString
-    cluster = Cluster.builder().addContactPoint("localhost").build()
-    session = cluster.connect()
+  CassandraHelper.createKeyspace(session,randomKeyspace)
+  CassandraHelper.createMetadataTables(session,randomKeyspace)
 
-    CassandraEntities.createKeyspace(session,randomKeyspace)
-    CassandraEntities.createMetadataTables(session,randomKeyspace)
-
-    connectedSession = cluster.connect(randomKeyspace)
-  }
+  val connectedSession = cluster.connect(randomKeyspace)
 
   "MetadataStorage.init(), MetadataStorage.truncate() and MetadataStorage.remove()" should "create, truncate and remove metadata tables" in {
 
@@ -41,24 +33,13 @@ class MetadataStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     catch{
       case e : Exception => checkIfOk = false
     }
-
     checkIfOk shouldEqual true
   }
 
-
   override def afterAll() : Unit = {
-    val newCluster = Cluster.builder().addContactPoint("localhost").build()
-    val newSession: Session = newCluster.connect()
-    newSession.execute(s"DROP KEYSPACE $randomKeyspace")
-    newCluster.close()
-    newSession.close()
-
-    if (!cluster.isClosed)
-      cluster.close()
-    if (!session.isClosed)
-      session.close()
-    if (!connectedSession.isClosed)
-      connectedSession.close()
+    session.execute(s"DROP KEYSPACE $randomKeyspace")
+    cluster.close()
+    session.close()
+    connectedSession.close()
   }
-
 }

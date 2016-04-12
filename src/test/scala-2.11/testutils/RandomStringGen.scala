@@ -1,5 +1,8 @@
 package testutils
 
+/**
+ * Random string generator
+ */
 object RandomStringGen {
   private val random = new scala.util.Random
 

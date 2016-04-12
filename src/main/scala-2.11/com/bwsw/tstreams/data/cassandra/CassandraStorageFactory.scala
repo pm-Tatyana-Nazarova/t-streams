@@ -33,7 +33,7 @@ class CassandraStorageFactory {
 
     val builder: Builder = Cluster.builder()
 
-    cassandraStorageOptions.cassandraHosts.foreach(x => builder.addContactPoint(x))
+    cassandraStorageOptions.cassandraHosts.foreach(x => builder.addContactPointsWithPorts(x))
 
     val cluster = builder.build()
 

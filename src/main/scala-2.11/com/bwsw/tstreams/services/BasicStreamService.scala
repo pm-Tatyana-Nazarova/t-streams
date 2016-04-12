@@ -31,7 +31,7 @@ object BasicStreamService {
   def loadStream[T](streamName : String,
                     metadataStorage: MetadataStorage,
                     dataStorage: IStorage[T],
-                    lockService: ILockerFactory) : Option[BasicStream[T]] = {
+                    lockService: ILockerFactory) : BasicStream[T] = {
 
 
     logger.info(s"start load stream with name : {$streamName}\n")
@@ -39,14 +39,14 @@ object BasicStreamService {
 
     logger.info(s"finished load stream with name : {$streamName}\n")
     if (settingsOpt.isEmpty)
-      None
+      throw new IllegalArgumentException("stream with this name can not be loaded")
     else {
       val settings = settingsOpt.get
       val (name: String, partitions: Int, ttl: Int, description: String) =
         (settings.name,settings.partitions,settings.ttl,settings.description)
 
       val stream: BasicStream[T] = new BasicStream(name, partitions, metadataStorage, dataStorage, lockService, ttl, description)
-      Some(stream)
+      stream
     }
   }
 

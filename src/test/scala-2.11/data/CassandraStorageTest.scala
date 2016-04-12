@@ -2,39 +2,28 @@ package data
 
 import java.util.UUID
 import com.bwsw.tstreams.data.cassandra.CassandraStorage
-import com.datastax.driver.core.{Session, Cluster}
+import com.datastax.driver.core.Cluster
 import com.gilt.timeuuid.TimeUuid
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraEntities, RandomStringGen}
-import scala.concurrent.duration._
+import testutils.{CassandraHelper, RandomStringGen}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 
 
 class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringGen.randomAlphaString(10)
-
-  var randomKeyspace : String = null
-  var cluster: Cluster = null
-  var session: Session = null
-  var connectedSession : Session = null
-
-  override def beforeAll(): Unit = {
-    randomKeyspace = randomString
-    cluster = Cluster.builder().addContactPoint("localhost").build()
-    session = cluster.connect()
-
-    CassandraEntities.createKeyspace(session,randomKeyspace)
-    CassandraEntities.createDataTable(session,randomKeyspace)
-
-    connectedSession = cluster.connect(randomKeyspace)
-  }
+  val randomKeyspace = randomString
+  var cluster = Cluster.builder().addContactPoint("localhost").build()
+  var session = cluster.connect()
+  CassandraHelper.createKeyspace(session,randomKeyspace)
+  CassandraHelper.createDataTable(session,randomKeyspace)
+  var connectedSession = cluster.connect(randomKeyspace)
 
   "CassandraStorage.close()" should "close session and cluster connection" in {
 
-    val cassandraStorage = new CassandraStorage(cluster = cluster,
+    val cassandraStorage = new CassandraStorage(
+      cluster = cluster,
       session = connectedSession,
       keyspace = randomKeyspace)
 
@@ -43,7 +32,7 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
     val equation1 = cluster.isClosed
     val equation2 = connectedSession.isClosed
 
-    //using for future tests
+    //used for future tests
     if (cluster.isClosed || session.isClosed || connectedSession.isClosed){
       cluster = Cluster.builder().addContactPoint("localhost").build()
       session = cluster.connect()
@@ -56,7 +45,8 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
 
   "CassandraStorage.init(), CassandraStorage.truncate() and CassandraStorage.remove()" should "create, truncate and remove data table" in {
 
-    val cassandraStorage = new CassandraStorage(cluster = cluster,
+    val cassandraStorage = new CassandraStorage(
+      cluster = cluster,
       session = connectedSession,
       keyspace = randomKeyspace)
 
@@ -75,9 +65,10 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
     checkIfOk shouldEqual true
   }
 
-  "CassandraStorage.put() CassandraStorage.get()" should "insert data in cassandra storage and receive it" in {
+  "CassandraStorage.put() CassandraStorage.get()" should "insert data in cassandra storage and retrieve it" in {
 
-    val cassandraStorage = new CassandraStorage(cluster = cluster,
+    val cassandraStorage = new CassandraStorage(
+      cluster = cluster,
       session = connectedSession,
       keyspace = randomKeyspace)
 
@@ -86,16 +77,15 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
     val transaction: UUID = TimeUuid()
     val data = "some_data"
     val cnt = 1000
-    val timeout = 10 seconds
 
-    val jobs = ListBuffer[Future[Unit]]()
+    val jobs = ListBuffer[() => Unit]()
 
     for (i <- 0 until 1000) {
       val future = cassandraStorage.put(streamName, partition, transaction, 60*60*24, data.getBytes, i)
       jobs += future
     }
 
-    jobs.foreach(x=> Await.ready(x, timeout))
+    jobs.foreach(x=> x())
 
     val queue: mutable.Queue[Array[Byte]] = cassandraStorage.get(streamName, partition, transaction, 0, cnt-1)
     val emptyQueueForLeftBound = cassandraStorage.get(streamName, partition, transaction, -100, -1)
@@ -117,17 +107,9 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
 
 
   override def afterAll() : Unit = {
-    val newCluster = Cluster.builder().addContactPoint("localhost").build()
-    val newSession: Session = newCluster.connect()
-    newSession.execute(s"DROP KEYSPACE $randomKeyspace")
-    newCluster.close()
-    newSession.close()
-
-    if (!cluster.isClosed)
-      cluster.close()
-    if (!session.isClosed)
-      session.close()
-    if (!connectedSession.isClosed)
-      connectedSession.close()
+    session.execute(s"DROP KEYSPACE $randomKeyspace")
+    cluster.close()
+    session.close()
+    connectedSession.close()
   }
 }

@@ -1,11 +1,13 @@
 package com.bwsw.tstreams.data.cassandra
 
+import java.net.InetSocketAddress
+
 /**
  * Options for cassandra
  * @param cassandraHosts Cassandra hosts to connect
  * @param keyspace Cassandra keyspace to connect
  */
-class CassandraStorageOptions(val cassandraHosts : List[String],
+class CassandraStorageOptions(val cassandraHosts : List[InetSocketAddress],
                               val keyspace : String){
   if (cassandraHosts.isEmpty)
     throw new IllegalArgumentException("cassandra hosts can't be empty")

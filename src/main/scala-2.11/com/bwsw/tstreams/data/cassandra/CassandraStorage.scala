@@ -3,14 +3,12 @@ package com.bwsw.tstreams.data.cassandra
 import java.nio.ByteBuffer
 import java.util
 import java.util.UUID
-
+import java.util.concurrent.TimeUnit
 import com.bwsw.tstreams.data.IStorage
 import com.datastax.driver.core._
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 /**
  * Cassandra storage impl of IStorage
@@ -34,7 +32,6 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
   private val selectStatement = session
     .prepare(s"select data from data_queue where stream=? AND partition=? AND transaction=? AND seq>=? AND seq<=? LIMIT ?")
 
-
   /**
    * Put data in the cassandra storage
    * @param streamName Name of the stream
@@ -42,14 +39,14 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
    * @param transaction Number of stream transactions
    * @param data Data which will be put
    * @param partNum Data unique part number
-   * @return Wait future (if insertion was not async wait future will complete instantly)
+   * @return Wait lambda
    */
   override def put(streamName : String,
                    partition : Int,
                    transaction: UUID,
                    ttl : Int,
                    data: Array[Byte],
-                   partNum: Int) : Future[Unit] = {
+                   partNum: Int) : () => Unit = {
 
     val values = List(streamName, new Integer(partition), transaction, new Integer(partNum), ByteBuffer.wrap(data), new Integer(ttl))
 
@@ -60,9 +57,7 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
       .executeAsync(statementWithBindings)
     logger.debug(s"finished inserting data for stream:{$streamName}, partition:{$partition}, partNum:{$partNum}\n")
 
-    val job: Future[Unit] = Future {
-      res.getUninterruptibly
-    }
+    val job: () => Unit = () => res.getUninterruptibly(1, TimeUnit.SECONDS)
     job
   }
 
@@ -110,7 +105,6 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
   /**
    * Validate that data storage created successfully
    */
-  //@TODO implement validate and then delete deprecated annotation
   override def validate(): Boolean = ???
 
   /**
@@ -157,4 +151,29 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
    * @return Closed concrete storage or not
    */
   override def isClosed(): Boolean = session.isClosed && cluster.isClosed
+
+  /**
+   * Save all info from buffer in IStorage
+   * @return Lambda which indicate done or not putting request(if request was async) null else
+   */
+  override def saveBuffer(): () => Unit = {
+    val batchStatement = new BatchStatement()
+    buffer foreach {x =>
+      val statementWithBindings = insertStatement.bind(
+        x.streamName,
+        new Integer(x.partition),
+        x.transaction,
+        new Integer(x.partNum),
+        ByteBuffer.wrap(x.data),
+        new Integer(x.ttl))
+
+      batchStatement.add(statementWithBindings)
+    }
+
+    logger.debug(s"Start putting batch of data with size:${getBufferSize()} in cassandra for streamName: {${buffer.head.streamName}}, partition: {${buffer.head.streamName}")
+    session.execute(batchStatement)
+    logger.debug(s"Finished putting batch of data with size:${getBufferSize()} in cassandra for streamName: {${buffer.head.streamName}}, partition: {${buffer.head.streamName}")
+
+    null
+  }
 }

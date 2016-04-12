@@ -3,18 +3,17 @@ package services
 import com.bwsw.tstreams.services.{CassandraStorageService, CassandraStrategies}
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RandomStringGen, CassandraEntities}
+import testutils.{RandomStringGen, CassandraHelper}
 
 import scala.collection.mutable.ListBuffer
 
 
 class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll {
-
   def randomString: String = RandomStringGen.randomAlphaString(10)
   var maybeCreatedKeyspaces = ListBuffer[String]()
 
   "MetadataStorageService.createKeyspace() and MetadataStorageService.dropKeyspace()" should
-    "create keyspace and drop it in cassandra which deployed on localhost" in {
+    "create keyspace and drop it in cassandra" in {
 
     val randomKeyspace = randomString
     maybeCreatedKeyspaces+=randomKeyspace
@@ -35,7 +34,7 @@ class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndA
   }
 
   "MetadataStorageService.createKeyspace()" should
-    "create keyspace in cassandra which deployed on localhost" in {
+    "create keyspace in cassandra" in {
 
     val randomKeyspace = randomString
     maybeCreatedKeyspaces += randomKeyspace
@@ -58,7 +57,7 @@ class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndA
   }
 
   "MetadataStorageService.dropKeyspace()" should
-    "drop keyspace in cassandra which deployed on localhost" in {
+    "drop keyspace in cassandra which" in {
 
     val randomKeyspace = randomString
     maybeCreatedKeyspaces += randomKeyspace
@@ -66,8 +65,7 @@ class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndA
     val cluster: Cluster = Cluster.builder().addContactPoint("localhost").build()
     val session = cluster.connect()
 
-    //helper method invoke
-    CassandraEntities.createKeyspace(session, randomKeyspace)
+    CassandraHelper.createKeyspace(session, randomKeyspace)
 
     //testing method
     CassandraStorageService.dropKeyspace(List("localhost"),
@@ -92,5 +90,4 @@ class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndA
     cluster.close()
     session.close()
   }
-
 }

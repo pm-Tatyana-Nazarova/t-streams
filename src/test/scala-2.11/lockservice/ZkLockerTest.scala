@@ -1,6 +1,8 @@
 package lockservice
 
-import com.bwsw.tstreams.lockservice.impl.{ZkServer, ZkLockerFactory, ZkLocker}
+import java.net.InetSocketAddress
+
+import com.bwsw.tstreams.lockservice.impl.{ZkLockerFactory, ZkLocker}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.mutable.ListBuffer
@@ -12,11 +14,11 @@ class ZkLockerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
   "Locker.lock(), Locker.unlock()" should "lock concrete zk path and unlock concrete zk path" in {
     val path = "/testpath"
-    val factory1 = new ZkLockerFactory(List(ZkServer("localhost",2181)),"/unittest",10)
-    val factory2 = new ZkLockerFactory(List(ZkServer("localhost",2181)),"/unittest",10)
-    val factory3 = new ZkLockerFactory(List(ZkServer("localhost",2181)),"/unittest",10)
-    val factory4 = new ZkLockerFactory(List(ZkServer("localhost",2181)),"/unittest",10)
-    val factory5 = new ZkLockerFactory(List(ZkServer("localhost",2181)),"/unittest",10)
+    val factory1 = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)),"/unittest",10)
+    val factory2 = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)),"/unittest",10)
+    val factory3 = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)),"/unittest",10)
+    val factory4 = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)),"/unittest",10)
+    val factory5 = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)),"/unittest",10)
     factory1.createLocker(path)
     factory2.createLocker(path)
     factory3.createLocker(path)
@@ -36,6 +38,13 @@ class ZkLockerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
     threads.foreach(t=>t.start())
     threads.foreach(t=>t.join())
+
+    factory1.closeFactory()
+    factory2.closeFactory()
+    factory3.closeFactory()
+    factory4.closeFactory()
+    factory5.closeFactory()
+
     checkVal.get() shouldEqual true
   }
 
