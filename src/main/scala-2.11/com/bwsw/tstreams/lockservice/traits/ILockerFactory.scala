@@ -8,7 +8,7 @@ trait ILockerFactory {
    * Create locker with specific name
    * @param name
    */
-  def createLocker(name : String) : Unit
+  def createLocker(name : String) : Unit = ()
 
   /**
    * Get Locker with specific name

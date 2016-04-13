@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * @tparam DATATYPE Storage data type
  */
 class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
-                                                  basicProducer: BasicProducer[USERTYPE,DATATYPE]) {
+                                                  basicProducer: BasicProducer[USERTYPE,DATATYPE]){
 
   /**
    * BasicProducerTransaction logger for logging
@@ -92,7 +92,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       throw new IllegalStateException("transaction is closed")
 
     basicProducer.producerOptions.insertType match {
-      case BatchInsert(size) =>
+      case InsertionType.BatchInsert(size) =>
         basicProducer.stream.dataStorage.putInBuffer(
           basicProducer.stream.getName,
           partition,
@@ -107,7 +107,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
           basicProducer.stream.dataStorage.clearBuffer()
         }
 
-      case SingleElementInsert =>
+      case InsertionType.SingleElementInsert =>
         val job: () => Unit = basicProducer.stream.dataStorage.put(
           basicProducer.stream.getName,
           partition,
@@ -133,9 +133,9 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       throw new IllegalStateException("transaction is already closed")
 
     basicProducer.producerOptions.insertType match {
-      case SingleElementInsert =>
+      case InsertionType.SingleElementInsert =>
 
-      case BatchInsert(_) =>
+      case InsertionType.BatchInsert(_) =>
         basicProducer.stream.dataStorage.clearBuffer()
 
       case _ =>
@@ -161,9 +161,9 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       throw new IllegalStateException("transaction is already closed")
 
     basicProducer.producerOptions.insertType match {
-      case SingleElementInsert =>
+      case InsertionType.SingleElementInsert =>
 
-      case BatchInsert(size) =>
+      case InsertionType.BatchInsert(size) =>
         if (basicProducer.stream.dataStorage.getBufferSize() > 0) {
           val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer()
           if (job != null)

@@ -24,14 +24,6 @@ class RedisLockerFactory(path : String, config : org.redisson.Config) extends IL
   private val reddison: RedissonClient = Redisson.create(config)
 
   /**
-   * Create locker with specific name
-   * @param name redis locker name
-   */
-  override def createLocker(name: String): Unit = {
-    //lockers for Redis are created by method getLock(name: String), so we don't need to create them here
-  }
-
-  /**
    * Get Locker with specific name
    * @param name
    * @return

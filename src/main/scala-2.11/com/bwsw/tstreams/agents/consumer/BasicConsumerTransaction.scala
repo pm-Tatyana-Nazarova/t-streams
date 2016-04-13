@@ -2,7 +2,6 @@ package com.bwsw.tstreams.agents.consumer
 
 
 import java.util.UUID
-
 import com.bwsw.tstreams.entities.TransactionSettings
 import scala.collection.mutable
 
@@ -61,8 +60,10 @@ class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATAT
   /**
    * Refresh BasicConsumerTransaction iterator to read from the beginning
    */
-  def replay() : Unit =
+  def replay() : Unit = {
+    buffer.clear()
     cnt = 0
+  }
 
   /**
    * @return All consumed transaction

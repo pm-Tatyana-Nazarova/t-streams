@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory
  * Factory for creating cassandra storage instances
  */
 class CassandraStorageFactory {
-
   /**
    * CassandraStorageFactory logger for logging
    */
@@ -63,7 +62,6 @@ class CassandraStorageFactory {
     logger.info(s"finished CassandraStorage instance creation with keyspace : {${cassandraStorageOptions.keyspace}}\n")
     inst
   }
-
 
   /**
    * Close all factory storage instances

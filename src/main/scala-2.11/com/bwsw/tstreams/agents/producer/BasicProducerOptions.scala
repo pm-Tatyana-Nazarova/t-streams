@@ -1,8 +1,9 @@
 package com.bwsw.tstreams.agents.producer
 
+import com.bwsw.tstreams.agents.producer.InsertionType.InsertType
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.policy.AbstractPolicy
-import com.bwsw.tstreams.txngenerator.{LocalTimeTxnGenerator, ITxnGenerator}
+import com.bwsw.tstreams.txngenerator.ITxnGenerator
 
 /**
  * Class for Basic Producer Options
@@ -46,9 +47,9 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
 
 
     insertType match {
-      case SingleElementInsert =>
+      case InsertionType.SingleElementInsert =>
 
-      case BatchInsert(size) =>
+      case InsertionType.BatchInsert(size) =>
         if (size <= 0)
           throw new IllegalArgumentException("batch size must be greater or equal 1")
 

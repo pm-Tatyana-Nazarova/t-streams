@@ -79,7 +79,6 @@ class AerospikeStorage(client : AerospikeClient, options : AerospikeStorageOptio
   /**
    * Remove all data in data storage
    */
-  //TODO check that it is true
   override def truncate(): Unit = {
     logger.warn("aerospike can't be truncated")
   }

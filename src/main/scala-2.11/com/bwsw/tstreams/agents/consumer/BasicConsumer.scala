@@ -40,18 +40,22 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     //update consumer offsets
     if(!stream.metadataStorage.consumerEntity.exist(name) || !options.useLastOffset){
       options.offset match {
-        case Oldest =>
+        case Offsets.Oldest =>
           for (i <- 0 until stream.getPartitions)
             currentOffsets(i) = TimeUuid(0)
 
-        case Newest =>
+        case Offsets.Newest =>
           val newestUuid = options.txnGenerator.getTimeUUID()
           for (i <- 0 until stream.getPartitions)
             currentOffsets(i) = newestUuid
 
-        case offset : DateTime =>
+        case dateTime : Offsets.DateTime =>
           for (i <- 0 until stream.getPartitions)
-            currentOffsets(i) = TimeUuid(offset.startTime.getTime)
+            currentOffsets(i) = TimeUuid(dateTime.startTime.getTime)
+
+        case offset : Offsets.UUID =>
+          for (i <- 0 until stream.getPartitions)
+            currentOffsets(i) = offset.startUUID
 
         case _ => throw new IllegalStateException("offset cannot be resolved")
       }

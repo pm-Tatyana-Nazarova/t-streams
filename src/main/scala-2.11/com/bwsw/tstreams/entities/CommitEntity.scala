@@ -2,7 +2,6 @@ package com.bwsw.tstreams.entities
 
 import java.util
 import java.util.UUID
-
 import com.datastax.driver.core.{Row, Session}
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
