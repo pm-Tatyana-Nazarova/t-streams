@@ -112,7 +112,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
         return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, curPartition, txn))
       }
 
-      val updatedTxnOpt: Option[TransactionSettings] = updateTransaction(txn, curPartition)
+      val updatedTxnOpt: Option[TransactionSettings] = updateTransaction(txn.time, curPartition)
 
       if (updatedTxnOpt.isDefined) {
         val updatedTxn = updatedTxnOpt.get
@@ -142,13 +142,33 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     }
 
   /**
-   * 
-   * @param partition
-   * @param uuid
-   * @return
+   *
+   * @param partition Partition from which historic transaction will be retrieved
+   * @param uuid Uuid for this transaction
+   * @return BasicConsumerTransaction
    */
     def getTransactionById(partition : Int, uuid : UUID): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
-      ???
+      logger.info(s"Start new historic transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+      val option = updateTransaction(uuid, partition)
+      if (option.isDefined){
+        val txn = option.get
+        if (txn.totalItems != -1)
+          Some(new BasicConsumerTransaction[DATATYPE,USERTYPE](this, partition, txn))
+        else
+          None
+      }
+      else
+        None
+    }
+
+  /**
+   * Sets offset on concrete partition
+   * @param partition partition to set offset
+   * @param uuid offset value
+   */
+    def setLocalOffset(partition : Int, uuid : UUID) : Unit = {
+      offsetsForCheckpoint(partition) = uuid
+      currentOffsets(partition) = uuid
     }
 
   /**
@@ -156,13 +176,13 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * @param txn Transaction to update
    * @return Updated transaction
    */
-    private def updateTransaction(txn : TransactionSettings, partition : Int) : Option[TransactionSettings] = {
+    private def updateTransaction(txn : UUID, partition : Int) : Option[TransactionSettings] = {
       val amount: Option[Int] = stream.metadataStorage.commitEntity.getTransactionAmount(
         stream.getName,
         partition,
-        txn.time)
+        txn)
       if (amount.isDefined)
-        Some(TransactionSettings(txn.time, amount.get))
+        Some(TransactionSettings(txn, amount.get))
       else
         None
     }
