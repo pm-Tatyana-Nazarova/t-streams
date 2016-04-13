@@ -20,29 +20,6 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
   CassandraHelper.createDataTable(session,randomKeyspace)
   var connectedSession = cluster.connect(randomKeyspace)
 
-  "CassandraStorage.close()" should "close session and cluster connection" in {
-
-    val cassandraStorage = new CassandraStorage(
-      cluster = cluster,
-      session = connectedSession,
-      keyspace = randomKeyspace)
-
-    cassandraStorage.close()
-
-    val equation1 = cluster.isClosed
-    val equation2 = connectedSession.isClosed
-
-    //used for future tests
-    if (cluster.isClosed || session.isClosed || connectedSession.isClosed){
-      cluster = Cluster.builder().addContactPoint("localhost").build()
-      session = cluster.connect()
-      connectedSession = cluster.connect(randomKeyspace)
-    }
-
-    equation1 && equation2 shouldEqual true
-  }
-
-
   "CassandraStorage.init(), CassandraStorage.truncate() and CassandraStorage.remove()" should "create, truncate and remove data table" in {
 
     val cassandraStorage = new CassandraStorage(

@@ -1,31 +1,24 @@
 package com.bwsw.tstreams.data.aerospike
 
 import java.util.UUID
-
 import com.aerospike.client.{AerospikeClient, Bin, Key, Record}
 import com.bwsw.tstreams.data.IStorage
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
-
 import scala.collection.mutable
-import scala.concurrent.Future
 
 
 /**
  * Aerospike storage impl of IStorage
  * @param options User defined aerospike options
+ * @param client Aerospike client instance
  */
-class AerospikeStorage(options : AerospikeStorageOptions) extends IStorage[Array[Byte]]{
+class AerospikeStorage(client : AerospikeClient, options : AerospikeStorageOptions) extends IStorage[Array[Byte]]{
 
   /**
    * AerospikeStorage logger for logging
    */
   private val logger = Logger(LoggerFactory.getLogger(this.getClass))
-
-  /**
-   * Aerospike client
-   */
-  private val client = new AerospikeClient(options.policy,options.hosts:_*)
 
   /**
    * @return Closed concrete storage or not
@@ -37,8 +30,7 @@ class AerospikeStorage(options : AerospikeStorageOptions) extends IStorage[Array
    * Initialize data storage
    */
   override def init(): Unit = {
-    //TODO review
-    logger.warn("this method was not implemented for aerospike")
+    logger.warn("aerospike data storage don't require initialization")
   }
 
   /**
@@ -87,29 +79,17 @@ class AerospikeStorage(options : AerospikeStorageOptions) extends IStorage[Array
   /**
    * Remove all data in data storage
    */
+  //TODO check that it is true
   override def truncate(): Unit = {
-    //TODO review
-    logger.warn("this method was not implemented for aerospike")
+    logger.warn("aerospike can't be truncated")
   }
 
   /**
    * Remove storage
    */
   override def remove(): Unit = {
-    //TODO review
-    logger.warn("this method was not implemented for aerospike")
+    logger.warn("aerospike data storage can't be removed")
   }
-
-  /**
-   * Validate that data storage created successfully
-   */
-  override def validate(): Boolean = ???
-
-  /**
-   * Close storage
-   */
-  override def close(): Unit =
-    client.close()
 
   /**
    * Save all info from buffer in IStorage

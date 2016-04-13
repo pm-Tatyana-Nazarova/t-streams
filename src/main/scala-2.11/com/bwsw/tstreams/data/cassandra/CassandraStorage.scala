@@ -95,19 +95,6 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
   }
 
   /**
-   * Close storage
-   */
-  def close() = {
-    session.close()
-    cluster.close()
-  }
-
-  /**
-   * Validate that data storage created successfully
-   */
-  override def validate(): Boolean = ???
-
-  /**
    * Initialize data storage
    */
   override def init(): Unit = {

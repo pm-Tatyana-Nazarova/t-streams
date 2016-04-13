@@ -1,7 +1,6 @@
 package metadata
 
 import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}

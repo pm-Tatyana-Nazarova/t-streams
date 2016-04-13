@@ -6,38 +6,33 @@ import com.aerospike.client.policy.{ClientPolicy, Policy, WritePolicy}
 /**
  * @param namespace Aerospike namespace
  * @param hosts Aerospike hosts to connect
- * @param user User authentication to cluster
- * @param password Password authentication to cluster
- * @param failIfNotConnected If true throw exception if not connected
- * @param timeoutToOpenConnection Timeout to open connection  for the first time in milliseconds
+ * @param clientPolicy custom client policy for storage
+ * @param writePolicy custom write policy for storage
+ * @param readPolicy custom read policy for storage
  */
 class AerospikeStorageOptions(val namespace : String,
                               val hosts : List[Host],
-                              user : String = null,
-                              password : String = null,
-                              failIfNotConnected : Boolean = true,
-                              timeoutToOpenConnection : Int = 1000) {
+                              var clientPolicy : ClientPolicy = null,
+                              var writePolicy : WritePolicy = null,
+                              var readPolicy : Policy = null) {
   if (namespace == null)
     throw new Exception("namespace can't be null")
 
   /**
    * Client policy
    */
-  val policy = new ClientPolicy()
-  policy.failIfNotConnected = failIfNotConnected
-  policy.timeout = timeoutToOpenConnection
-  if (user != null)
-    policy.user = user
-  if (password != null)
-    policy.password = password
+  if (clientPolicy == null)
+    clientPolicy = new ClientPolicy()
 
   /**
    * Write policy
    */
-  val writePolicy = new WritePolicy()
+  if (writePolicy == null)
+    writePolicy = new WritePolicy()
 
   /**
    * Read policy
    */
-  val readPolicy: Policy = new com.aerospike.client.policy.Policy
+  if (readPolicy == null)
+    readPolicy = new Policy
 }
