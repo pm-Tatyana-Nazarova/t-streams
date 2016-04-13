@@ -72,7 +72,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   /**
    * Return reference for transaction from concrete partition
    * @param partition Partition from which transaction will be retrieved
-   * @return Transaction ref
+   * @return Transaction reference if it exist or not closed
    */
   def getTransaction(partition : Int) : Option[BasicProducerTransaction[USERTYPE,DATATYPE]] = {
     if (!(partition >= 0 && partition < stream.getPartitions))

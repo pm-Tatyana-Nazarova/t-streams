@@ -1,8 +1,9 @@
 package com.bwsw.tstreams.agents.consumer
 
+import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.policy.AbstractPolicy
-import com.bwsw.tstreams.txngenerator.{LocalTimeTxnGenerator, ITxnGenerator}
+import com.bwsw.tstreams.txngenerator.ITxnGenerator
 
 /**
  * Basic consumer options

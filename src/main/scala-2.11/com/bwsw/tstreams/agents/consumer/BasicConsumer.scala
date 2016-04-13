@@ -142,6 +142,16 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     }
 
   /**
+   * 
+   * @param partition
+   * @param uuid
+   * @return
+   */
+    def getTransactionById(partition : Int, uuid : UUID): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+      ???
+    }
+
+  /**
    * Update single transaction (if transaction is not closed it will have total packets value -1 so we need to wait while it will close)
    * @param txn Transaction to update
    * @return Updated transaction
