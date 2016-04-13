@@ -16,7 +16,8 @@ libraryDependencies ++= Seq(
   "org.scalatest" % "scalatest_2.11" % "3.0.0-M15",
   "io.netty" % "netty-all" % "4.0.34.Final",
   "com.aerospike" % "aerospike-client" % "3.2.1",
-  "org.json4s" %% "json4s-jackson" % "3.3.0"
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.3",
+  "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.7.2"
 )
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
@@ -58,5 +59,5 @@ assemblyMergeStrategy in assembly := {
 }
 
 
-//TEST
+//SBT TEST
 parallelExecution in ThisBuild := false

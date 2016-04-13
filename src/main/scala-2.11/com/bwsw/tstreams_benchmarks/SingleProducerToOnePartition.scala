@@ -1,15 +1,22 @@
 package com.bwsw.tstreams_benchmarks
 
 import java.io.File
+import java.net.InetSocketAddress
+
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams_benchmarks.utils.JsonUtils
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, BatchInsert, SingleElementInsert}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
+import com.bwsw.tstreams.data.IStorage
+import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
+import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
-import com.bwsw.tstreams.policy.PolicyRepository
+import com.bwsw.tstreams.policy.RoundRobinPolicy
 import com.bwsw.tstreams.streams.BasicStream
+import com.bwsw.tstreams.txngenerator.LocalTimeTxnGenerator
 import org.redisson.Config
+
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 import scala.util.Random
@@ -17,46 +24,71 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
 
-object SingleProducerToOnePartition extends MetricsCalculator with MetadataCreator{
+object SingleProducerToOnePartition extends MetricsCalculator with MetadataCreator with BenchmarkBase {
   def main(args: Array[String]) {
+    checkParams(args)
+    val configFilePath = args(0)
+    val resultDirectoryPath = args(1)
+
+    // Read config
     implicit val formats = DefaultFormats
 
-    val inputString: String = Source.fromFile("benchmark_config").getLines().toList.mkString("")
+    val inputString: String = Source.fromFile(configFilePath).getLines().toList.mkString("")
     val parsed = parse(inputString)
-    //constants
+    // constants
     val init = (parsed \\ "InitMetadata").extract[Boolean]
-    val size = (parsed \\ "Size").extract[Int]
-    val amountInTxn = (parsed \\ "AmountInTxn").extract[Int]
-    val totalTxn = (parsed \\ "TotalTxn").extract[Int]
-    val interval = (parsed \\ "TxnInterval").extract[Int]
-    //spaces
+    val recordByteSize = (parsed \\ "RecordByteSize").extract[Int]
+    val recordsPerTransaction = (parsed \\ "RecordsPerTransaction").extract[Int]
+    val transactionsNumber = (parsed \\ "TransactionsNumber").extract[Int]
+    val transactionsPerBatch = (parsed \\ "TransactionsPerBatch").extract[Int]
+    val batchInsert = (parsed \\ "InsertType" \\ "batchInsert").extract[Boolean]
+    val batchSize = if (batchInsert) (parsed \\ "InsertType" \\ "batchSize").extract[Int] else 1
+    val dataStorageType = (parsed \\ "DataStorageType").extract[String]
+    // cassandra
     val cassandraKeyspace = (parsed \\ "Cassandra" \\ "Keyspace").extract[String]
+    val cassandraHosts = (parsed \\ "Cassandra" \\ "Hosts").extract[List[Map[String,Int]]].map{ x =>
+      val hostAndPort: (String, Int) = x.toList.head
+      new InetSocketAddress(hostAndPort._1, hostAndPort._2)
+    }
+    // aerospike
     val aerospikeNamespace = (parsed \\ "Aerospike" \\ "Namespace").extract[String]
-    //hosts configs
-    val aerospikeHosts = (parsed \\ "Aerospike" \\ "Hosts").extract[List[Map[String,Int]]]
-    val cassandraHosts = (parsed \\ "Cassandra" \\ "Hosts").extract[List[String]]
-    val redisHosts = (parsed \\ "Redis" \\ "Hosts").extract[List[Map[String,Int]]]
-
-    //run it only ones
-    if (init)
-      initMetadata(cassandraHosts, cassandraKeyspace)
-
-    //start benchmark
-    val dataToSend = Random.alphanumeric.take(size).mkString("")
-    val metadataFactory = new MetadataStorageFactory
-    val storageFactory = new AerospikeStorageFactory
-
-    val convertedHosts = aerospikeHosts.map{ x =>
+    val aerospikeHosts = (parsed \\ "Aerospike" \\ "Hosts").extract[List[Map[String,Int]]].map{ x =>
       val hostAndPort: (String, Int) = x.toList.head
       new Host(hostAndPort._1, hostAndPort._2)
     }
+    // redis
+    val redisHosts = (parsed \\ "Redis" \\ "Hosts").extract[List[Map[String,Int]]]
 
-    val aerospikeOptions = new AerospikeStorageOptions(
-      "test",
-      convertedHosts)
+    // Run it only once
+    if (init)
+      initMetadata(cassandraHosts, cassandraKeyspace)
 
-    val metadataInst = metadataFactory.getInstance(cassandraHosts, cassandraKeyspace)
-    val storageInst = storageFactory.getInstance(aerospikeOptions)
+    // Start benchmark
+    val dataToSend = Random.alphanumeric.take(recordByteSize).mkString("")
+    val bytes = dataToSend.getBytes()
+    val metadataFactory = new MetadataStorageFactory
+    val metadataInstance = metadataFactory.getInstance(cassandraHosts, cassandraKeyspace)
+
+    val aerospikeStorageOptions = new AerospikeStorageOptions(
+      namespace = aerospikeNamespace,
+      hosts = aerospikeHosts)
+    val cassandraStorageOptions = new CassandraStorageOptions(
+      cassandraHosts,
+      cassandraKeyspace
+    )
+
+    var cassandraStorageFactory : CassandraStorageFactory = null
+    var aerospikeStorageFactory : AerospikeStorageFactory = null
+
+    val storageInstance: IStorage[Array[Byte]] = dataStorageType match {
+        case "aerospike"  =>
+          aerospikeStorageFactory = new AerospikeStorageFactory
+          aerospikeStorageFactory.getInstance(aerospikeStorageOptions)
+        case "cassandra"  =>
+          cassandraStorageFactory = new CassandraStorageFactory
+          cassandraStorageFactory.getInstance(cassandraStorageOptions)
+        case storage      => throw new IllegalArgumentException(s"Data storage '$storage' is not supported")
+      }
 
     val convertedRedisHosts = redisHosts.map{ x=>
       val hostAndPort = x.toList.head
@@ -80,70 +112,83 @@ object SingleProducerToOnePartition extends MetricsCalculator with MetadataCreat
     val stream = new BasicStream[Array[Byte]](
       name = "benchmark_stream",
       partitions = 1,
-      metadataStorage = metadataInst,
-      dataStorage = storageInst,
+      metadataStorage = metadataInstance,
+      dataStorage = storageInstance,
       lockService = lockerFactory,
       ttl = 60 * 60 * 24,
       description = "some_description")
+
+    val policy = new RoundRobinPolicy(stream, List(0))
 
     val stringToArrayByteConverter = new StringToArrayByteConverter
     val producerOptions = new BasicProducerOptions[String, Array[Byte]](
       transactionTTL = 60,
       transactionKeepAliveInterval = 20,
       producerKeepAliveInterval = 1,
-      PolicyRepository.getRoundRobinPolicy(
-        stream, List(0)), //here we stream only in the one partition
+      writePolicy = policy,
+      insertType = if (batchInsert) BatchInsert(batchSize) else SingleElementInsert,
+      txnGenerator = new LocalTimeTxnGenerator(),
       stringToArrayByteConverter)
 
     val producer: BasicProducer[String, Array[Byte]] = new BasicProducer("some_producer_name", stream, producerOptions)
 
     var tstart = System.nanoTime()
 
-    var timeInAllTxn = ListBuffer[Long]()
+    var timePerTransactionBatch = ListBuffer[Long]()
 
-    (0 until totalTxn).foreach{ cur =>
-      val txn = producer.newTransaction(false)
-      (0 until amountInTxn).foreach{ _ =>
-        txn.send(dataToSend)
+    (0 until transactionsNumber).foreach{ cur =>
+      val transaction = producer.newTransaction(false)
+      (0 until recordsPerTransaction).foreach{ _ =>
+        transaction.send(dataToSend)
       }
-      txn.close()
+      transaction.close()
 
-      if (cur % interval == 0){
-        val newtstart = System.nanoTime()
-        val difference = (newtstart - tstart)/(1000 * 1000 * 1000)
-        tstart = newtstart
-        timeInAllTxn += difference
+      if (cur % transactionsPerBatch == transactionsPerBatch - 1) {
+        val newTstart = System.nanoTime()
+        val difference = (newTstart - tstart)/(1000 * 1000)
+        tstart = newTstart
+        timePerTransactionBatch += difference
 
-        println(s"timePerTxnBatch=$difference sec")
+        println("Time per transaction batch " + (cur / transactionsPerBatch + 1) + s" = $difference ms")
       }
     }
 
-    val avg = getMedian(timeInAllTxn.toList)
-    val perc = getPercentile(timeInAllTxn.toList, 0.95)
-    val variance = getVariance(timeInAllTxn.toList)
-    val sum = getSum(timeInAllTxn.toList)
+    // Calculate statistics data
+    val avg = getMedian(timePerTransactionBatch.toList)
+    val perc = getPercentile(timePerTransactionBatch.toList, 0.95)
+    val variance = getVariance(timePerTransactionBatch.toList)
+    val totalTime = getSum(timePerTransactionBatch.toList)
 
-    val file1 = new File("total_statistic")
-    val file2 = new File("pertransaction_statistic")
+    val totalStatistics = Map(
+      "transactionsNumber"    -> transactionsNumber,
+      "recordsPerTransaction" -> recordsPerTransaction,
+      "recordByteSize"        -> recordByteSize,
+      "timeUnit"              -> "ms",
+      "totalTime"             -> totalTime,
+      "averageTime"           -> avg,
+      "percentile95"          -> perc,
+      "variance"              -> variance
+    )
+    case class asd(batchSize : Int, transactionBatchTiming : List[Long])
+    val timingStatistics = asd(transactionsPerBatch, timePerTransactionBatch.toList)
+
+    // Write statistics to files
+    val file1 = new File(resultDirectoryPath + "Total_statistics.json")
+    val file2 = new File(resultDirectoryPath + "Transactions_timing.json")
     val pw1 = new java.io.PrintWriter(file1)
     val pw2 = new java.io.PrintWriter(file2)
-
-    pw1.write(s"totalTxn=$totalTxn\n")
-    pw1.write(s"dataInTxn=$amountInTxn\n")
-    pw1.write(s"sizeOfDataInTxn=$size\n\n")
-    pw1.write(s"avg=$avg\n")
-    pw1.write(s"percentile=$perc\n")
-    pw1.write(s"variance=$variance\n")
-    pw1.write(s"sum=$sum\n")
+    pw1.write(JsonUtils.toPrettyJson(totalStatistics))
     pw1.close()
-
-    timeInAllTxn.foreach {x=>
-      pw2.write(s"time=${x.toString}sec\n")
-    }
+    pw2.write(JsonUtils.toPrettyJson(timingStatistics))
     pw2.close()
 
     metadataFactory.closeFactory()
-    storageFactory.closeFactory()
+    if (cassandraStorageFactory != null) {
+      cassandraStorageFactory.closeFactory()
+    }
+    if (aerospikeStorageFactory != null) {
+      aerospikeStorageFactory.closeFactory()
+    }
     lockerFactory.closeFactory()
   }
 }
