@@ -10,7 +10,6 @@ import testutils.{CassandraHelper, RandomStringCreator}
 
 class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringCreator.randomAlphaString(10)
-
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
   val temporarySession = temporaryCluster.connect()
@@ -20,7 +19,6 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
   "ConsumerEntity.saveSingleOffset() ConsumerEntity.exist() ConsumerEntity.getOffset()" should "create new consumer with particular offset," +
     " then check consumer existence, then get this consumer offset" in {
-
     val consumerEntity = new ConsumerEntity("consumers", connectedSession)
     val consumer = randomString
     val stream = randomString
@@ -52,7 +50,6 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
   "ConsumerEntity.saveBatchOffset(); ConsumerEntity.getOffset()" should "create new consumer with particular offsets and " +
     "then validate this consumer offsets" in {
-
     val consumerEntity = new ConsumerEntity("consumers", connectedSession)
     val consumer = randomString
     val stream = randomString

@@ -66,11 +66,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
   lockRef.lock()
 
-  val transaction = basicProducer.producerOptions.txnGenerator.getTimeUUID()
+  val transactionUuid = basicProducer.producerOptions.txnGenerator.getTimeUUID()
   basicProducer.stream.metadataStorage.commitEntity.commit(
     basicProducer.stream.getName,
     partition,
-    transaction,
+    transactionUuid,
     totalCnt = -1,
     ttl = basicProducer.stream.getTTL)
 
@@ -82,7 +82,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   private val updateFuture: Future[Unit] = startAsyncKeepAlive(
     basicProducer.stream.getName,
     partition,
-    transaction,
+    transactionUuid,
     basicProducer.producerOptions.transactionTTL,
     basicProducer.producerOptions.transactionKeepAliveInterval)
 
@@ -99,7 +99,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         basicProducer.stream.dataStorage.putInBuffer(
           basicProducer.stream.getName,
           partition,
-          transaction,
+          transactionUuid,
           basicProducer.stream.getTTL,
           basicProducer.producerOptions.converter.convert(obj),
           part)
@@ -114,7 +114,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         val job: () => Unit = basicProducer.stream.dataStorage.put(
           basicProducer.stream.getName,
           partition,
-          transaction,
+          transactionUuid,
           basicProducer.stream.getTTL,
           basicProducer.producerOptions.converter.convert(obj),
           part)
@@ -190,7 +190,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       basicProducer.stream.metadataStorage.commitEntity.commit(
         basicProducer.stream.getName,
         partition,
-        transaction,
+        transactionUuid,
         part,
         basicProducer.stream.getTTL)
     }

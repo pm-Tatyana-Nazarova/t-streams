@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.consumer
 import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.policy.AbstractPolicy
-import com.bwsw.tstreams.txngenerator.ITxnGenerator
+import com.bwsw.tstreams.generator.IuuidGenerator
 
 /**
  * Basic consumer options
@@ -25,7 +25,7 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
                                               val converter : IConverter[DATATYPE,USERTYPE],
                                               val readPolicy : AbstractPolicy,
                                               val offset : IOffset,
-                                              val txnGenerator: ITxnGenerator,
+                                              val txnGenerator: IuuidGenerator,
                                               val useLastOffset : Boolean = true) {
   if (transactionsPreload < 1)
     throw new IllegalArgumentException("incorrect transactionPreload value, should be greater or equal one")

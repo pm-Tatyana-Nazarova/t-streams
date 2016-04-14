@@ -9,17 +9,15 @@ import testutils.{CassandraHelper, RandomStringCreator}
 
 class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringCreator.randomAlphaString(10)
-
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
   val temporarySession = temporaryCluster.connect()
-
   CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
   CassandraHelper.createDataTable(temporarySession, randomKeyspace)
+
   val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
 
   "CassandraStorageFactory.getInstance()" should "return CassandraStorage instance" in {
-
     val factory = new CassandraStorageFactory
     val instance = factory.getInstance(cassandraOptions)
     val checkVal = instance.isInstanceOf[CassandraStorage]
@@ -29,7 +27,6 @@ class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndA
   }
 
   "CassandraStorageFactory.closeFactory()" should "close instances connections" in {
-
     val factory: CassandraStorageFactory = new CassandraStorageFactory
     val instance1 = factory.getInstance(cassandraOptions)
     val instance2 = factory.getInstance(cassandraOptions)

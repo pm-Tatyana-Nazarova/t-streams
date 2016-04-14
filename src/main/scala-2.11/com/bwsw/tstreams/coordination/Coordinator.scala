@@ -9,8 +9,8 @@ import org.redisson.core.RLock
  * @param prefix Common prefix for all RedissonClient entities
  * @param client Redisson client
  */
-class Coordinator(private val prefix : String,
-                  private val client : RedissonClient){
+class Coordinator(prefix : String,
+                  client : RedissonClient){
 
   /**
    * Creating lock on concrete prefix+path

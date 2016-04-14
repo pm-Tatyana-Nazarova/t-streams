@@ -15,7 +15,6 @@ import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelpe
 
 
 class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
-  //creating data,metadata tables
   def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
@@ -24,23 +23,18 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
   CassandraHelper.createDataTable(temporarySession, randomKeyspace)
 
-  //metadata storage, storage factories
   val metadataStorageFactory = new MetadataStorageFactory
   val storageFactory = new CassandraStorageFactory
 
-  //coordinator
   val config = new Config()
   config.useSingleServer().setAddress("localhost:6379")
   val redisson = Redisson.create(config)
   val coordinator = new Coordinator("some_path", redisson)
 
-  //converter to convert user strings to data storage array byte
   val stringToArrayByteConverter = new StringToArrayByteConverter
 
-  //storage options
   val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
 
-  //stream
   val stream = BasicStreamService.createStream(
     streamName = "test_stream",
     partitions = 3,
@@ -50,8 +44,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     dataStorage = storageFactory.getInstance(cassandraOptions),
     lockService = coordinator)
 
-  //producer options
-  val options = new BasicProducerOptions[String, Array[Byte]](
+  val producerOptions = new BasicProducerOptions[String, Array[Byte]](
     transactionTTL = 10,
     transactionKeepAliveInterval = 2,
     producerKeepAliveInterval = 1,
@@ -60,7 +53,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     LocalGeneratorCreator.getGen(),
     stringToArrayByteConverter)
 
-  val producer = new BasicProducer("test_producer", stream, options)
+  val producer = new BasicProducer("test_producer", stream, producerOptions)
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
     val txn: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpen)
@@ -69,7 +62,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   }
 
   "BasicProducer.newTransaction(ProducerPolicies.errorIfOpen)" should "throw exception if previous transaction was not closed" in {
-    val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpen, 2)
+    val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.checkpointIfOpen, 2)
     intercept[IllegalStateException] {
        val txn2 = producer.newTransaction(ProducerPolicies.errorIfOpen, 2)
     }

@@ -15,20 +15,19 @@ import testutils.{CassandraHelper, RandomStringCreator}
 
 class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll {
   def randomString: String = RandomStringCreator.randomAlphaString(10)
-  val config = new Config()
-  config.useSingleServer().setAddress("localhost:6379")
-  val redisson = Redisson.create(config)
-  val coordinator = new Coordinator("some_path", redisson)
-  val dataFactory = new AerospikeStorageFactory
-  val metadataFactory = new MetadataStorageFactory
-
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
   val temporarySession = temporaryCluster.connect()
-
   CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
   CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
 
+  val config = new Config()
+  config.useSingleServer().setAddress("localhost:6379")
+  val redissonClient = Redisson.create(config)
+  val coordinator = new Coordinator("some_path", redissonClient)
+  val dataStorageFactory = new AerospikeStorageFactory
+  val metadataStorageFactory = new MetadataStorageFactory
+  
   val hosts = List(
     new Host("localhost",3000),
     new Host("localhost",3001),
@@ -36,8 +35,8 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
     new Host("localhost",3003))
   val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
 
-  val storageInst = dataFactory.getInstance(aerospikeOptions)
-  val metadataInst = metadataFactory.getInstance(
+  val storageInst = dataStorageFactory.getInstance(aerospikeOptions)
+  val metadataStorageInst = metadataStorageFactory.getInstance(
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
     keyspace = randomKeyspace)
 
@@ -50,7 +49,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       partitions = 3,
       ttl = 100,
       description = "some_description",
-      metadataStorage = metadataInst,
+      metadataStorage = metadataStorageInst,
       dataStorage = storageInst,
       lockService = coordinator)
 
@@ -68,7 +67,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       partitions = 3,
       ttl = 100,
       description = "some_description",
-      metadataStorage = metadataInst,
+      metadataStorage = metadataStorageInst,
       dataStorage = storageInst,
       lockService = coordinator)
 
@@ -77,7 +76,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
         partitions = 3,
         ttl = 100,
         description = "some_description",
-        metadataStorage = metadataInst,
+        metadataStorage = metadataStorageInst,
         dataStorage = storageInst,
         lockService = coordinator)
     }
@@ -91,11 +90,11 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       partitions = 3,
       ttl = 100,
       description = "some_description",
-      metadataStorage = metadataInst,
+      metadataStorage = metadataStorageInst,
       dataStorage = storageInst,
       lockService = coordinator)
 
-    val stream: BasicStream[_] = BasicStreamService.loadStream(name, metadataInst, storageInst, coordinator)
+    val stream: BasicStream[_] = BasicStreamService.loadStream(name, metadataStorageInst, storageInst, coordinator)
     val checkVal = stream.isInstanceOf[BasicStream[_]]
     checkVal shouldBe true
   }
@@ -104,7 +103,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
     val name = randomString
 
     intercept[IllegalArgumentException] {
-      BasicStreamService.loadStream(name, metadataInst, storageInst, coordinator)
+      BasicStreamService.loadStream(name, metadataStorageInst, storageInst, coordinator)
     }
   }
 
@@ -116,14 +115,14 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       partitions = 3,
       ttl = 100,
       description = "some_description",
-      metadataStorage = metadataInst,
+      metadataStorage = metadataStorageInst,
       dataStorage = storageInst,
       lockService = coordinator)
 
-    BasicStreamService.deleteStream(name, metadataInst)
+    BasicStreamService.deleteStream(name, metadataStorageInst)
 
     intercept[IllegalArgumentException] {
-      BasicStreamService.loadStream(name, metadataInst, storageInst, coordinator)
+      BasicStreamService.loadStream(name, metadataStorageInst, storageInst, coordinator)
     }
   }
 
@@ -131,7 +130,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
     val name = randomString
 
     intercept[IllegalArgumentException] {
-      BasicStreamService.deleteStream(name, metadataInst)
+      BasicStreamService.deleteStream(name, metadataStorageInst)
     }
   }
 

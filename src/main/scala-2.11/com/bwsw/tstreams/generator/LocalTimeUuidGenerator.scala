@@ -1,12 +1,12 @@
-package com.bwsw.tstreams.txngenerator
+package com.bwsw.tstreams.generator
 
 import java.util.UUID
 import com.datastax.driver.core.utils.UUIDs
 
 /**
- * Entity for generating new transaction time
+ * Entity for generating new transaction time UUID
  */
-class LocalTimeTxnGenerator extends ITxnGenerator{
+class LocalTimeUuidGenerator extends IuuidGenerator{
   /**
    * @return Transaction UUID
    */

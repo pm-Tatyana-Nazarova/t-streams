@@ -35,7 +35,7 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
   val arrayByteToStringConverter = new ArrayByteToStringConverter
   val stringToArrayByteConverter = new StringToArrayByteConverter
 
-  //coordinator client instance
+  //coordinator for coordinating producer/consumer
   val config = new Config()
   config.useSingleServer().setAddress("localhost:6379")
   val redissonClient = Redisson.create(config)

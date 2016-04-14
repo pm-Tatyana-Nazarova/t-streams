@@ -1,11 +1,11 @@
-package com.bwsw.tstreams.txngenerator
+package com.bwsw.tstreams.generator
 
 import java.util.UUID
 
 /**
  * Trait for producer/consumer transaction unique UUID generating
  */
-trait ITxnGenerator {
+trait IuuidGenerator {
   /**
    * @return Txn UUID
    */

@@ -1,26 +1,24 @@
-package agents.both.batch_insert.aerospike
+package agents.both.single_element_insert.aerospike
 
 import java.net.InetSocketAddress
-import agents.both.batch_insert.BatchSizeTestVal
+
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Redisson, Config}
+import org.redisson.{Config, Redisson}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringCreator}
+import testutils.{CassandraHelper, LocalGeneratorCreator, RandomStringCreator, RoundRobinPolicyCreator}
 
 
-
-class AManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest extends FlatSpec
-with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
+class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   //creating keyspace, metadata
   def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
@@ -53,8 +51,8 @@ with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
 
   "Some amount of producers and one consumer" should "producers - send transactions in many partition" +
     " (each producer send each txn in only one partition without intersection " +
-    " for ex. producer1 in partition1, producer2 in partition2, producer3 in partition3 etc...) " +
-    " consumer - retrieve them all with reinitialization every 10 transactions" in {
+    " for ex. producer1 in partition1, producer2 in partition2, producer3 in partition3 etc...)," +
+    " consumer - retrieve them all" in {
     val timeoutForWaiting = 60*5
     val totalPartitions = 4
     val totalTxn = 10
@@ -93,11 +91,11 @@ with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
         stream = streamInst),
       Oldest,
       LocalGeneratorCreator.getGen(),
-      useLastOffset = true)
+      useLastOffset = false)
 
     var checkVal = true
 
-    var consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
+    val consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
 
     val consumerThread = new Thread(
       new Runnable {
@@ -105,21 +103,11 @@ with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
         def run() = {
           var i = 0
           while(i < totalTxn*producersAmount) {
-
-            //every 10 txns consumer start reinitializing
-            if (i % 10 == 0) {
-              consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
-              Thread.sleep(1000)
-            }
-
             val txn = consumer.getTransaction
-
             if (txn.isDefined){
               checkVal &= txn.get.getAll().sorted == dataToSend
-              consumer.checkpoint()
               i+=1
             }
-
             Thread.sleep(200)
           }
         }
@@ -129,6 +117,7 @@ with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
     consumerThread.start()
     consumerThread.join(timeoutForWaiting * 1000)
     producersThreads.foreach(x=>x.join(timeoutForWaiting * 1000))
+
 
     //assert that is nothing to read
     (0 until totalPartitions) foreach { _=>
@@ -149,7 +138,7 @@ with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions),
-      BatchInsert(batchSizeVal),
+      SingleElementInsert,
       LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter)
 

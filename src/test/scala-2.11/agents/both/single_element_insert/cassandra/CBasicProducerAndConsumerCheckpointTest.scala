@@ -1,45 +1,45 @@
-package agents.consumer
+package agents.both.single_element_insert.cassandra
 
 import java.net.InetSocketAddress
-import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
-import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerPolicies}
+import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
+import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Redisson, Config}
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, CassandraHelper, RandomStringCreator}
+import org.redisson.{Config, Redisson}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import testutils.{CassandraHelper, LocalGeneratorCreator, RandomStringCreator, RoundRobinPolicyCreator}
 
 
-class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
+class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll{
+  //creating keyspace, metadata, data
   def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
   val session = cluster.connect()
   CassandraHelper.createKeyspace(session, randomKeyspace)
   CassandraHelper.createMetadataTables(session, randomKeyspace)
+  CassandraHelper.createDataTable(session, randomKeyspace)
 
+  //metadata/data factories
   val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new AerospikeStorageFactory
+  val storageFactory = new CassandraStorageFactory
 
+  //converters to convert usertype->storagetype; storagetype->usertype
   val arrayByteToStringConverter = new ArrayByteToStringConverter
   val stringToArrayByteConverter = new StringToArrayByteConverter
 
-  val hosts = List(
-    new Host("localhost",3000),
-    new Host("localhost",3001),
-    new Host("localhost",3002),
-    new Host("localhost",3003))
-  val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
-  val aerospikeInstForProducer = storageFactory.getInstance(aerospikeOptions)
-  val aerospikeInstForConsumer = storageFactory.getInstance(aerospikeOptions)
+  //cassandra storage instances
+  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
+  val cassandraInstForProducer = storageFactory.getInstance(cassandraStorageOptions)
+  val cassandraInstForConsumer = storageFactory.getInstance(cassandraStorageOptions)
 
+  //metadata storage instances
   val metadataStorageInstForProducer = metadataStorageFactory.getInstance(
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
     keyspace = randomKeyspace)
@@ -47,16 +47,18 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
     keyspace = randomKeyspace)
 
+  //coordinator for coordinating producer/consumer
   val config = new Config()
   config.useSingleServer().setAddress("localhost:6379")
   val redissonClient = Redisson.create(config)
   val coordinator = new Coordinator("some_path", redissonClient)
 
+  //stream instances for producer/consumer
   val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
     name = "test_stream",
     partitions = 3,
     metadataStorage = metadataStorageInstForProducer,
-    dataStorage = aerospikeInstForProducer,
+    dataStorage = cassandraInstForProducer,
     coordinator = coordinator,
     ttl = 60 * 10,
     description = "some_description")
@@ -65,11 +67,12 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     name = "test_stream",
     partitions = 3,
     metadataStorage = metadataStorageInstForConsumer,
-    dataStorage = aerospikeInstForConsumer,
+    dataStorage = cassandraInstForConsumer,
     coordinator = coordinator,
     ttl = 60 * 10,
     description = "some_description")
 
+  //producer/consumer options
   val producerOptions = new BasicProducerOptions[String, Array[Byte]](
     transactionTTL = 6,
     transactionKeepAliveInterval = 2,
@@ -90,34 +93,48 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     useLastOffset = true)
 
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
-  val consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
+  var consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
 
-  "consumer.getTransaction" should "return None if nothing was sent" in {
-    val txn = consumer.getTransaction
-    txn.isEmpty shouldBe true
-  }
 
-  "consumer.getTransactionById" should "return sent transaction" in {
-    val totalDataInTxn = 10
-    val data = (for (i <- 0 until totalDataInTxn) yield randomString).toList.sorted
-    val txn = producer.newTransaction(ProducerPolicies.errorIfOpen, 1)
-    val txnUuid = txn.transactionUuid
-    data.foreach(x=>txn.send(x))
-    txn.close()
+  "producer, consumer" should "producer - generate many transactions, consumer - retrieve all of them with reinitialization after some time" in {
+    val dataToSend = (for (i <- 0 until 10) yield randomString).sorted
+    val txnNum = 20
+
+    (0 until txnNum) foreach { _ =>
+      val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
+      dataToSend foreach { part =>
+        txn.send(part)
+      }
+      txn.close()
+    }
+
+    val firstPart = txnNum/3
+    val secondPart = txnNum - firstPart
 
     var checkVal = true
 
-    val consumedTxn = consumer.getTransactionById(1, txnUuid).get
-    checkVal = consumedTxn.getPartition == txn.getPartition
-    checkVal = consumedTxn.getTxnUUID == txnUuid
-    checkVal = consumedTxn.getAll().sorted == data
+    (0 until firstPart) foreach { _ =>
+      val txn: BasicConsumerTransaction[Array[Byte], String] = consumer.getTransaction.get
+      val data = txn.getAll().sorted
+      consumer.checkpoint()
+      checkVal &= data == dataToSend
+    }
 
-    checkVal shouldEqual true
-  }
+    //reinitialization (should begin read from the latest checkpoint)
+    consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
 
-  "consumer.getTransaction" should "return sent transaction" in {
-    val txn = consumer.getTransaction
-    txn.isDefined shouldEqual true
+    (0 until secondPart) foreach { _ =>
+      val txn: BasicConsumerTransaction[Array[Byte], String] = consumer.getTransaction.get
+      val data = txn.getAll().sorted
+      checkVal &= data == dataToSend
+    }
+
+    //assert that is nothing to read
+    (0 until streamForConsumer.getPartitions) foreach { _=>
+      checkVal &= consumer.getTransaction.isEmpty
+    }
+
+    checkVal shouldBe true
   }
 
   override def afterAll(): Unit = {

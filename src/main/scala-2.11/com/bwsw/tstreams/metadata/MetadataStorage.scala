@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory
 
 
 /**
- * Class of MetadataStorage
+ * Class of the MetadataStorage
  * @param cluster Cluster instance for metadata storage
  * @param session Session instance for metadata storage
  * @param keyspace Keyspace for metadata storage

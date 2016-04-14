@@ -1,26 +1,23 @@
-package agents.both.batch_insert.aerospike
+package agents.both.single_element_insert.aerospike
 
 import java.net.InetSocketAddress
-import agents.both.batch_insert.BatchSizeTestVal
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Redisson, Config}
+import org.redisson.{Config, Redisson}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringCreator}
+import testutils.{CassandraHelper, LocalGeneratorCreator, RandomStringCreator, RoundRobinPolicyCreator}
 
 
-
-class AManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest extends FlatSpec
-with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
+class AManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   //creating keyspace, metadata
   def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
@@ -149,7 +146,7 @@ with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions),
-      BatchInsert(batchSizeVal),
+      SingleElementInsert,
       LocalGeneratorCreator.getGen(),
       converter = stringToArrayByteConverter)
 

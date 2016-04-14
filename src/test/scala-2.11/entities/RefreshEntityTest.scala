@@ -9,7 +9,6 @@ import testutils.{CassandraHelper, RandomStringCreator}
 
 class RefreshEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringCreator.randomAlphaString(10)
-
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
   val temporarySession = temporaryCluster.connect()
@@ -30,7 +29,6 @@ class RefreshEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     //refresh metadata
     CassandraHelper.dropMetadataTables(connectedSession, randomKeyspace)
     CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
-
     commitEntity.commit(stream, partition, txn, totalCnt, ttl)
   }
 }

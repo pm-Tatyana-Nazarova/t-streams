@@ -21,7 +21,6 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
   var connectedSession = cluster.connect(randomKeyspace)
 
   "CassandraStorage.init(), CassandraStorage.truncate() and CassandraStorage.remove()" should "create, truncate and remove data table" in {
-
     val cassandraStorage = new CassandraStorage(
       cluster = cluster,
       session = connectedSession,
@@ -43,7 +42,6 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
   }
 
   "CassandraStorage.put() CassandraStorage.get()" should "insert data in cassandra storage and retrieve it" in {
-
     val cassandraStorage = new CassandraStorage(
       cluster = cluster,
       session = connectedSession,

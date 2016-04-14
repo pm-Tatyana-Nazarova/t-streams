@@ -1,49 +1,44 @@
-package agents.both.batch_insert.aerospike
+package agents.both.batch_insert.cassandra
 
 import java.net.InetSocketAddress
 import agents.both.batch_insert.BatchSizeTestVal
-import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
+import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Redisson, Config}
+import org.redisson.{Config, Redisson}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringCreator}
+import testutils.{CassandraHelper, LocalGeneratorCreator, RandomStringCreator, RoundRobinPolicyCreator}
 
 
-class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
-  //creating keyspace, metadata
+class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
+  //creating keyspace, metadata, data
   def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
   val session = cluster.connect()
   CassandraHelper.createKeyspace(session, randomKeyspace)
   CassandraHelper.createMetadataTables(session, randomKeyspace)
+  CassandraHelper.createDataTable(session, randomKeyspace)
 
   //metadata/data factories
   val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new AerospikeStorageFactory
+  val storageFactory = new CassandraStorageFactory
 
   //converters to convert usertype->storagetype; storagetype->usertype
   val arrayByteToStringConverter = new ArrayByteToStringConverter
   val stringToArrayByteConverter = new StringToArrayByteConverter
 
-  //aerospike storage instances
-  val hosts = List(
-    new Host("localhost",3000),
-    new Host("localhost",3001),
-    new Host("localhost",3002),
-    new Host("localhost",3003))
-  val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
-  val aerospikeInstForProducer = storageFactory.getInstance(aerospikeOptions)
-  val aerospikeInstForConsumer = storageFactory.getInstance(aerospikeOptions)
+  //cassandra storage instances
+  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
+  val cassandraInstForProducer = storageFactory.getInstance(cassandraStorageOptions)
+  val cassandraInstForConsumer = storageFactory.getInstance(cassandraStorageOptions)
 
   //metadata storage instances
   val metadataStorageInstForProducer = metadataStorageFactory.getInstance(
@@ -64,7 +59,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     name = "test_stream",
     partitions = 3,
     metadataStorage = metadataStorageInstForProducer,
-    dataStorage = aerospikeInstForProducer,
+    dataStorage = cassandraInstForProducer,
     coordinator = coordinator,
     ttl = 60 * 10,
     description = "some_description")
@@ -73,7 +68,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     name = "test_stream",
     partitions = 3,
     metadataStorage = metadataStorageInstForConsumer,
-    dataStorage = aerospikeInstForConsumer,
+    dataStorage = cassandraInstForConsumer,
     coordinator = coordinator,
     ttl = 60 * 10,
     description = "some_description")

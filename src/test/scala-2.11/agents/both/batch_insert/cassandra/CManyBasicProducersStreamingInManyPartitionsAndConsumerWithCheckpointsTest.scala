@@ -1,37 +1,36 @@
-package agents.both.batch_insert.aerospike
+package agents.both.batch_insert.cassandra
 
 import java.net.InetSocketAddress
 import agents.both.batch_insert.BatchSizeTestVal
-import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
-import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
+import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Redisson, Config}
+import org.redisson.{Config, Redisson}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringCreator}
+import testutils.{CassandraHelper, LocalGeneratorCreator, RandomStringCreator, RoundRobinPolicyCreator}
 
 
-
-class AManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest extends FlatSpec
+class CManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTest extends FlatSpec
 with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
-  //creating keyspace, metadata
+  //creating keyspace, metadata, data
   def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
   val session = cluster.connect()
   CassandraHelper.createKeyspace(session, randomKeyspace)
   CassandraHelper.createMetadataTables(session, randomKeyspace)
+  CassandraHelper.createDataTable(session, randomKeyspace)
 
   //metadata/data factories
   val metadataStorageFactory = new MetadataStorageFactory
-  val storageFactory = new AerospikeStorageFactory
+  val storageFactory = new CassandraStorageFactory
 
   //converters to convert usertype->storagetype; storagetype->usertype
   val arrayByteToStringConverter = new ArrayByteToStringConverter
@@ -43,13 +42,8 @@ with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
   val redissonClient = Redisson.create(config)
   val coordinator = new Coordinator("some_path", redissonClient)
 
-  //aerospike storage options
-  val hosts = List(
-    new Host("localhost",3000),
-    new Host("localhost",3001),
-    new Host("localhost",3002),
-    new Host("localhost",3003))
-  val aerospikeOptions = new AerospikeStorageOptions("test", hosts)
+  //cassandra storage options
+  val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
 
   "Some amount of producers and one consumer" should "producers - send transactions in many partition" +
     " (each producer send each txn in only one partition without intersection " +
@@ -162,7 +156,7 @@ with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
     val metadataStorageInst = metadataStorageFactory.getInstance(
       cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
       keyspace = randomKeyspace)
-    val dataStorageInst = storageFactory.getInstance(aerospikeOptions)
+    val dataStorageInst = storageFactory.getInstance(cassandraStorageOptions)
 
     new BasicStream[Array[Byte]](
       name = "stream_name",
