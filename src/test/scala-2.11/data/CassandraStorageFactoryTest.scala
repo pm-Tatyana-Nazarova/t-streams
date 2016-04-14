@@ -4,11 +4,11 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory, CassandraStorage}
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraHelper, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringCreator}
 
 
 class CassandraStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll{
-  def randomString: String = RandomStringGen.randomAlphaString(10)
+  def randomString: String = RandomStringCreator.randomAlphaString(10)
 
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()

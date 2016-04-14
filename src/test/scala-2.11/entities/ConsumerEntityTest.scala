@@ -5,11 +5,11 @@ import com.bwsw.tstreams.entities.ConsumerEntity
 import com.datastax.driver.core.Cluster
 import com.gilt.timeuuid.TimeUuid
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraHelper, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringCreator}
 
 
 class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
-  def randomString: String = RandomStringGen.randomAlphaString(10)
+  def randomString: String = RandomStringCreator.randomAlphaString(10)
 
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()

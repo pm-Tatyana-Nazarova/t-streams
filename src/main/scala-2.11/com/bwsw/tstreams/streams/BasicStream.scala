@@ -1,8 +1,8 @@
 package com.bwsw.tstreams.streams
 
 import com.bwsw.tstreams.data.IStorage
-import com.bwsw.tstreams.lockservice.traits.ILockServiceFactory
 import com.bwsw.tstreams.metadata.MetadataStorage
+import com.bwsw.tstreams.coordination.Coordinator
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
@@ -15,16 +15,16 @@ import org.slf4j.LoggerFactory
  * @param dataStorage Data storage which will be using stream
  * @param ttl Time of transaction time expiration in seconds
  * @param description Some additional info about stream
+ * @param coordinator Redisson configured client and common prefix for all its entites
  * @tparam T Storage data type
  */
 class BasicStream[T](val name : String,
                   private var partitions : Int,
                   val metadataStorage: MetadataStorage,
                   val dataStorage : IStorage[T],
-                  val lockService: ILockServiceFactory,
+                  val coordinator: Coordinator,
                   private var ttl : Int,
                   private var description : String){
-
   /**
    * Transaction minimum ttl time
    */
@@ -37,15 +37,6 @@ class BasicStream[T](val name : String,
    * Basic Stream logger for logging
    */
   private val logger = Logger(LoggerFactory.getLogger(this.getClass))
-
-  /**
-   * Create lockers for all partitions if path already exist nothing will happen
-   */
-  if (lockService != null) {
-    //TODO try to remove null check from here
-    for (partition <- 0 until partitions)
-      lockService.createLocker(s"/$name/$partition")
-  }
 
   /**
    * @return Name
@@ -75,11 +66,6 @@ class BasicStream[T](val name : String,
    * Save stream info in metadata
    */
   def save() : Unit = {
-    //TODO try to remove null check from here
-    if (lockService != null) {
-      for (partition <- 0 until partitions)
-        lockService.createLocker(s"/$name/$partition")
-    }
     logger.info(s"start alternating stream with name : {$name}, partitions : {$partitions}, ttl : {$ttl}, description : {$description}\n")
     metadataStorage.streamEntity.alternateStream(name, partitions, ttl, description)
     logger.info(s"finished alternating stream with name : {$name}, partitions : {$partitions}, ttl : {$ttl}, description : {$description}\n")

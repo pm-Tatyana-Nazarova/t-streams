@@ -5,14 +5,14 @@ import com.bwsw.tstreams.data.cassandra.CassandraStorage
 import com.datastax.driver.core.Cluster
 import com.gilt.timeuuid.TimeUuid
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraHelper, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringCreator}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
 
 
 class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll{
-  def randomString: String = RandomStringGen.randomAlphaString(10)
+  def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
   var cluster = Cluster.builder().addContactPoint("localhost").build()
   var session = cluster.connect()

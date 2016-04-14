@@ -1,10 +1,8 @@
 package com.bwsw.tstreams.services
 
+import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.entities.StreamSettings
-
-
-import com.bwsw.tstreams.lockservice.traits.ILockServiceFactory
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
 import com.typesafe.scalalogging.Logger
@@ -31,7 +29,7 @@ object BasicStreamService {
   def loadStream[T](streamName : String,
                     metadataStorage: MetadataStorage,
                     dataStorage: IStorage[T],
-                    lockService: ILockServiceFactory) : BasicStream[T] = {
+                    lockService: Coordinator) : BasicStream[T] = {
 
 
     logger.info(s"start load stream with name : {$streamName}\n")
@@ -66,7 +64,7 @@ object BasicStreamService {
                    description : String,
                    metadataStorage: MetadataStorage,
                    dataStorage : IStorage[T],
-                   lockService: ILockServiceFactory) : BasicStream[T] = {
+                   lockService: Coordinator) : BasicStream[T] = {
 
 
     logger.info(s"start stream creation with name : {$streamName}, {$partitions}, {$ttl}\n")

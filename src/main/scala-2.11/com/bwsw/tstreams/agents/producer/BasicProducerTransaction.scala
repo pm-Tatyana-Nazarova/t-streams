@@ -2,8 +2,8 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
-import com.bwsw.tstreams.lockservice.traits.ILockService
 import com.typesafe.scalalogging.Logger
+import org.redisson.core.RLock
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{Await, Future}
@@ -30,6 +30,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   logger.info(s"Open transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
 
   /**
+   * Return transaction partition
+   */
+  def getPartition : Int = partition
+
+  /**
    * Variable for indicating transaction state
    */
   private var closed = false
@@ -54,16 +59,14 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
    */
   private val updateQueue = new LinkedBlockingQueue[Boolean](10)
 
-
   /**
-   * Locker reference for concrete producer on concrete stream/partition
+   * Lock reference for concrete producer on concrete stream/partition
    */
-  private val lockerRef: ILockService = basicProducer.stream.lockService.getLocker(s"/${basicProducer.stream.getName}/$partition")
+  private val lockRef: RLock = basicProducer.stream.coordinator.getLock(s"${basicProducer.stream.getName}/$partition")
 
+  lockRef.lock()
 
-  lockerRef.lock()
-
-  private val transaction = basicProducer.producerOptions.txnGenerator.getTimeUUID()
+  val transaction = basicProducer.producerOptions.txnGenerator.getTimeUUID()
   basicProducer.stream.metadataStorage.commitEntity.commit(
     basicProducer.stream.getName,
     partition,
@@ -71,7 +74,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     totalCnt = -1,
     ttl = basicProducer.stream.getTTL)
 
-  lockerRef.unlock()
+  lockRef.unlock()
 
   /**
    * Future to keep this transaction alive

@@ -3,13 +3,12 @@ package services
 import com.bwsw.tstreams.services.{CassandraStorageService, CassandraStrategies}
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RandomStringGen, CassandraHelper}
-
+import testutils.{RandomStringCreator, CassandraHelper}
 import scala.collection.mutable.ListBuffer
 
 
 class CassandraStorageServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll {
-  def randomString: String = RandomStringGen.randomAlphaString(10)
+  def randomString: String = RandomStringCreator.randomAlphaString(10)
   var maybeCreatedKeyspaces = ListBuffer[String]()
 
   "MetadataStorageService.createKeyspace() and MetadataStorageService.dropKeyspace()" should

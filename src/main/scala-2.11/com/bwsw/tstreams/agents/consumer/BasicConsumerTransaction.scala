@@ -21,7 +21,7 @@ class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATAT
   /**
    * Return transaction UUID
    */
-  def getTxnID: UUID = transaction.time
+  def getTxnUUID: UUID = transaction.time
 
   /**
    * Return transaction partition

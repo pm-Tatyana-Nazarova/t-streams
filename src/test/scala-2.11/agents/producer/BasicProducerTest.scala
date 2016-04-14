@@ -4,18 +4,19 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducerTransaction, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
+import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
-import com.bwsw.tstreams.lockservice.impl.ZkLockServiceFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.services.BasicStreamService
 import com.datastax.driver.core.Cluster
+import org.redisson.{Redisson, Config}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringGen}
+import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringCreator}
 
 
 class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
-  def randomString: String = RandomStringGen.randomAlphaString(10)
-
+  //creating data,metadata tables
+  def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
   val temporarySession = temporaryCluster.connect()
@@ -23,12 +24,23 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
   CassandraHelper.createDataTable(temporarySession, randomKeyspace)
 
+  //metadata storage, storage factories
   val metadataStorageFactory = new MetadataStorageFactory
   val storageFactory = new CassandraStorageFactory
-  val lockService = new ZkLockServiceFactory(List(new InetSocketAddress("localhost", 2181)), "/some_path", 10)
 
+  //coordinator
+  val config = new Config()
+  config.useSingleServer().setAddress("localhost:6379")
+  val redisson = Redisson.create(config)
+  val coordinator = new Coordinator("some_path", redisson)
+
+  //converter to convert user strings to data storage array byte
   val stringToArrayByteConverter = new StringToArrayByteConverter
+
+  //storage options
   val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
+
+  //stream
   val stream = BasicStreamService.createStream(
     streamName = "test_stream",
     partitions = 3,
@@ -36,7 +48,9 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     description = "unit_testing",
     metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
     dataStorage = storageFactory.getInstance(cassandraOptions),
-    lockService = lockService)
+    lockService = coordinator)
+
+  //producer options
   val options = new BasicProducerOptions[String, Array[Byte]](
     transactionTTL = 10,
     transactionKeepAliveInterval = 2,
@@ -77,7 +91,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
     temporarySession.close()
     temporaryCluster.close()
-    lockService.closeFactory()
+    redisson.shutdown()
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
   }
