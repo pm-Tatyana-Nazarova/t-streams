@@ -35,6 +35,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   def getPartition : Int = partition
 
   /**
+   * Return transaction UUID
+   */
+  def getTxnUUID: UUID = transactionUuid
+
+  /**
    * Variable for indicating transaction state
    */
   private var closed = false
@@ -66,7 +71,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
   lockRef.lock()
 
-  val transactionUuid = basicProducer.producerOptions.txnGenerator.getTimeUUID()
+  private val transactionUuid = basicProducer.producerOptions.txnGenerator.getTimeUUID()
   basicProducer.stream.metadataStorage.commitEntity.commit(
     basicProducer.stream.getName,
     partition,
