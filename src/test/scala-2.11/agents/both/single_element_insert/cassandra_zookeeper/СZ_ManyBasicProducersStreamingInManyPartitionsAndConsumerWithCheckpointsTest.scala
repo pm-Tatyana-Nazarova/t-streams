@@ -7,7 +7,7 @@ import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
-import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
+import com.bwsw.tstreams.lockservice.impl.ZkLockServiceFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -25,7 +25,7 @@ class СZ_ManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsT
   val arrayByteToStringConverter = new ArrayByteToStringConverter
   val stringToArrayByteConverter = new StringToArrayByteConverter
   //all locker factory instances
-  var instances = ListBuffer[ZkLockerFactory]()
+  var instances = ListBuffer[ZkLockServiceFactory]()
 
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
@@ -144,7 +144,7 @@ class СZ_ManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsT
 
   def getStream(partitions : Int): BasicStream[Array[Byte]] = {
     //locker factory instance
-    val lockService = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
+    val lockService = new ZkLockServiceFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
     instances += lockService
 
     //storage instances

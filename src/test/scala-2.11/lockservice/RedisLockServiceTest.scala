@@ -2,12 +2,12 @@ package lockservice
 
 import java.util.concurrent.atomic.AtomicReference
 import com.bwsw.tstreams.lockservice.impl._
-import com.bwsw.tstreams.lockservice.traits.ILocker
+import com.bwsw.tstreams.lockservice.traits.ILockService
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import scala.collection.mutable.ListBuffer
 
 
-class RedisLockerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
+class RedisLockServiceTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
   val flag = new AtomicReference[Int](0)
   val checkVal = new AtomicReference[Boolean](true)
@@ -17,13 +17,13 @@ class RedisLockerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     val config = new org.redisson.Config()
     config.useSingleServer().setAddress("localhost:6379")
 
-    val factory1 = new RedisLockerFactory("/unittest",config)
-    val factory2 = new RedisLockerFactory("/unittest",config)
-    val factory3 = new RedisLockerFactory("/unittest",config)
-    val factory4 = new RedisLockerFactory("/unittest",config)
-    val factory5 = new RedisLockerFactory("/unittest",config)
+    val factory1 = new RedisLockServiceFactory("/unittest",config)
+    val factory2 = new RedisLockServiceFactory("/unittest",config)
+    val factory3 = new RedisLockServiceFactory("/unittest",config)
+    val factory4 = new RedisLockServiceFactory("/unittest",config)
+    val factory5 = new RedisLockServiceFactory("/unittest",config)
 
-    var lockers = new ListBuffer[ILocker]()
+    var lockers = new ListBuffer[ILockService]()
     lockers+=factory1.getLocker(path)
     lockers+=factory2.getLocker(path)
     lockers+=factory3.getLocker(path)
@@ -46,7 +46,7 @@ class RedisLockerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     checkVal.get() shouldEqual true
   }
 
-  def getRunnable(locker: ILocker) = {
+  def getRunnable(locker: ILockService) = {
     new Runnable {
       override def run(): Unit = {
         var i : Int = 0

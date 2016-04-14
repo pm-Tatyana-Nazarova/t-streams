@@ -7,7 +7,7 @@ import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
-import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
+import com.bwsw.tstreams.lockservice.impl.ZkLockServiceFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -49,8 +49,8 @@ class CZ_BasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with
     keyspace = randomKeyspace)
 
   //locker factories
-  val lockerFactoryForProducer = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
-  val lockerFactoryForConsumer = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
+  val lockerFactoryForProducer = new ZkLockServiceFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
+  val lockerFactoryForConsumer = new ZkLockServiceFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
 
   //streams
   val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](

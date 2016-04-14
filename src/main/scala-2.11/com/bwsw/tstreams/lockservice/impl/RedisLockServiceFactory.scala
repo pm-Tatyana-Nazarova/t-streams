@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.lockservice.impl
 
-import com.bwsw.tstreams.lockservice.traits.{ILocker, ILockerFactory}
+import com.bwsw.tstreams.lockservice.traits.{ILockService, ILockServiceFactory}
 import com.typesafe.scalalogging.Logger
 import org.redisson.{RedissonClient, Redisson}
 import org.redisson.core.RLock
@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory
  * @param path Common path for all lockers
  * @param config Redisson Client config
  */
-class RedisLockerFactory(path : String, config : org.redisson.Config) extends ILockerFactory{
+class RedisLockServiceFactory(path : String, config : org.redisson.Config) extends ILockServiceFactory{
 
   /**
    * RedisLockerFactory logger for logging
@@ -28,10 +28,10 @@ class RedisLockerFactory(path : String, config : org.redisson.Config) extends IL
    * @param name
    * @return
    */
-  override def getLocker(name: String): ILocker = {
+  override def getLocker(name: String): ILockService = {
      logger.info(s"start retrieving redis locker with path: {$path$name}")
      val locker: RLock = reddison.getLock(path + name)
-     val inst = new RedisLocker(locker)
+     val inst = new RedisLockService(locker)
      logger.info(s"finished retrieving redis locker with path: {$path$name}")
      inst
   }

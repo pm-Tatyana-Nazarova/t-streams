@@ -2,7 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
-import com.bwsw.tstreams.lockservice.traits.ILocker
+import com.bwsw.tstreams.lockservice.traits.ILockService
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
@@ -58,7 +58,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   /**
    * Locker reference for concrete producer on concrete stream/partition
    */
-  private val lockerRef: ILocker = basicProducer.stream.lockService.getLocker(s"/${basicProducer.stream.getName}/$partition")
+  private val lockerRef: ILockService = basicProducer.stream.lockService.getLocker(s"/${basicProducer.stream.getName}/$partition")
 
 
   lockerRef.lock()

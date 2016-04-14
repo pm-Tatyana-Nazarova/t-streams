@@ -10,7 +10,7 @@ import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
+import com.bwsw.tstreams.lockservice.impl.RedisLockServiceFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -60,8 +60,8 @@ class AR_BasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with
   //locker factories
   val config = new Config()
   config.useSingleServer().setAddress("localhost:6379")
-  val lockerFactoryForProducer = new RedisLockerFactory("/some_path", config)
-  val lockerFactoryForConsumer = new RedisLockerFactory("/some_path", config)
+  val lockerFactoryForProducer = new RedisLockServiceFactory("/some_path", config)
+  val lockerFactoryForConsumer = new RedisLockServiceFactory("/some_path", config)
 
   //streams
   val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](

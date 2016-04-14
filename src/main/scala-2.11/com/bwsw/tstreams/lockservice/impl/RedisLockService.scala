@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.lockservice.impl
 
-import com.bwsw.tstreams.lockservice.traits.ILocker
+import com.bwsw.tstreams.lockservice.traits.ILockService
 import com.typesafe.scalalogging.Logger
 import org.redisson.core.RLock
 import org.slf4j.LoggerFactory
@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory
 /**
  * Locker using redis client
  */
-class RedisLocker(locker : RLock) extends ILocker{
+class RedisLockService(locker : RLock) extends ILockService{
 
   /**
    * RedisLocker logger for logging

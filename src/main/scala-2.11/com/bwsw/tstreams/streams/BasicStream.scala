@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.streams
 
 import com.bwsw.tstreams.data.IStorage
-import com.bwsw.tstreams.lockservice.traits.ILockerFactory
+import com.bwsw.tstreams.lockservice.traits.ILockServiceFactory
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
@@ -21,7 +21,7 @@ class BasicStream[T](val name : String,
                   private var partitions : Int,
                   val metadataStorage: MetadataStorage,
                   val dataStorage : IStorage[T],
-                  val lockService: ILockerFactory,
+                  val lockService: ILockServiceFactory,
                   private var ttl : Int,
                   private var description : String){
 
@@ -42,7 +42,7 @@ class BasicStream[T](val name : String,
    * Create lockers for all partitions if path already exist nothing will happen
    */
   if (lockService != null) {
-    //TODO mb special case for consumer
+    //TODO try to remove null check from here
     for (partition <- 0 until partitions)
       lockService.createLocker(s"/$name/$partition")
   }
@@ -75,8 +75,8 @@ class BasicStream[T](val name : String,
    * Save stream info in metadata
    */
   def save() : Unit = {
+    //TODO try to remove null check from here
     if (lockService != null) {
-      //TODO mb special case for consumer
       for (partition <- 0 until partitions)
         lockService.createLocker(s"/$name/$partition")
     }

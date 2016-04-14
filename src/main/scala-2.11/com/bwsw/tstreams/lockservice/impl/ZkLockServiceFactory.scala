@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.lockservice.impl
 
 import java.net.InetSocketAddress
-import com.bwsw.tstreams.lockservice.traits.ILockerFactory
+import com.bwsw.tstreams.lockservice.traits.ILockServiceFactory
 import com.twitter.common.quantity.Amount
 import com.twitter.common.zookeeper.ZooKeeperClient
 import com.typesafe.scalalogging.Logger
@@ -14,7 +14,7 @@ import scala.collection.JavaConverters._
  * @param zkServers Zk service params
  * @param rootPath Path to handle
  */
-class ZkLockerFactory(zkServers : List[InetSocketAddress], rootPath : String, zkSessionTimeout : Int) extends ILockerFactory{
+class ZkLockServiceFactory(zkServers : List[InetSocketAddress], rootPath : String, zkSessionTimeout : Int) extends ILockServiceFactory{
   /**
    * ZkLockerFactory logger for logging
    */
@@ -28,7 +28,7 @@ class ZkLockerFactory(zkServers : List[InetSocketAddress], rootPath : String, zk
   /**
    * Instances of all Lockers
    */
-  private val instances = scala.collection.mutable.Map[String, ZkLocker]()
+  private val instances = scala.collection.mutable.Map[String, ZkLockService]()
 
   /**
    * Zk client instance
@@ -41,7 +41,7 @@ class ZkLockerFactory(zkServers : List[InetSocketAddress], rootPath : String, zk
    */
   override def createLocker(additionalPath : String) : Unit = {
     logger.info(s"start creating locker with lockpath : {${rootPath+additionalPath}")
-    val inst = new ZkLocker(zkClient, rootPath + additionalPath.toString, zkSessionTimeout)
+    val inst = new ZkLockService(zkClient, rootPath + additionalPath.toString, zkSessionTimeout)
     logger.info(s"finished creating locker with lockpath : {${rootPath+additionalPath}")
     instances += rootPath+additionalPath -> inst
   }
@@ -51,7 +51,7 @@ class ZkLockerFactory(zkServers : List[InetSocketAddress], rootPath : String, zk
    * @param additionalPath Create locker instance for concrete additional path
    * @return Locker if it created, exception else
    */
-  def getLocker(additionalPath : String) : ZkLocker = {
+  def getLocker(additionalPath : String) : ZkLockService = {
     logger.info(s"start retrieving locker with lockpath : {${rootPath+additionalPath}")
     if (!instances.contains(rootPath+additionalPath))
       throw new IllegalArgumentException("Requested Locker not exist")

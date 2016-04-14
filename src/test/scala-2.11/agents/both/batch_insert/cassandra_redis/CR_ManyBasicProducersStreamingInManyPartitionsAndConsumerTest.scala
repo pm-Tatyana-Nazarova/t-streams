@@ -8,7 +8,7 @@ import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
-import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
+import com.bwsw.tstreams.lockservice.impl.RedisLockServiceFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -27,7 +27,7 @@ class CR_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends Flat
   val arrayByteToStringConverter = new ArrayByteToStringConverter
   val stringToArrayByteConverter = new StringToArrayByteConverter
   //all locker factory instances
-  var instances = ListBuffer[RedisLockerFactory]()
+  var instances = ListBuffer[RedisLockServiceFactory]()
 
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
@@ -139,7 +139,7 @@ class CR_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends Flat
     //locker factory instance
     val config = new Config()
     config.useSingleServer().setAddress("localhost:6379")
-    val lockService = new RedisLockerFactory("/some_path", config)
+    val lockService = new RedisLockServiceFactory("/some_path", config)
     instances += lockService
 
     //storage instances

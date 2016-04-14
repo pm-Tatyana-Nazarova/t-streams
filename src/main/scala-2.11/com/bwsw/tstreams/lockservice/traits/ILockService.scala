@@ -3,7 +3,7 @@ package com.bwsw.tstreams.lockservice.traits
 /**
  * Basic Locker trait
  */
-trait ILocker {
+trait ILockService {
   /**
    * Lock this locker
    */

@@ -3,7 +3,7 @@ package com.bwsw.tstreams.lockservice.traits
 /**
  * Basic trait for locker
  */
-trait ILockerFactory {
+trait ILockServiceFactory {
   /**
    * Create locker with specific name
    * @param name
@@ -15,7 +15,7 @@ trait ILockerFactory {
    * @param name
    * @return
    */
-  def getLocker(name : String) : ILocker
+  def getLocker(name : String) : ILockService
 
   /**
    * Close all factory lockers

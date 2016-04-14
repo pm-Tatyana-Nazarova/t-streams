@@ -93,6 +93,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   /**
    * Close all opened transactions
    */
+  //TODO not simultaneous now
   def checkPoint() : Unit = {
     mapPartitions.map{case(partition,txn)=>txn}.foreach{ x=>
       if (!x.isClosed)

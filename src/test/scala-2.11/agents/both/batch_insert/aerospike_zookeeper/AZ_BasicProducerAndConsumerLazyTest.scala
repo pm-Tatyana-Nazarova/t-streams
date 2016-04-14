@@ -10,7 +10,7 @@ import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
+import com.bwsw.tstreams.lockservice.impl.ZkLockServiceFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -60,9 +60,9 @@ class AZ_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     keyspace = randomKeyspace)
 
   //locker factories
-  val lockerFactoryForProducer1 = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
-  val lockerFactoryForProducer2 = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
-  val lockerFactoryForConsumer = new ZkLockerFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
+  val lockerFactoryForProducer1 = new ZkLockServiceFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
+  val lockerFactoryForProducer2 = new ZkLockServiceFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
+  val lockerFactoryForConsumer = new ZkLockServiceFactory(List(new InetSocketAddress("localhost",2181)), "/some_path", 10)
 
   //streams
   val streamForProducer1: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](

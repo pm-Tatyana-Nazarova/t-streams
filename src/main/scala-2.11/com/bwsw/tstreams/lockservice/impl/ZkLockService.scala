@@ -1,6 +1,6 @@
 package com.bwsw.tstreams.lockservice.impl
 
-import com.bwsw.tstreams.lockservice.traits.ILocker
+import com.bwsw.tstreams.lockservice.traits.ILockService
 import com.twitter.common.zookeeper.{DistributedLockImpl, ZooKeeperClient}
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
  * @param timeoutInSeconds Zk session timeout
  */
 
-class ZkLocker(zkClient : ZooKeeperClient, path : String, timeoutInSeconds : Int) extends ILocker{
+class ZkLockService(zkClient : ZooKeeperClient, path : String, timeoutInSeconds : Int) extends ILockService{
 
   /**
    * ZKLocker logger for logging

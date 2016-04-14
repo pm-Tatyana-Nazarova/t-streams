@@ -3,7 +3,7 @@ package services
 import java.net.InetSocketAddress
 import com.aerospike.client.Host
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
+import com.bwsw.tstreams.lockservice.impl.RedisLockServiceFactory
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.services.BasicStreamService
 import com.bwsw.tstreams.streams.BasicStream
@@ -17,7 +17,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   def randomString: String = RandomStringGen.randomAlphaString(10)
   val config = new Config()
   config.useSingleServer().setAddress("localhost:6379")
-  val lockerFactory = new RedisLockerFactory("some_path/", config)
+  val lockerFactory = new RedisLockServiceFactory("some_path/", config)
   val dataFactory = new AerospikeStorageFactory
   val metadataFactory = new MetadataStorageFactory
 
