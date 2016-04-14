@@ -182,7 +182,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     //await till update future will close
     Await.ready(updateFuture, TIMEOUT)
 
-    //close ttl from streams
+    //close transaction using stream ttl
     if (part > 0) {
       basicProducer.stream.metadataStorage.commitEntity.commit(
         basicProducer.stream.getName,

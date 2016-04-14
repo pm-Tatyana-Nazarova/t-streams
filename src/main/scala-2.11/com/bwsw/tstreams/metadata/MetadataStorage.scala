@@ -158,7 +158,7 @@ class MetadataStorageFactory {
   /**
    * Map for memorize Storage instances which are already created
    */
-  private val instancesMap = scala.collection.mutable.Map[(List[InetSocketAddress], String), (MetadataStorage, Session)]()
+  private val instancesMap = scala.collection.mutable.Map[(List[InetSocketAddress], String), Session]()
 
   /**
     * Fabric method which returns new MetadataStorage
@@ -183,19 +183,18 @@ class MetadataStorageFactory {
       }
     }
 
-    val inst = {
+    val session = {
       if (instancesMap.contains((sortedHosts,keyspace)))
-        instancesMap((sortedHosts,keyspace))._1
+        instancesMap((sortedHosts,keyspace))
       else{
         val session: Session = cluster.connect(keyspace)
-        val inst = new MetadataStorage(cluster, session, keyspace)
-        instancesMap((sortedHosts, keyspace)) = (inst,session)
-        inst
+        instancesMap((sortedHosts, keyspace)) = session
+        session
       }
     }
 
     logger.info("finished MetadataStorage instance creation\n")
-    inst
+    new MetadataStorage(cluster,session,keyspace)
   }
 
   /**
@@ -203,7 +202,7 @@ class MetadataStorageFactory {
    */
   def closeFactory() = {
     clusterMap.foreach(x=>x._2.close()) //close all clusters for each instance
-    instancesMap.foreach(x=>x._2._2.close()) //close all sessions for each instance
+    instancesMap.foreach(x=>x._2.close()) //close all sessions for each instance
     clusterMap.clear()
     instancesMap.clear()
   }

@@ -17,7 +17,6 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringGen}
 import scala.collection.mutable.ListBuffer
 
-
 class СR_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
    def randomString: String = RandomStringGen.randomAlphaString(10)
    //factories
@@ -105,7 +104,6 @@ class СR_ManyBasicProducersStreamingInManyRandomPartitionsAndConsumerTest exten
      consumerThread.start()
      consumerThread.join(timeoutForWaiting * 1000)
      producersThreads.foreach(x=>x.join(timeoutForWaiting * 1000))
-
      //assert that is nothing to read
      (0 until totalPartitions) foreach { _=>
        checkVal &= consumer.getTransaction.isEmpty

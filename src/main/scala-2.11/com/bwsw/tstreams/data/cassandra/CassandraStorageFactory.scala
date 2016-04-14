@@ -24,7 +24,7 @@ class CassandraStorageFactory {
   /**
    * Map for memorize sessions which are already created
    */
-  private val sessionMap = scala.collection.mutable.Map[(List[InetSocketAddress], String), (CassandraStorage,Session)]()
+  private val sessionMap = scala.collection.mutable.Map[(List[InetSocketAddress], String), Session]()
 
   /**
    *
@@ -48,19 +48,18 @@ class CassandraStorageFactory {
       }
     }
 
-    val inst = {
+    val session = {
       if (sessionMap.contains((sortedHosts,cassandraStorageOptions.keyspace)))
-        sessionMap((sortedHosts,cassandraStorageOptions.keyspace))._1
+        sessionMap((sortedHosts,cassandraStorageOptions.keyspace))
       else{
         val session: Session = cluster.connect(cassandraStorageOptions.keyspace)
-        val inst = new CassandraStorage(cluster, session, cassandraStorageOptions.keyspace)
-        sessionMap((sortedHosts, cassandraStorageOptions.keyspace)) = (inst,session)
-        inst
+        sessionMap((sortedHosts, cassandraStorageOptions.keyspace)) = session
+        session
       }
     }
 
     logger.info(s"finished CassandraStorage instance creation with keyspace : {${cassandraStorageOptions.keyspace}}\n")
-    inst
+    new CassandraStorage(cluster, session, cassandraStorageOptions.keyspace)
   }
 
   /**
@@ -68,7 +67,7 @@ class CassandraStorageFactory {
    */
   def closeFactory() : Unit = {
     clusterMap.foreach{x=>x._2.close()}
-    sessionMap.foreach{x=>x._2._2.close()}
+    sessionMap.foreach{x=>x._2.close()}
     clusterMap.clear()
     sessionMap.clear()
   }
