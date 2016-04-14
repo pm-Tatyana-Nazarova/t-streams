@@ -16,7 +16,7 @@ object InsertionType {
   case object SingleElementInsert extends InsertType
 
   /**
-   * With this statement elements will be sent only after the batch will be filled
+   * With this statement elements will be sent only after the local batch will be filled
    * @param batchSize Size of batch to put in storage
    */
   case class BatchInsert(batchSize: Int) extends InsertType
