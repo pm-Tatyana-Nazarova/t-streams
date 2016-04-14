@@ -28,19 +28,19 @@ class AerospikeStorageFactory{
   def getInstance(aerospikeOptions: AerospikeStorageOptions) : AerospikeStorage = {
     logger.info(s"start AerospikeStorage instance creation\n")
 
-    val inst = {
+    val client = {
       if (aerospikeClients.contains((aerospikeOptions.hosts, aerospikeOptions.clientPolicy))) {
-        new AerospikeStorage(aerospikeClients((aerospikeOptions.hosts, aerospikeOptions.clientPolicy)),aerospikeOptions)
+        aerospikeClients((aerospikeOptions.hosts, aerospikeOptions.clientPolicy))
       }
       else{
         val client = new AerospikeClient(aerospikeOptions.clientPolicy,aerospikeOptions.hosts:_*)
         aerospikeClients((aerospikeOptions.hosts, aerospikeOptions.clientPolicy)) = client
-        new AerospikeStorage(client, aerospikeOptions)
+        client
       }
     }
 
     logger.info(s"finished AerospikeStorage instance creation\n")
-    inst
+    new AerospikeStorage(client, aerospikeOptions)
   }
 
   /**
