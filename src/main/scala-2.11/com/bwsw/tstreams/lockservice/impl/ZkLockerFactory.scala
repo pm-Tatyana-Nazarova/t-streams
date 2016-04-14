@@ -39,7 +39,7 @@ class ZkLockerFactory(zkServers : List[InetSocketAddress], rootPath : String, zk
    * Create Locker instance
    * @param additionalPath Some additional path for rootPath
    */
-  def createLocker(additionalPath : String) : Unit = {
+  override def createLocker(additionalPath : String) : Unit = {
     logger.info(s"start creating locker with lockpath : {${rootPath+additionalPath}")
     val inst = new ZkLocker(zkClient, rootPath + additionalPath.toString, zkSessionTimeout)
     logger.info(s"finished creating locker with lockpath : {${rootPath+additionalPath}")

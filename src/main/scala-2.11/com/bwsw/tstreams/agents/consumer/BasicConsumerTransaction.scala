@@ -19,9 +19,14 @@ class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATAT
                                                    transaction : TransactionSettings) {
 
   /**
-   * Return transaction unique number
+   * Return transaction UUID
    */
   def getTxnID: UUID = transaction.time
+
+  /**
+   * Return transaction partition
+   */
+  def getPartition : Int = partition
 
   /**
    * Transaction data pointer

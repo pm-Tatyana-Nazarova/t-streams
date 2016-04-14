@@ -1,7 +1,8 @@
 package agents.consumer
 
 import java.net.InetSocketAddress
-import com.bwsw.tstreams.agents.consumer.{Oldest, BasicConsumerTransaction, BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
+import com.bwsw.tstreams.agents.consumer.{BasicConsumerTransaction, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.converter.ArrayByteToStringConverter
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory, CassandraStorage}
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}

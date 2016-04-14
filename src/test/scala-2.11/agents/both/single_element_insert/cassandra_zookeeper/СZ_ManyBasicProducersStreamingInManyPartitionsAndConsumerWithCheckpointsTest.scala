@@ -1,8 +1,10 @@
 package agents.both.single_element_insert.cassandra_zookeeper
 
 import java.net.InetSocketAddress
-import com.bwsw.tstreams.agents.consumer.{Oldest, BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.agents.producer.{SingleElementInsert, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
+import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
@@ -56,7 +58,7 @@ class СZ_ManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsT
           var i = 0
           while(i < totalTxn) {
             Thread.sleep(2000)
-            val txn = p.newTransaction(false)
+            val txn = p.newTransaction(ProducerPolicies.errorIfOpen)
             dataToSend.foreach(x => txn.send(x))
             txn.close()
             i+=1

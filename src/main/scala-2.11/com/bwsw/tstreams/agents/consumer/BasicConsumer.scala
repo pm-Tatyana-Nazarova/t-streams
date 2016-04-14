@@ -149,9 +149,9 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    */
     def getTransactionById(partition : Int, uuid : UUID): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
       logger.info(s"Start new historic transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
-      val option = updateTransaction(uuid, partition)
-      if (option.isDefined){
-        val txn = option.get
+      val txnOpt = updateTransaction(uuid, partition)
+      if (txnOpt.isDefined){
+        val txn = txnOpt.get
         if (txn.totalItems != -1)
           Some(new BasicConsumerTransaction[DATATYPE,USERTYPE](this, partition, txn))
         else

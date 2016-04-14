@@ -2,8 +2,10 @@ package agents.both.single_element_insert.aerospike_redis
 
 import java.net.InetSocketAddress
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{Oldest, BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.agents.producer.{SingleElementInsert, BasicProducerOptions, BasicProducer}
+import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
+import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducerOptions, BasicProducer}
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
@@ -63,7 +65,7 @@ class AR_ManyBasicProducersStreamingInManyPartitionsAndConsumerWithCheckpointsTe
           var i = 0
           while(i < totalTxn) {
             Thread.sleep(2000)
-            val txn = p.newTransaction(false)
+            val txn = p.newTransaction(ProducerPolicies.errorIfOpen)
             dataToSend.foreach(x => txn.send(x))
             txn.close()
             i+=1

@@ -4,8 +4,10 @@ import java.net.InetSocketAddress
 
 import agents.both.batch_insert.BatchSizeTestVal
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction, Oldest}
-import com.bwsw.tstreams.agents.producer.{BatchInsert, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
+import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
+import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
@@ -103,7 +105,7 @@ class AZ_BasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers w
      val txnNum = 20
 
      (0 until txnNum) foreach { _ =>
-       val txn = producer.newTransaction(false)
+       val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
        dataToSend foreach { part =>
          txn.send(part)
        }

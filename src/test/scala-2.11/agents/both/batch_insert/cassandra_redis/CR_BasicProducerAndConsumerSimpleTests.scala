@@ -2,8 +2,10 @@ package agents.both.batch_insert.cassandra_redis
 
 import java.net.InetSocketAddress
 import agents.both.batch_insert.BatchSizeTestVal
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction, Oldest}
-import com.bwsw.tstreams.agents.producer.{BatchInsert, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
+import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
+import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
@@ -100,7 +102,7 @@ class CR_BasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it with getAll method" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val totalDataInTxn = 10
-    val producerTransaction = producer.newTransaction(false)
+    val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpen)
     val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
     sendData.foreach{ x=>
       producerTransaction.send(x)
@@ -122,7 +124,7 @@ class CR_BasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with
   "producer, consumer" should "producer - generate one transaction, consumer - retrieve it using iterator" in {
     CassandraHelper.clearMetadataTables(session, randomKeyspace)
     val totalDataInTxn = 10
-    val producerTransaction = producer.newTransaction(false)
+    val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpen)
     val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
     sendData.foreach{ x=>
       producerTransaction.send(x)
@@ -155,7 +157,7 @@ class CR_BasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with
     val sendData = (for (part <- 0 until totalDataInTxn) yield "data_part_" + randomString).sorted
 
     (0 until totalTxn).foreach { _=>
-        val producerTransaction = producer.newTransaction(false)
+        val producerTransaction = producer.newTransaction(ProducerPolicies.errorIfOpen)
         sendData.foreach{ x=>
           producerTransaction.send(x)
         }
@@ -186,7 +188,7 @@ class CR_BasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with
 
     val producerThread = new Thread(new Runnable {
       def run() {
-        val txn = producer.newTransaction(false)
+        val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
         sendData.foreach{ x=>
           txn.send(x)
           Thread.sleep(1000)

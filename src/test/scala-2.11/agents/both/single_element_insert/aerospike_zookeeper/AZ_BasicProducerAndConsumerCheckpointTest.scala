@@ -2,8 +2,10 @@ package agents.both.single_element_insert.aerospike_zookeeper
 
 import java.net.InetSocketAddress
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{Oldest, BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
-import com.bwsw.tstreams.agents.producer.{SingleElementInsert, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
+import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
+import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
@@ -101,7 +103,7 @@ class AZ_BasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers w
      val txnNum = 20
 
      (0 until txnNum) foreach { _ =>
-       val txn = producer.newTransaction(false)
+       val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
        dataToSend foreach { part =>
          txn.send(part)
        }

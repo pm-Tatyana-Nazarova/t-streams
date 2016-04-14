@@ -2,8 +2,10 @@ package agents.both.batch_insert.cassandra_redis
 
 import java.net.InetSocketAddress
 import agents.both.batch_insert.BatchSizeTestVal
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, Oldest}
-import com.bwsw.tstreams.agents.producer.{BatchInsert, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
+import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
@@ -58,7 +60,7 @@ class CR_ManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends Flat
           var i = 0
           while(i < totalTxn) {
             Thread.sleep(2000)
-            val txn = p.newTransaction(false)
+            val txn = p.newTransaction(ProducerPolicies.errorIfOpen)
             dataToSend.foreach(x => txn.send(x))
             txn.close()
             i+=1

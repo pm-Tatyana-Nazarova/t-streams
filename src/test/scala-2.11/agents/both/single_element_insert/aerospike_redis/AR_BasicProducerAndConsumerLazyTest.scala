@@ -2,8 +2,10 @@ package agents.both.single_element_insert.aerospike_redis
 
 import java.net.InetSocketAddress
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{Oldest, BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.agents.producer.{SingleElementInsert, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
+import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
 import com.bwsw.tstreams.lockservice.impl.RedisLockerFactory
@@ -134,7 +136,7 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
 
     val producer1Thread = new Thread(new Runnable {
       def run() {
-        val txn = producer1.newTransaction(false)
+        val txn = producer1.newTransaction(ProducerPolicies.errorIfOpen)
         dataToSend1.foreach { x =>
           txn.send(x)
           Thread.sleep(2000)
@@ -146,7 +148,7 @@ class AR_BasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Be
     val producer2Thread = new Thread(new Runnable {
       def run() {
         Thread.sleep(2000)
-        val txn = producer2.newTransaction(false)
+        val txn = producer2.newTransaction(ProducerPolicies.errorIfOpen)
         dataToSend2.foreach{ x=>
           txn.send(x)
         }

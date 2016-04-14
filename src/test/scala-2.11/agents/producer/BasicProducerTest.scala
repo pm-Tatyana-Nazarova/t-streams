@@ -1,7 +1,8 @@
 package agents.producer
 
 import java.net.InetSocketAddress
-import com.bwsw.tstreams.agents.producer.{SingleElementInsert, BasicProducerTransaction, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
+import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducerTransaction, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
 import com.bwsw.tstreams.lockservice.impl.ZkLockerFactory
@@ -49,22 +50,22 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
-    val txn: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(false)
+    val txn: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpen)
     txn.close()
     txn.isInstanceOf[BasicProducerTransaction[_,_]] shouldEqual true
   }
 
   "BasicProducer.newTransaction(false)" should "throw exception if previous transaction was not closed" in {
-    val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(false)
+    val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpen)
     intercept[IllegalStateException] {
-       val txn2 = producer.newTransaction(false)
+       val txn2 = producer.newTransaction(ProducerPolicies.errorIfOpen)
     }
     txn1.close()
   }
 
   "BasicProducer.newTransaction(true)" should "not throw exception if previous transaction was not closed" in {
-    val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(false)
-    val txn2 = producer.newTransaction(true)
+    val txn1: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpen)
+    val txn2 = producer.newTransaction(ProducerPolicies.errorIfOpen)
   }
 
 
