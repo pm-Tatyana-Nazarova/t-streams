@@ -10,7 +10,6 @@ import scala.collection.mutable
 
 class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringCreator.randomAlphaString(10)
-
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
   val temporarySession = temporaryCluster.connect()
@@ -33,12 +32,14 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
     //read all transactions from oldest offset
     val amount: Int = commitEntity.getTransactionAmount(stream, partition, txn).get
+    var checkVal = true
 
-    assert(amount == totalCnt)
+    checkVal &= amount == totalCnt
     Thread.sleep(3000)
-
     val emptyQueue: mutable.Queue[TransactionSettings] = commitEntity.getTransactions(stream, partition, TimeUuid(0), 1)
-    assert(emptyQueue.isEmpty)
+    checkVal &= emptyQueue.isEmpty
+
+    checkVal shouldEqual true
   }
 
   "CommitEntity.commit() CommitEntity.getTransactions()" should
@@ -56,13 +57,16 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     commitEntity.commit(stream, partition, txn1, totalCnt, ttl)
     commitEntity.commit(stream, partition, txn2, totalCnt, ttl)
 
-    val queue = commitEntity.getTransactions(stream, partition, TimeUuid(0), 2)
-    assert(queue.size == 2)
-    val txnSettings1 = queue.dequeue()
-    assert(txnSettings1.time == txn1 && txnSettings1.totalItems == totalCnt)
+    var checkVal = true
 
+    val queue = commitEntity.getTransactions(stream, partition, TimeUuid(0), 2)
+    checkVal &= queue.size == 2
+    val txnSettings1 = queue.dequeue()
+    checkVal &= txnSettings1.time == txn1 && txnSettings1.totalItems == totalCnt
     val txnSettings2 = queue.dequeue()
-    assert(txnSettings2.time == txn2 && txnSettings2.totalItems == totalCnt)
+    checkVal &= txnSettings2.time == txn2 && txnSettings2.totalItems == totalCnt
+
+    checkVal shouldEqual true
   }
 
   override def afterAll(): Unit = {

@@ -27,7 +27,7 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
       session = connectedSession,
       keyspace = randomKeyspace)
 
-    var checkIfOk = true
+    var checkVal = true
 
     try {
       //here we already have created tables for entitiesRepository
@@ -36,10 +36,10 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
       cassandraStorage.truncate()
     }
     catch{
-      case e : Exception => checkIfOk = false
+      case e : Exception => checkVal = false
     }
 
-    checkIfOk shouldEqual true
+    checkVal shouldEqual true
   }
 
   "CassandraStorage.put() CassandraStorage.get()" should "insert data in cassandra storage and retrieve it" in {
@@ -79,7 +79,7 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
         checkVal = false
     }
 
-    checkVal shouldBe true
+    checkVal shouldEqual true
   }
 
 
