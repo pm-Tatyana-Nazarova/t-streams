@@ -26,10 +26,8 @@ libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.
   .exclude("io.netty", "netty-handler")
 
 
-//DISTRIBUTED LOCK DEPENDENCIES
-resolvers += "twitter resolver" at "http://maven.twttr.com"
-libraryDependencies += "com.twitter.common.zookeeper" % "lock" % "0.0.7"
-libraryDependencies += ("org.redisson" % "redisson" % "2.2.10")
+//COORDINATION
+libraryDependencies += ("org.redisson" % "redisson" % "2.2.11")
   .exclude("io.netty", "netty-common")
   .exclude("io.netty", "netty-codec")
   .exclude("io.netty", "netty-transport")
@@ -57,5 +55,5 @@ assemblyMergeStrategy in assembly := {
 }
 
 
-//TEST
+//TESTS
 parallelExecution in ThisBuild := false

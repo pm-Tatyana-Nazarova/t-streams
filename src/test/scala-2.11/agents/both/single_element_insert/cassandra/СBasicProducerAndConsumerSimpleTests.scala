@@ -51,7 +51,9 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
 
   //coordinator for coordinating producer/consumer
   val config = new Config()
-  config.useSingleServer().setAddress("localhost:6379")
+  //TODO redis response timeout investigation
+  config.useSingleServer().setTimeout(10000).setAddress("localhost:6379")
+
   val redissonClient = Redisson.create(config)
   val coordinator = new Coordinator("some_path", redissonClient)
 
