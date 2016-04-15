@@ -57,7 +57,7 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
       .executeAsync(statementWithBindings)
     logger.debug(s"finished inserting data for stream:{$streamName}, partition:{$partition}, partNum:{$partNum}\n")
 
-    val job: () => Unit = () => res.getUninterruptibly(1, TimeUnit.SECONDS)
+    val job: () => Unit = () => res.getUninterruptibly()
     job
   }
 
