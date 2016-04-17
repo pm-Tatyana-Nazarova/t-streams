@@ -105,12 +105,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   /**
    * Future to keep this transaction alive
    */
-  private val updateFuture: Future[Unit] = startAsyncKeepAlive(
-    basicProducer.stream.getName,
-    partition,
-    transactionUuid,
-    basicProducer.producerOptions.transactionTTL,
-    basicProducer.producerOptions.transactionKeepAliveInterval)
+  private val updateFuture: Future[Unit] = startAsyncKeepAlive()
 
   /**
    * Send data to storage
@@ -248,37 +243,29 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
   /**
    * Async job for keeping alive current transaction
-   * @param streamName Stream name of current transaction
-   * @param partition Partition of current transaction
-   * @param transaction Current transaction UUID
-   * @param ttl Transaction live time in seconds
-   * @param keepAliveInterval Ttl update frequency in seconds
    */
-  private def startAsyncKeepAlive(streamName : String,
-                                  partition : Int,
-                                  transaction : UUID,
-                                  ttl : Int,
-                                  keepAliveInterval : Int) : Future[Unit] = {
+  private def startAsyncKeepAlive() : Future[Unit] = {
 
     Future {
       breakable { while (true) {
 
-        val value = updateQueue.poll(keepAliveInterval * 1000, TimeUnit.MILLISECONDS)
+        val value = updateQueue.poll(basicProducer.producerOptions.transactionKeepAliveInterval * 1000, TimeUnit.MILLISECONDS)
+
         if (value)
           break()
 
         //-1 here indicate that transaction is started but not finished yet
         basicProducer.stream.metadataStorage.producerCommitEntity.commit(
-          streamName = streamName,
+          streamName = basicProducer.stream.getName,
           partition = partition,
-          transaction = transaction,
+          transaction = transactionUuid,
           totalCnt = -1,
-          ttl = ttl)
+          ttl = basicProducer.producerOptions.transactionTTL)
 
         //publish that current txn is being updating
         topicRef.publish(jsonSerializer.serialize(ProducerTopicMessage(
           txnUuid = transactionUuid,
-          ttl = ttl,
+          ttl = basicProducer.producerOptions.transactionTTL,
           status = ProducerTransactionStatus.opened)))
       }}
     }

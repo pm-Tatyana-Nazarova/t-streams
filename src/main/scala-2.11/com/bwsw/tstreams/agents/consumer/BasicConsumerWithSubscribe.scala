@@ -8,7 +8,6 @@ import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicM
 import com.bwsw.tstreams.coordination.ProducerTransactionStatus._
 import com.bwsw.tstreams.streams.BasicStream
 import java.util.concurrent.atomic.AtomicBoolean
-import com.gilt.timeuuid.TimeUuid
 import org.apache.commons.collections4.map.PassiveExpiringMap
 import org.redisson.core.{RTopic, MessageListener}
 import scala.util.control.Breaks._
