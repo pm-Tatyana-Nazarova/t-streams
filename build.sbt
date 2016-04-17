@@ -15,7 +15,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.scala-logging" % "scala-logging_2.11" % "3.1.0",
   "org.scalatest" % "scalatest_2.11" % "3.0.0-M15",
   "io.netty" % "netty-all" % "4.0.34.Final",
-  "com.aerospike" % "aerospike-client" % "3.2.1"
+  "com.aerospike" % "aerospike-client" % "3.2.1",
+  "org.apache.commons" % "commons-collections4" % "4.1",
+  "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.6.3"
 )
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
@@ -46,9 +48,10 @@ assemblyMergeStrategy in assembly := {
   case PathList("ch", "qos", "logback", xs @ _*) => MergeStrategy.first
   case PathList("com", "typesafe", "scala-logging", xs @ _*) => MergeStrategy.first
   case PathList("org", "scalatest", xs @ _*) => MergeStrategy.first
-  case PathList("com", "twitter", "common", "zookeeper", xs @ _*) => MergeStrategy.first
   case PathList("org", "redisson", xs @ _*) => MergeStrategy.first
   case PathList("com", "aerospike", xs @ _*) => MergeStrategy.first
+  case PathList("org", "apache", "commons", xs @ _*) => MergeStrategy.first
+  case PathList("com","fasterxml","jackson","module", xs @ _*) => MergeStrategy.first
   case x =>
     val oldStrategy = (assemblyMergeStrategy in assembly).value
     oldStrategy(x)

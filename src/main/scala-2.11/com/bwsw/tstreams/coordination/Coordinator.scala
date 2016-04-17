@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.coordination
 
 import org.redisson.RedissonClient
-import org.redisson.core.RLock
+import org.redisson.core.{RTopic, RLock}
 
 
 /**
@@ -18,4 +18,13 @@ class Coordinator(prefix : String,
    * @return Redisson RLock instance
    */
   def getLock(path : String): RLock = client.getLock(prefix + "/" + path)
+
+  /**
+   * Creating topic on concrete prefix+name
+   * @param name Topic name
+   * @tparam T Message type
+   * @return RTopic instance
+   */
+  def getTopic[T](name : String): RTopic[T] = client.getTopic[T](prefix + "/" + name)
 }
+

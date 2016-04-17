@@ -2,8 +2,10 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
+import com.bwsw.tstreams.common.JsonSerializer
+import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage}
 import com.typesafe.scalalogging.Logger
-import org.redisson.core.RLock
+import org.redisson.core.{RTopic, RLock}
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{Await, Future}
@@ -65,6 +67,17 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   private val updateQueue = new LinkedBlockingQueue[Boolean](10)
 
   /**
+   * Json serializer inst
+   */
+  private val jsonSerializer = new JsonSerializer
+
+  /**
+   * Topic reference for concrete producer on concrete stream/partition to publish events(cancel,close,update)
+   */
+  private val topicRef: RTopic[String] =
+    basicProducer.stream.coordinator.getTopic[String](s"${basicProducer.stream.getName}/$partition/events")
+
+  /**
    * Lock reference for concrete producer on concrete stream/partition
    */
   private val lockRef: RLock = basicProducer.stream.coordinator.getLock(s"${basicProducer.stream.getName}/$partition")
@@ -72,12 +85,20 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   lockRef.lock()
 
   private val transactionUuid = basicProducer.producerOptions.txnGenerator.getTimeUUID()
+
   basicProducer.stream.metadataStorage.commitEntity.commit(
-    basicProducer.stream.getName,
-    partition,
-    transactionUuid,
+    streamName = basicProducer.stream.getName,
+    partition = partition,
+    transaction = transactionUuid,
     totalCnt = -1,
-    ttl = basicProducer.stream.getTTL)
+    ttl = basicProducer.producerOptions.transactionTTL)
+
+  topicRef.publish(
+    jsonSerializer.serialize(
+    ProducerTopicMessage(
+    txnUuid = transactionUuid,
+    ttl = basicProducer.producerOptions.transactionTTL,
+    status = ProducerTransactionStatus.opened)))
 
   lockRef.unlock()
 
@@ -157,6 +178,13 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     //await till update future will close
     Await.ready(updateFuture, TIMEOUT)
 
+    topicRef.publish(
+      jsonSerializer.serialize(
+        ProducerTopicMessage(
+          txnUuid = transactionUuid,
+          ttl = -1,
+          status = ProducerTransactionStatus.canceled)))
+
     closed = true
     logger.info(s"Cancel transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
   }
@@ -193,11 +221,19 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     //close transaction using stream ttl
     if (part > 0) {
       basicProducer.stream.metadataStorage.commitEntity.commit(
-        basicProducer.stream.getName,
-        partition,
-        transactionUuid,
-        part,
-        basicProducer.stream.getTTL)
+        streamName = basicProducer.stream.getName,
+        partition = partition,
+        transaction = transactionUuid,
+        totalCnt = part,
+        ttl = basicProducer.stream.getTTL)
+
+      //publish that current txn is closed
+      topicRef.publish(
+        jsonSerializer.serialize(
+        ProducerTopicMessage(
+        txnUuid = transactionUuid,
+        ttl = -1,
+        status = ProducerTransactionStatus.closed)))
     }
 
     closed = true
@@ -232,13 +268,18 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
           break()
 
         //-1 here indicate that transaction is started but not finished yet
-          basicProducer.stream.metadataStorage.producerCommitEntity.commit(
-            streamName,
-            partition,
-            transaction,
-            totalCnt = -1,
-            ttl)
+        basicProducer.stream.metadataStorage.producerCommitEntity.commit(
+          streamName = streamName,
+          partition = partition,
+          transaction = transaction,
+          totalCnt = -1,
+          ttl = ttl)
 
+        //publish that current txn is being updating
+        topicRef.publish(jsonSerializer.serialize(ProducerTopicMessage(
+          txnUuid = transactionUuid,
+          ttl = ttl,
+          status = ProducerTransactionStatus.opened)))
       }}
     }
   }
