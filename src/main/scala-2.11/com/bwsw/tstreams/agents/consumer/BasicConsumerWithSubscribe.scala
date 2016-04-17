@@ -8,6 +8,7 @@ import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicM
 import com.bwsw.tstreams.coordination.ProducerTransactionStatus._
 import com.bwsw.tstreams.streams.BasicStream
 import java.util.concurrent.atomic.AtomicBoolean
+import com.gilt.timeuuid.TimeUuid
 import org.apache.commons.collections4.map.PassiveExpiringMap
 import org.redisson.core.{RTopic, MessageListener}
 import scala.util.control.Breaks._
@@ -61,12 +62,9 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
         val listener = topic.addListener(new MessageListener[String] {
           override def onMessage(channel: String, msg: String): Unit = {
             lock.lock()
-
             val deserializedMsg = jsonSerializer.deserialize[ProducerTopicMessage](msg)
             if (deserializedMsg.status == ProducerTransactionStatus.canceled) {
-              if (map.containsKey(deserializedMsg.txnUuid)) {
                 map.remove(deserializedMsg.txnUuid)
-              }
             }
             else {
                 map.put(deserializedMsg.txnUuid, (deserializedMsg.status, deserializedMsg.ttl))
@@ -77,10 +75,9 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
         })
 
         while(!finishedSubscribe.get()){
-
           lock.lock()
-          val it = map.entrySet().iterator()
 
+          val it = map.entrySet().iterator()
           breakable{while (it.hasNext) {
             val entry = it.next()
             val key: UUID = entry.getKey
@@ -93,6 +90,7 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
             }
             it.remove()
           }}
+
           lock.unlock()
 
           Thread.sleep(callBack.frequency * 1000L)
