@@ -18,7 +18,6 @@ import com.datastax.driver.core.Cluster
 import org.redisson.{Config, Redisson}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{CassandraHelper, LocalGeneratorCreator, RandomStringCreator, RoundRobinPolicyCreator}
-
 import scala.collection.mutable.ListBuffer
 
 
@@ -57,7 +56,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     " (each producer send each txn in only one partition without intersection " +
     " for ex. producer1 in partition1, producer2 in partition2, producer3 in partition3 etc...)," +
     " subscriber - retrieve them all(with callback) in sorted order" in {
-    val timeoutForWaiting = 60*5
+    val timeoutForWaiting = 60
     val totalPartitions = 4
     val totalTxn = 10
     val totalElementsInTxn = 3
@@ -115,9 +114,8 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     subscriber.startListen()
 
     producersThreads.foreach(x=>x.start())
-    producersThreads.foreach(x=>x.join(timeoutForWaiting * 1000))
-
-    Thread.sleep(10*1000)
+    producersThreads.foreach(x=>x.join(timeoutForWaiting*1000L))
+    Thread.sleep(20*1000)
 
     assert(map.values.map(x=>x.size).sum == totalTxn*producersAmount)
     map foreach {case(_,list) =>

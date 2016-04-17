@@ -39,7 +39,13 @@ class CommitEntity(commitLog : String, session: Session) {
     .prepare(s"select transaction,cnt from $commitLog where stream=? AND partition=? AND transaction>? LIMIT ?")
 
   /**
-   * Session prepared statement using for transaction selection from metadata from commit log
+   * Session prepared statement using for selecting last transaction
+   */
+  private val selectLastTransactionsStatement = session
+    .prepare(s"select transaction,cnt from $commitLog where stream=? AND partition=? AND transaction<? LIMIT ?")
+
+  /**
+   * Session prepared statement using for transaction total amount selection from metadata from commit log
    */
   private val selectTransactionAmountStatement = session
     .prepare(s"select cnt from $commitLog where stream=? AND partition=? AND transaction=? LIMIT 1")
@@ -84,6 +90,25 @@ class CommitEntity(commitLog : String, session: Session) {
     while(it.hasNext){
       val value = it.next()
       q.enqueue(TransactionSettings(value.getUUID("transaction"), value.getInt("cnt")))
+    }
+    q
+  }
+
+
+  def getTransactionsLessThanLastTxn(streamName : String, partition : Int, lastTransaction : UUID, cnt : Int=128) : scala.collection.mutable.Stack[TransactionSettings] = {
+    logger.info(s"start retrieving transactions from commit table with stream : {$streamName}, partition: {$partition}\n")
+    val values : List[AnyRef] = List(streamName, new Integer(partition), lastTransaction, new Integer(cnt))
+    val statementWithBindings = selectLastTransactionsStatement.bind(values:_*)
+
+    logger.debug(s"start executing transactions retrieving statement with stream : {$streamName}, partition: {$partition}\n")
+    val selected = session.execute(statementWithBindings)
+
+    logger.info(s"finished retrieving transactions from commit table with stream : {$streamName}, partition: {$partition}\n")
+    val q = scala.collection.mutable.Stack[TransactionSettings]()
+    val it = selected.iterator()
+    while(it.hasNext){
+      val value = it.next()
+      q.push(TransactionSettings(value.getUUID("transaction"), value.getInt("cnt")))
     }
     q
   }

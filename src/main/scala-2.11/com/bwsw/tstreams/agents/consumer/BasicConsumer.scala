@@ -7,6 +7,8 @@ import com.gilt.timeuuid.TimeUuid
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable
+
 /**
  * Basic consumer class
  * @param name Name of consumer
@@ -139,6 +141,34 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       options.readPolicy.startNewRound()
       val txn: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = getTxnOpt
       txn
+    }
+
+  /**
+   * Getting last transaction from concrete partition
+   * @param partition partition to get last transaction
+   * @return Last txn
+   */
+    def getLastTransaction(partition : Int): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+      var now = options.txnGenerator.getTimeUUID()
+      var done = false
+      while(!done){
+        val s: mutable.Stack[TransactionSettings] = stream.metadataStorage.commitEntity.getTransactionsLessThanLastTxn(
+          stream.getName,
+          partition,
+          now)
+        if (s.isEmpty)
+          done = true
+        else{
+          while (s.nonEmpty) {
+            val txn = s.pop()
+            if (txn.totalItems != -1)
+              return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, partition, txn))
+            now = txn.time
+          }
+        }
+      }
+
+      None
     }
 
   /**
