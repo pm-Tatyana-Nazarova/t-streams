@@ -31,7 +31,10 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
    */
   private val finishedSubscribe = new AtomicBoolean(false)
 
-  val Threads =
+  /**
+   * Threads for each partition which listen incoming events
+   */
+  private val Threads =
   for (partition <- 0 until stream.getPartitions) yield
     new Thread(new Runnable {
       override def run(): Unit = {

@@ -19,7 +19,7 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, CassandraHelper, RandomStringCreator}
 
 
-class BasicConsumerWithSubscribeTotalAmountTest extends FlatSpec with Matchers with BeforeAndAfterAll{
+class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   //creating keyspace, metadata
   def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
@@ -119,8 +119,7 @@ class BasicConsumerWithSubscribeTotalAmountTest extends FlatSpec with Matchers w
     val data = randomString
 
     subscribeConsumer.startListen()
-    //wait all threads
-    Thread.sleep(5000)
+    Thread.sleep(1000)
 
     (0 until totalMsg) foreach { x=>
       val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
@@ -132,5 +131,14 @@ class BasicConsumerWithSubscribeTotalAmountTest extends FlatSpec with Matchers w
     Thread.sleep(5000)
 
     acc shouldEqual totalMsg
-  } 
+  }
+
+  override def afterAll(): Unit = {
+    session.execute(s"DROP KEYSPACE $randomKeyspace")
+    session.close()
+    cluster.close()
+    metadataStorageFactory.closeFactory()
+    storageFactory.closeFactory()
+    redissonClient.shutdown()
+  }
 }
