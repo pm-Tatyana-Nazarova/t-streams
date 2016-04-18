@@ -128,15 +128,12 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     val commitEntity = new CommitEntity("commit_log", connectedSession)
     val txns = for (i <- 0 until 500) yield TimeUuid()
 
-    var cnt = 0
-    val txn : UUID = txns(55)
-    txns foreach { x =>
-      if (cnt < 56)
-        commitEntity.commit("test_stream", 1, x, 1, 120)
-      else
-        commitEntity.commit("test_stream", 1, x, -1, 120)
+    val txn : UUID = txns.head
 
-      cnt += 1
+    commitEntity.commit("test_stream", 1, txns.head, 1, 120)
+
+    txns.drop(1) foreach { x =>
+      commitEntity.commit("test_stream", 1, x, -1, 120)
     }
 
     val retrievedTxnOpt: Option[BasicConsumerTransaction[Array[Byte], String]] = consumer.getLastTransaction(partition = 1)
