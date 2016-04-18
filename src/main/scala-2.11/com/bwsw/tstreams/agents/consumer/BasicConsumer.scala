@@ -152,15 +152,16 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       var now = options.txnGenerator.getTimeUUID()
       var done = false
       while(!done){
-        val s: mutable.Stack[TransactionSettings] = stream.metadataStorage.commitEntity.getTransactionsLessThanLastTxn(
+        val treeSet = stream.metadataStorage.commitEntity.getTransactionsLessThanLastTxn(
           stream.getName,
           partition,
           now)
-        if (s.isEmpty)
+        if (treeSet.isEmpty)
           done = true
         else{
-          while (s.nonEmpty) {
-            val txn = s.pop()
+          val it = treeSet.iterator()
+          while (it.hasNext) {
+            val txn = it.next
             if (txn.totalItems != -1)
               return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, partition, txn))
             now = txn.time

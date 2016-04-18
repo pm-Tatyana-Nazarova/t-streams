@@ -1,17 +1,20 @@
 package agents.consumer
 
 import java.net.InetSocketAddress
+import java.util.UUID
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumerTransaction, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
+import com.bwsw.tstreams.entities.CommitEntity
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
+import com.gilt.timeuuid.TimeUuid
 import org.redisson.{Redisson, Config}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, CassandraHelper, RandomStringCreator}
@@ -91,6 +94,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
   val consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
+  val connectedSession = cluster.connect(randomKeyspace)
 
   "consumer.getTransaction" should "return None if nothing was sent" in {
     val txn = consumer.getTransaction
@@ -120,10 +124,31 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     txn.isDefined shouldEqual true
   }
 
+  "consumer.getLastTransaction" should "return last closed transaction" in {
+    val commitEntity = new CommitEntity("commit_log", connectedSession)
+    val txns = for (i <- 0 until 500) yield TimeUuid()
+
+    var cnt = 0
+    val txn : UUID = txns(55)
+    txns foreach { x =>
+      if (cnt < 56)
+        commitEntity.commit("test_stream", 1, x, 1, 120)
+      else
+        commitEntity.commit("test_stream", 1, x, -1, 120)
+
+      cnt += 1
+    }
+
+    val retrievedTxnOpt: Option[BasicConsumerTransaction[Array[Byte], String]] = consumer.getLastTransaction(partition = 1)
+    val retrievedTxn = retrievedTxnOpt.get
+    retrievedTxn.getTxnUUID shouldEqual txn
+  }
+
   override def afterAll(): Unit = {
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()
+    connectedSession.close()
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
     redissonClient.shutdown()

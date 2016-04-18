@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.entities
 
 import java.util
-import java.util.UUID
+import java.util.{Comparator, UUID}
 import com.datastax.driver.core.{Row, Session}
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
@@ -95,7 +95,7 @@ class CommitEntity(commitLog : String, session: Session) {
   }
 
 
-  def getTransactionsLessThanLastTxn(streamName : String, partition : Int, lastTransaction : UUID, cnt : Int=128) : scala.collection.mutable.Stack[TransactionSettings] = {
+  def getTransactionsLessThanLastTxn(streamName : String, partition : Int, lastTransaction : UUID, cnt : Int=128) : util.TreeSet[TransactionSettings] = {
     logger.info(s"start retrieving transactions from commit table with stream : {$streamName}, partition: {$partition}\n")
     val values : List[AnyRef] = List(streamName, new Integer(partition), lastTransaction, new Integer(cnt))
     val statementWithBindings = selectLastTransactionsStatement.bind(values:_*)
@@ -104,13 +104,23 @@ class CommitEntity(commitLog : String, session: Session) {
     val selected = session.execute(statementWithBindings)
 
     logger.info(s"finished retrieving transactions from commit table with stream : {$streamName}, partition: {$partition}\n")
-    val q = scala.collection.mutable.Stack[TransactionSettings]()
+
+    val tree = new util.TreeSet[TransactionSettings](new Comparator[TransactionSettings](){
+      override def compare(first: TransactionSettings, second: TransactionSettings): Int = {
+        val tsFirst = first.time.timestamp()
+        val tsSecond = second.time.timestamp()
+        if (tsFirst < tsSecond) 1
+        else if (tsFirst > tsSecond) -1
+        else 0
+      }})
+
     val it = selected.iterator()
     while(it.hasNext){
       val value = it.next()
-      q.push(TransactionSettings(value.getUUID("transaction"), value.getInt("cnt")))
+      tree.add(TransactionSettings(value.getUUID("transaction"), value.getInt("cnt")))
     }
-    q
+
+    tree
   }
 
 
