@@ -66,6 +66,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     }
 
     //fill start offsets
+    //TODO add exception if consumer not exist but useLastOffset=true
     for (i <- 0 until stream.getPartitions) {
       val offset = stream.metadataStorage.consumerEntity.getOffset(name, stream.getName, i)
       offsetsForCheckpoint(i) = offset
@@ -158,7 +159,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
           now)
         if (treeSet.isEmpty)
           done = true
-        else{
+        else {
           val it = treeSet.iterator()
           while (it.hasNext) {
             val txn = it.next

@@ -1,6 +1,6 @@
 package testutils
 
-import com.datastax.driver.core.Session
+import com.datastax.driver.core.{Cluster, Session}
 
 /**
  * Test util for creating C* entities
