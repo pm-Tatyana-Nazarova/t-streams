@@ -92,7 +92,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[TransactionSettings]]()
     //fill transaction buffer using current offsets
     for (i <- 0 until stream.getPartitions)
-      transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactions(
+      transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
         stream.getName,
         i,
         currentOffsets(i),
@@ -109,7 +109,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       val curPartition = options.readPolicy.getNextPartition
 
       if (transactionBuffer(curPartition).isEmpty) {
-        transactionBuffer(curPartition) = stream.metadataStorage.commitEntity.getTransactions(
+        transactionBuffer(curPartition) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
           stream.getName,
           curPartition,
           currentOffsets(curPartition),
@@ -166,7 +166,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       var now = options.txnGenerator.getTimeUUID()
       var done = false
       while(!done){
-        val treeSet = stream.metadataStorage.commitEntity.getTransactionsLessThanLastTxn(
+        val treeSet = stream.metadataStorage.commitEntity.getTransactionsLessThan(
           stream.getName,
           partition,
           now)
@@ -217,7 +217,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     }
 
   /**
-   * Update single transaction (if transaction is not closed it will have total packets value -1 so we need to wait while it will close)
+   * Update transaction (if transaction is not closed it will have total packets value -1 so we need to wait while it will close)
    * @param txn Transaction to update
    * @return Updated transaction
    */

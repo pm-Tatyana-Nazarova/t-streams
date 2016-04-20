@@ -36,7 +36,7 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
     checkVal &= amount == totalCnt
     Thread.sleep(3000)
-    val emptyQueue: mutable.Queue[TransactionSettings] = commitEntity.getTransactions(stream, partition, TimeUuid(0), 1)
+    val emptyQueue: mutable.Queue[TransactionSettings] = commitEntity.getTransactionsMoreThan(stream, partition, TimeUuid(0), 1)
     checkVal &= emptyQueue.isEmpty
 
     checkVal shouldEqual true
@@ -59,7 +59,7 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
     var checkVal = true
 
-    val queue = commitEntity.getTransactions(stream, partition, TimeUuid(0), 2)
+    val queue = commitEntity.getTransactionsMoreThan(stream, partition, TimeUuid(0), 2)
     checkVal &= queue.size == 2
     val txnSettings1 = queue.dequeue()
     checkVal &= txnSettings1.time == txn1 && txnSettings1.totalItems == totalCnt
