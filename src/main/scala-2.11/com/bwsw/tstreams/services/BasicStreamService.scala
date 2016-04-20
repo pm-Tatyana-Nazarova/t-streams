@@ -88,4 +88,17 @@ object BasicStreamService {
     logger.info(s"finished deleting stream with name : $streamName\n")
   }
 
+
+  /**
+   * Checking exist concrete stream or not
+   * @param streamName Name of the stream to delete
+   * @param metadataStorage Name of metadata storage where concrete stream exist
+   */
+  def isExist(streamName : String, metadataStorage: MetadataStorage) : Boolean = {
+    logger.info(s"start checking existence stream with name : $streamName\n")
+    val checkVal = metadataStorage.streamEntity.isExist(streamName)
+    logger.info(s"finished checking existence stream with name : $streamName\n")
+    checkVal
+  }
+
 }
