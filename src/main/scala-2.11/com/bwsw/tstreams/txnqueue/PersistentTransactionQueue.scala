@@ -1,11 +1,11 @@
-package com.bwsw.tstreams.queue
+package com.bwsw.tstreams.txnqueue
 
-import com.bwsw.tstreams.generator.LocalTimeUuidGenerator
-import com.gilt.timeuuid.TimeUuid
+import com.typesafe.scalalogging.Logger
 import net.openhft.chronicle.queue.{ExcerptAppender, ChronicleQueueBuilder, ExcerptTailer}
 import java.util.UUID
 import java.util.concurrent.locks._
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueue
+import org.slf4j.LoggerFactory
 
 /**
  * Queue for basic consumer with subscribe to maintain incoming and already existing messages
@@ -16,6 +16,11 @@ class PersistentTransactionQueue (private val basePath : String,
                                   private val separator : UUID) {
 
     private var fromQ1 = !(separator == null)
+
+    /**
+     * Transaction queue logger for logging
+     */
+    private val logger = Logger(LoggerFactory.getLogger(this.getClass))
 
     private val q1: SingleChronicleQueue = ChronicleQueueBuilder.single(basePath + "/q1").build()
     private val q2: SingleChronicleQueue = ChronicleQueueBuilder.single(basePath + "/q2").build()
@@ -40,6 +45,7 @@ class PersistentTransactionQueue (private val basePath : String,
     * @param value uuid to put
     */
     def put(value : UUID) {
+        logger.info(s"start put in queue uuid : $value\n")
         mutex.lock()
 
         if (separator == null)
@@ -51,12 +57,14 @@ class PersistentTransactionQueue (private val basePath : String,
 
         cond.signal()
         mutex.unlock()
+        logger.info(s"finished put in queue uuid : $value\n")
     }
 
   /**
     * Get element from queue
     */
     def get() : UUID = {
+      logger.info("start retrieving transaction from queue\n")
       mutex.lock()
 
       val t = {
@@ -75,6 +83,8 @@ class PersistentTransactionQueue (private val basePath : String,
       val retrieved = UUID.fromString(data)
 
       mutex.unlock()
+
+      logger.info(s"finished retrieving transaction from queue : $retrieved\n")
       retrieved
     }
 
@@ -86,25 +96,3 @@ class PersistentTransactionQueue (private val basePath : String,
         q2.close()
     }
 }
-
-//object asd{
-//  def main(args: Array[String]) {
-//    val gen = new LocalTimeUuidGenerator
-//    val t1 = for(i <- 0 until 10) yield gen.getTimeUUID()
-//    val t2 = for(i <- 0 until 10) yield gen.getTimeUUID()
-//    val t3 = for(i <- 0 until 10) yield gen.getTimeUUID()
-//    val t4 = for(i <- 0 until 10) yield gen.getTimeUUID()
-//    val sep = gen.getTimeUUID()
-//    val t5 = for(i <- 0 until 10) yield gen.getTimeUUID()
-//    val t6 = for(i <- 0 until 10) yield gen.getTimeUUID()
-//    val t7 = for(i <- 0 until 10) yield gen.getTimeUUID()
-//    val t8 = for(i <- 0 until 10) yield gen.getTimeUUID()
-//
-//
-//    val q = new PersistentTransactionQueue("path", sep)
-//
-//    val threads = new Thread(new Runnable {
-//      override def run(): Unit = ???
-//    })
-//  }
-//}
