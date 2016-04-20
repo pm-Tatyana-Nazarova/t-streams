@@ -11,4 +11,9 @@ class LocalTimeUuidGenerator extends IuuidGenerator{
    * @return Transaction UUID
    */
   def getTimeUUID(): UUID = UUIDs.timeBased()
+
+  /**
+   *
+   */
+  override val oldest: UUID = UUIDs.startOf(0)
 }

@@ -31,10 +31,10 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     commitEntity.commit(stream, partition, txn, totalCnt, ttl)
 
     //read all transactions from oldest offset
-    val amount: Int = commitEntity.getTransactionAmount(stream, partition, txn).get
+    val amount: (Int,Int) = commitEntity.getTransactionAmount(stream, partition, txn).get
     var checkVal = true
 
-    checkVal &= amount == totalCnt
+    checkVal &= amount._1 == totalCnt
     Thread.sleep(3000)
     val emptyQueue: mutable.Queue[TransactionSettings] = commitEntity.getTransactionsMoreThan(stream, partition, TimeUuid(0), 1)
     checkVal &= emptyQueue.isEmpty

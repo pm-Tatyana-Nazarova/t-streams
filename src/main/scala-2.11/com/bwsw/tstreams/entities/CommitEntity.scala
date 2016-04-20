@@ -11,8 +11,9 @@ import org.slf4j.LoggerFactory
  * Transactions settings
  * @param time Time of transaction
  * @param totalItems Total packets in transaction
+ * @param ttl Transaction expiration time in seconds
  */
-case class TransactionSettings(time : UUID, totalItems : Int)
+case class TransactionSettings(time : UUID, totalItems : Int, ttl : Int)
 
 /**
  * Metadata entity for commits
@@ -36,19 +37,31 @@ class CommitEntity(commitLog : String, session: Session) {
    * Session prepared statement using for transactions selection from metadata from commit log
    */
   private val selectTransactionsMoreThanStatement = session
-    .prepare(s"select transaction,cnt from $commitLog where stream=? AND partition=? AND transaction>? LIMIT ?")
+    .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction>? LIMIT ?")
+
+  /**
+   * Session prepared statement using for transactions selection from metadata from commit log
+   */
+  private val selectTransactionsMoreThanStatementWithoutLimit = session
+    .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction>?")
+
+  /**
+   * Session prepared statement using for transactions selection from metadata from commit log
+   */
+  private val selectTransactionsMoreThanAndLessOrEqualThanStatement = session
+    .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction>? AND transaction <= ?")
 
   /**
    * Session prepared statement using for selecting last transaction
    */
   private val selectTransactionsLessThanStatement = session
-    .prepare(s"select transaction,cnt from $commitLog where stream=? AND partition=? AND transaction<? LIMIT ?")
+    .prepare(s"select transaction,cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction<? LIMIT ?")
 
   /**
    * Session prepared statement using for transaction total amount selection from metadata from commit log
    */
   private val selectTransactionAmountStatement = session
-    .prepare(s"select cnt from $commitLog where stream=? AND partition=? AND transaction=? LIMIT 1")
+    .prepare(s"select cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction=? LIMIT 1")
   
   /**
    * Opening/Closing some specific transaction
@@ -69,17 +82,24 @@ class CommitEntity(commitLog : String, session: Session) {
   }
 
   /**
-   * Retrieving some amount of transactions
+   * Retrieving some set of transactions
    * @param streamName Name of the stream
    * @param partition Number of the partition
    * @param lastTransaction Transaction from which start to retrieve
    * @param cnt Amount of retrieved queue (can be less than cnt in case of insufficiency of transactions)
    * @return Queue of selected transactions
    */
-  def getTransactionsMoreThan(streamName : String, partition : Int, lastTransaction : UUID, cnt : Int) : scala.collection.mutable.Queue[TransactionSettings] = {
+  def getTransactionsMoreThan(streamName : String, partition : Int, lastTransaction : UUID, cnt : Int = -1) : scala.collection.mutable.Queue[TransactionSettings] = {
     logger.info(s"start retrieving transactions from commit table with stream : {$streamName}, partition: {$partition}\n")
-    val values : List[AnyRef] = List(streamName, new Integer(partition), lastTransaction, new Integer(cnt))
-    val statementWithBindings = selectTransactionsMoreThanStatement.bind(values:_*)
+    val statementWithBindings =
+      if (cnt == -1) {
+        val values : List[AnyRef] = List(streamName, new Integer(partition), lastTransaction)
+        selectTransactionsMoreThanStatementWithoutLimit.bind(values: _*)
+      }
+      else {
+        val values : List[AnyRef] = List(streamName, new Integer(partition), lastTransaction, new Integer(cnt))
+        selectTransactionsMoreThanStatement.bind(values: _*)
+      }
 
     logger.debug(s"start executing transactions retrieving statement with stream : {$streamName}, partition: {$partition}\n")
     val selected = session.execute(statementWithBindings)
@@ -89,13 +109,21 @@ class CommitEntity(commitLog : String, session: Session) {
     val it = selected.iterator()
     while(it.hasNext){
       val value = it.next()
-      q.enqueue(TransactionSettings(value.getUUID("transaction"), value.getInt("cnt")))
+      q.enqueue(TransactionSettings(value.getUUID("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
     }
     q
   }
 
 
-  def getTransactionsLessThan(streamName : String, partition : Int, lastTransaction : UUID, cnt : Int=128) : util.TreeSet[TransactionSettings] = {
+  /**
+   * Retrieving some set of transactions
+   * @param streamName Name of the stream
+   * @param partition Number of the partition
+   * @param lastTransaction Transaction from which start to retrieve
+   * @param cnt Amount of retrieved queue (can be less than cnt in case of insufficiency of transactions)
+   * @return
+   */
+  def getLastTransactionHelper(streamName : String, partition : Int, lastTransaction : UUID, cnt : Int=128) : scala.collection.mutable.Queue[TransactionSettings] = {
     logger.info(s"start retrieving transactions from commit table with stream : {$streamName}, partition: {$partition}\n")
     val values : List[AnyRef] = List(streamName, new Integer(partition), lastTransaction, new Integer(cnt))
     val statementWithBindings = selectTransactionsLessThanStatement.bind(values:_*)
@@ -105,33 +133,53 @@ class CommitEntity(commitLog : String, session: Session) {
 
     logger.info(s"finished retrieving transactions from commit table with stream : {$streamName}, partition: {$partition}\n")
 
-    val tree = new util.TreeSet[TransactionSettings](new Comparator[TransactionSettings](){
-      override def compare(first: TransactionSettings, second: TransactionSettings): Int = {
-        val tsFirst = first.time.timestamp()
-        val tsSecond = second.time.timestamp()
-        if (tsFirst < tsSecond) 1
-        else if (tsFirst > tsSecond) -1
-        else 0
-      }})
-
+    val q = scala.collection.mutable.Queue[TransactionSettings]()
     val it = selected.iterator()
     while(it.hasNext){
       val value = it.next()
-      tree.add(TransactionSettings(value.getUUID("transaction"), value.getInt("cnt")))
+      q.enqueue(TransactionSettings(value.getUUID("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
     }
-
-    tree
+    q.reverse
   }
 
 
   /**
-   * Retrieving only one concrete transaction
+   * Retrieving some set of transactions
+   * @param streamName Name of the stream
+   * @param partition Number of the partition
+   * @param leftBorder Left border of transactions to consume
+   * @param rightBorder Right border of transactions to consume
+   * @return
+   */
+  def getTransactionsMoreThanAndLessOrEqualThan(streamName : String, partition : Int, leftBorder : UUID, rightBorder : UUID) : scala.collection.mutable.Queue[TransactionSettings] = {
+    logger.info(s"start retrieving transactions from commit table with stream : {$streamName}, partition: {$partition}\n")
+    val values : List[AnyRef] = List(streamName, new Integer(partition), leftBorder, rightBorder)
+    val statementWithBindings = selectTransactionsMoreThanAndLessOrEqualThanStatement.bind(values:_*)
+
+    logger.debug(s"start executing transactions retrieving statement with stream : {$streamName}, partition: {$partition}\n")
+    val selected = session.execute(statementWithBindings)
+
+    logger.info(s"finished retrieving transactions from commit table with stream : {$streamName}, partition: {$partition}\n")
+
+    val q = scala.collection.mutable.Queue[TransactionSettings]()
+    val it = selected.iterator()
+    while(it.hasNext){
+      val value = it.next()
+      q.enqueue(TransactionSettings(value.getUUID("transaction"), value.getInt("cnt"), value.getInt("ttl(cnt)")))
+    }
+    q
+  }
+
+
+
+  /**
+   * Retrieving only one concrete transaction amount and ttl
    * @param streamName Name of concrete stream
    * @param partition Number of partition
    * @param transaction Concrete transaction time
-   * @return Amount of data in concrete transaction
+   * @return Amount of data in concrete transaction and ttl
    */
-  def getTransactionAmount(streamName : String, partition : Int, transaction : UUID) : Option[Int] = {
+  def getTransactionAmount(streamName : String, partition : Int, transaction : UUID) : Option[(Int,Int)] = {
     logger.info(s"start retrieving transaction amount from commit table with stream : {$streamName}, partition: {$partition}\n")
     val values : List[AnyRef] = List(streamName, new Integer(partition), transaction)
     val statementWithBindings = selectTransactionAmountStatement.bind(values:_*)
@@ -143,7 +191,9 @@ class CommitEntity(commitLog : String, session: Session) {
     val list: util.List[Row] = selected.all()
     if (list.isEmpty)
       None
-    else
-      Some(list.get(0).getInt("cnt"))
+    else {
+      val settings = list.get(0)
+      Some(settings.getInt("cnt"), settings.getInt("ttl(cnt)"))
+    }
   }
 }

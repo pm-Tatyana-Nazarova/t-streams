@@ -111,15 +111,14 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     }
     override val frequency: Int = 1
   }
-  val subscribeConsumer = new BasicConsumerWithSubscribe[Array[Byte],String]("test_consumer", streamForConsumer, consumerOptions, callback)
+  val subscribeConsumer = new BasicConsumerWithSubscribe[Array[Byte],String]("test_consumer", streamForConsumer, consumerOptions, callback, "path")
 
   "subscribe consumer" should "retrieve all sent messages" in {
     val totalMsg = 30
     val dataInTxn = 10
     val data = randomString
 
-    subscribeConsumer.startListen()
-    Thread.sleep(1000)
+    subscribeConsumer.start()
 
     (0 until totalMsg) foreach { x=>
       val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
@@ -128,7 +127,9 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
       }
       txn.close()
     }
-    Thread.sleep(5000)
+    Thread.sleep(10000)
+
+    subscribeConsumer.close()
 
     acc shouldEqual totalMsg
   }

@@ -36,7 +36,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
   /**
    * Local offsets
    */
-    private val currentOffsets = scala.collection.mutable.Map[Int, UUID]()
+    protected val currentOffsets = scala.collection.mutable.Map[Int, UUID]()
 
   /**
    * Indicate set offsets or not
@@ -159,23 +159,22 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
 
   /**
    * Getting last transaction from concrete partition
-   * @param partition partition to get last transaction
+   * @param partition Partition to get last transaction
    * @return Last txn
    */
     def getLastTransaction(partition : Int): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
       var now = options.txnGenerator.getTimeUUID()
       var done = false
       while(!done){
-        val treeSet = stream.metadataStorage.commitEntity.getTransactionsLessThan(
+        val queue = stream.metadataStorage.commitEntity.getLastTransactionHelper(
           stream.getName,
           partition,
           now)
-        if (treeSet.isEmpty)
+        if (queue.isEmpty)
           done = true
         else {
-          val it = treeSet.iterator()
-          while (it.hasNext) {
-            val txn = it.next
+          while (queue.nonEmpty) {
+            val txn = queue.dequeue()
             if (txn.totalItems != -1)
               return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, partition, txn))
             now = txn.time
@@ -222,12 +221,14 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * @return Updated transaction
    */
     private def updateTransaction(txn : UUID, partition : Int) : Option[TransactionSettings] = {
-      val amount: Option[Int] = stream.metadataStorage.commitEntity.getTransactionAmount(
+      val amount: Option[(Int,Int)] = stream.metadataStorage.commitEntity.getTransactionAmount(
         stream.getName,
         partition,
         txn)
-      if (amount.isDefined)
-        Some(TransactionSettings(txn, amount.get))
+      if (amount.isDefined) {
+        val (cnt, ttl) = amount.get
+        Some(TransactionSettings(txn, cnt, ttl))
+      }
       else
         None
     }

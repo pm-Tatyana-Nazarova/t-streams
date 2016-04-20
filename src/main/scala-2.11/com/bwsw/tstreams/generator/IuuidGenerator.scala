@@ -7,6 +7,11 @@ import java.util.UUID
  */
 trait IuuidGenerator {
   /**
+   * oldest UUID
+   */
+  val oldest : UUID
+
+  /**
    * @return Txn UUID
    */
   def getTimeUUID() : UUID
