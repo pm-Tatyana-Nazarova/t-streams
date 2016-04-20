@@ -133,7 +133,11 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
               if (deserializedMsg.status == ProducerTransactionStatus.canceled)
                 map.remove(deserializedMsg.txnUuid)
               else {
-                if (!(deserializedMsg.status == ProducerTransactionStatus.closed && map.containsKey(deserializedMsg.txnUuid))) {
+                if (map.containsKey(deserializedMsg.txnUuid)) {
+                  if (map.get(deserializedMsg.txnUuid)._1 != ProducerTransactionStatus.closed)
+                    map.put(deserializedMsg.txnUuid, (deserializedMsg.status, deserializedMsg.ttl))
+                }
+                else{
                   map.put(deserializedMsg.txnUuid, (deserializedMsg.status, deserializedMsg.ttl))
                 }
               }
@@ -193,7 +197,6 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
                   throw new IllegalStateException("incorrect subscriber state")
 
                 valueChecker = key
-
                 it.remove()
               }
             }

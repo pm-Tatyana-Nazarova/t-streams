@@ -1,5 +1,6 @@
 package agents.subscriber
 
+import java.io.File
 import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 import java.util.UUID
@@ -111,7 +112,8 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     }
     override val frequency: Int = 1
   }
-  val subscribeConsumer = new BasicConsumerWithSubscribe[Array[Byte],String]("test_consumer", streamForConsumer, consumerOptions, callback, "path")
+  val path = randomString
+  val subscribeConsumer = new BasicConsumerWithSubscribe[Array[Byte],String]("test_consumer", streamForConsumer, consumerOptions, callback, path)
 
   "subscribe consumer" should "retrieve all sent messages" in {
     val totalMsg = 30
@@ -141,5 +143,15 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
     redissonClient.shutdown()
+    val file = new File(path)
+    remove(file)
+  }
+
+  def remove(f : File) : Unit = {
+    if (f.isDirectory) {
+      for (c <- f.listFiles())
+      remove(c)
+    }
+    f.delete()
   }
 }
