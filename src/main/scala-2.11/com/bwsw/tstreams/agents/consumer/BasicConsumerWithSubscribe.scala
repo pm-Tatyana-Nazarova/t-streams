@@ -24,6 +24,7 @@ import scala.util.control.Breaks._
  * @tparam DATATYPE Storage data type
  * @tparam USERTYPE User data type
  */
+//TODO add logging
 class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
                                                      stream : BasicStream[DATATYPE],
                                                      options : BasicConsumerOptions[DATATYPE,USERTYPE],
