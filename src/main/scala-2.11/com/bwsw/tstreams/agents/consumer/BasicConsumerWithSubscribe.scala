@@ -86,10 +86,10 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
       }
 
       //start tread to consume queue and doing call callback on it
-      val queueConsumerLatch = new CountDownLatch(1)
+      var latch = new CountDownLatch(1)
       val queueConsumer = new Thread(new Runnable {
         override def run(): Unit = {
-          queueConsumerLatch.countDown()
+          latch.countDown()
           while (!finished.get()) {
             val txn = queue.get()
             callBack.onEvent(partition, txn)
@@ -97,12 +97,12 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
         }
       })
       queueConsumer.start()
-      queueConsumerLatch.await()
+      latch.await()
 
-      val subscriberLatch = new CountDownLatch(1)
+      latch = new CountDownLatch(1)
       val subscriber = new Thread(new Runnable {
         override def run(): Unit = {
-          subscriberLatch.countDown()
+          latch.countDown()
           val jsonSerializer = new JsonSerializer
           val lock = new ReentrantLock(true)
 
@@ -205,7 +205,7 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
         }
       })
       subscriber.start()
-      subscriberLatch.await()
+      latch.await()
     }
   }
 
