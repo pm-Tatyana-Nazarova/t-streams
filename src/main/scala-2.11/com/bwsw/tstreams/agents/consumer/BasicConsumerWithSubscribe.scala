@@ -159,12 +159,14 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
                 TimeUuid(0))
             }
 
+          lock.lock()
           messagesGreaterThanLast foreach { m =>
             if (m.totalItems != -1)
               map.put(m.time, (ProducerTransactionStatus.closed, -1))
             else
               map.put(m.time, (ProducerTransactionStatus.opened, m.ttl))
           }
+          lock.unlock()
 
           //TODO remove after complex debug
           var valueChecker = TimeUuid(0)
