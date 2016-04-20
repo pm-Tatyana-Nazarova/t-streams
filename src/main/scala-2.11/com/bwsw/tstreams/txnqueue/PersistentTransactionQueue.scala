@@ -45,7 +45,7 @@ class PersistentTransactionQueue (private val basePath : String,
     * @param value uuid to put
     */
     def put(value : UUID) {
-        logger.info(s"start put in queue uuid : $value\n")
+        logger.debug(s"start put in queue uuid : $value\n")
         mutex.lock()
 
         if (separator == null)
@@ -57,14 +57,14 @@ class PersistentTransactionQueue (private val basePath : String,
 
         cond.signal()
         mutex.unlock()
-        logger.info(s"finished put in queue uuid : $value\n")
+        logger.debug(s"finished put in queue uuid : $value\n")
     }
 
   /**
     * Get element from queue
     */
     def get() : UUID = {
-      logger.info("start retrieving transaction from queue\n")
+      logger.debug("start retrieving transaction from queue\n")
       mutex.lock()
 
       val t = {
@@ -84,7 +84,7 @@ class PersistentTransactionQueue (private val basePath : String,
 
       mutex.unlock()
 
-      logger.info(s"finished retrieving transaction from queue : $retrieved\n")
+      logger.debug(s"finished retrieving transaction from queue : $retrieved\n")
       retrieved
     }
 

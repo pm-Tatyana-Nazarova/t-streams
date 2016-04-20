@@ -82,7 +82,7 @@ class CommitEntity(commitLog : String, session: Session) {
   }
 
   /**
-   * Retrieving some set of transactions
+   * Retrieving some set of transactions more than last transaction (if cnt is default will be no limit to retrieve)
    * @param streamName Name of the stream
    * @param partition Number of the partition
    * @param lastTransaction Transaction from which start to retrieve
@@ -116,12 +116,12 @@ class CommitEntity(commitLog : String, session: Session) {
 
 
   /**
-   * Retrieving some set of transactions
+   * Retrieving some set of transactions(used only by getLastTransaction)
    * @param streamName Name of the stream
    * @param partition Number of the partition
    * @param lastTransaction Transaction from which start to retrieve
    * @param cnt Amount of retrieved queue (can be less than cnt in case of insufficiency of transactions)
-   * @return
+   * @return Queue of selected transactions
    */
   def getLastTransactionHelper(streamName : String, partition : Int, lastTransaction : UUID, cnt : Int=128) : scala.collection.mutable.Queue[TransactionSettings] = {
     logger.info(s"start retrieving transactions from commit table with stream : {$streamName}, partition: {$partition}\n")
@@ -144,12 +144,12 @@ class CommitEntity(commitLog : String, session: Session) {
 
 
   /**
-   * Retrieving some set of transactions
+   * Retrieving some set of transactions between bounds (L,R]
    * @param streamName Name of the stream
    * @param partition Number of the partition
    * @param leftBorder Left border of transactions to consume
    * @param rightBorder Right border of transactions to consume
-   * @return
+   * @return Queue of selected transactions
    */
   def getTransactionsMoreThanAndLessOrEqualThan(streamName : String, partition : Int, leftBorder : UUID, rightBorder : UUID) : scala.collection.mutable.Queue[TransactionSettings] = {
     logger.info(s"start retrieving transactions from commit table with stream : {$streamName}, partition: {$partition}\n")
