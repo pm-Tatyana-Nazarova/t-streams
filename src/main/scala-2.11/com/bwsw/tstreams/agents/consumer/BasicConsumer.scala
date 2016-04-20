@@ -7,7 +7,6 @@ import com.gilt.timeuuid.TimeUuid
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable
 
 /**
  * Basic consumer class
@@ -38,38 +37,53 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * Local offsets
    */
     private val currentOffsets = scala.collection.mutable.Map[Int, UUID]()
-    //TODO consumer shouldn't commit offset while checkpoint is not invoked
-    //update consumer offsets
+
+  /**
+   * Indicate set offsets or not
+   */
+    private var isSet = false
+
+    //set consumer offsets
     if(!stream.metadataStorage.consumerEntity.exist(name) || !options.useLastOffset){
+      isSet = true
+
       options.offset match {
         case Offsets.Oldest =>
-          for (i <- 0 until stream.getPartitions)
+          for (i <- 0 until stream.getPartitions) {
             currentOffsets(i) = TimeUuid(0)
+            offsetsForCheckpoint(i) = TimeUuid(0)
+          }
 
         case Offsets.Newest =>
           val newestUuid = options.txnGenerator.getTimeUUID()
-          for (i <- 0 until stream.getPartitions)
+          for (i <- 0 until stream.getPartitions) {
             currentOffsets(i) = newestUuid
+            offsetsForCheckpoint(i) = newestUuid
+          }
 
         case dateTime : Offsets.DateTime =>
-          for (i <- 0 until stream.getPartitions)
+          for (i <- 0 until stream.getPartitions) {
             currentOffsets(i) = TimeUuid(dateTime.startTime.getTime)
+            offsetsForCheckpoint(i) = TimeUuid(dateTime.startTime.getTime)
+          }
 
         case offset : Offsets.UUID =>
-          for (i <- 0 until stream.getPartitions)
+          for (i <- 0 until stream.getPartitions) {
             currentOffsets(i) = offset.startUUID
+            offsetsForCheckpoint(i) = offset.startUUID
+          }
 
         case _ => throw new IllegalStateException("offset cannot be resolved")
       }
 
-      stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, currentOffsets)
     }
 
-    //fill start offsets
-    for (i <- 0 until stream.getPartitions) {
-      val offset = stream.metadataStorage.consumerEntity.getOffset(name, stream.getName, i)
-      offsetsForCheckpoint(i) = offset
-      currentOffsets(i) = offset
+    if (!isSet) {
+      for (i <- 0 until stream.getPartitions) {
+        val offset = stream.metadataStorage.consumerEntity.getOffset(name, stream.getName, i)
+        offsetsForCheckpoint(i) = offset
+        currentOffsets(i) = offset
+      }
     }
 
   /**

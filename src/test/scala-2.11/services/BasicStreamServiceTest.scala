@@ -99,6 +99,26 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
     checkVal shouldBe true
   }
 
+  "BasicStreamService.isExist()" should "say exist concrete stream or not" in {
+    val name = randomString
+    val notExistName = randomString
+
+    BasicStreamService.createStream(
+      streamName = name,
+      partitions = 3,
+      ttl = 100,
+      description = "some_description",
+      metadataStorage = metadataStorageInst,
+      dataStorage = storageInst,
+      lockService = coordinator)
+
+    val isExist = BasicStreamService.isExist(name, metadataStorageInst)
+    val isNotExist = BasicStreamService.isExist(notExistName, metadataStorageInst)
+    val checkVal = isExist && !isNotExist
+
+    checkVal shouldBe true
+  }
+
   "BasicStreamService.loadStream()" should "throw exception if stream not exist" in {
     val name = randomString
 
