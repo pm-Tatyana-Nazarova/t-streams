@@ -8,6 +8,8 @@ import com.bwsw.tstreams.streams.BasicStream
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
+
+//TODO add method BasicStreamService.exist()
 /**
  * Service for streams
  */

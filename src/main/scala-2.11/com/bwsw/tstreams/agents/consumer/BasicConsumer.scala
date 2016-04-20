@@ -38,7 +38,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * Local offsets
    */
     private val currentOffsets = scala.collection.mutable.Map[Int, UUID]()
-
+    //TODO consumer shouldn't commit offset while checkpoint is not invoked
     //update consumer offsets
     if(!stream.metadataStorage.consumerEntity.exist(name) || !options.useLastOffset){
       options.offset match {
@@ -66,7 +66,6 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     }
 
     //fill start offsets
-    //TODO add exception if consumer not exist but useLastOffset=true
     for (i <- 0 until stream.getPartitions) {
       val offset = stream.metadataStorage.consumerEntity.getOffset(name, stream.getName, i)
       offsetsForCheckpoint(i) = offset
