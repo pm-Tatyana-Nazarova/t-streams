@@ -76,6 +76,10 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
               partition,
               leftBorder,
               txnUuid)
+
+            //TODO remove after complex debug
+            assert(transactions.last.time == txnUuid, "last transaction was not added in queue")
+
             while (transactions.nonEmpty && !finished.get()) {
               val uuid = transactions.dequeue().time
               queue.put(uuid)
