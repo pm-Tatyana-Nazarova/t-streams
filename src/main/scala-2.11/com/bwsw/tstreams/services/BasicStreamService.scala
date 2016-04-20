@@ -91,7 +91,7 @@ object BasicStreamService {
 
   /**
    * Checking exist concrete stream or not
-   * @param streamName Name of the stream to delete
+   * @param streamName Name of the stream to check
    * @param metadataStorage Name of metadata storage where concrete stream exist
    */
   def isExist(streamName : String, metadataStorage: MetadataStorage) : Boolean = {
