@@ -107,7 +107,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     val txn = producer.newTransaction(ProducerPolicies.errorIfOpen, 1)
     val txnUuid = txn.getTxnUUID
     data.foreach(x=>txn.send(x))
-    txn.close()
+    txn.checkpoint()
 
     var checkVal = true
 

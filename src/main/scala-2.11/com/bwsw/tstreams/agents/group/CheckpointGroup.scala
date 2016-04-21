@@ -1,17 +1,23 @@
 package com.bwsw.tstreams.agents.group
 
-import com.bwsw.tstreams.metadata.MetadataStorage
-
-
 /**
  * Base class to creating agent group
- * @param metadataStorage Metadata storage of all agents(every agent use this metadataStorage)
  */
-class AgentsGroup(metadataStorage: MetadataStorage) {
+class CheckpointGroup() {
   /**
    * Group of agents (producers/consumer)
    */
   private var agents = scala.collection.mutable.Map[String,Agent]()
+
+  /**
+   * Validate that all agents has the same metadata storage
+   */
+  private def validateAgents() = {
+    var set = Set[String]()
+    agents.map(x=>x._2.getMetadataRef().id).foreach(id => set += id)
+    if (set.size != 1)
+      throw new IllegalStateException("agents must use only one common metadata storage")
+  }
 
   /**
    * Add new agent in group
@@ -22,6 +28,7 @@ class AgentsGroup(metadataStorage: MetadataStorage) {
     if (agents.contains(name))
       throw new IllegalArgumentException("agents with such name already exist")
     agents += ((name, agent))
+    validateAgents()
   }
 
   /**
@@ -39,6 +46,6 @@ class AgentsGroup(metadataStorage: MetadataStorage) {
    */
   def commit() : Unit = {
     val totalCommit: List[CommitInfo] = agents.map(x=>x._2.getCommitInfo()).reduceRight((l1,l2)=>l1 ++ l2)
-    metadataStorage.groupCommitEntity.groupCommit(totalCommit)
+    agents.head._2.getMetadataRef().groupCommitEntity.groupCommit(totalCommit)
   }
 }

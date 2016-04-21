@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.group.AgentsGroup
+import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
@@ -91,13 +91,13 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   var consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
   
   "Group commit" should "checkpoint all AgentsGroup state" in {
-    val group = new AgentsGroup(metadataStorage)
+    val group = new CheckpointGroup()
     group.add("producer", producer)
     group.add("consumer", consumer)
 
     val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
     txn.send("info1")
-    txn.close()
+    txn.checkpoint()
 
     //move consumer offsets
     val consumedTxn = consumer.getTransaction.get

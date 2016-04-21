@@ -139,7 +139,7 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
           txn.send(x)
           Thread.sleep(2000)
         }
-        txn.close()
+        txn.checkpoint()
       }
     })
 
@@ -150,7 +150,7 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
         dataToSend2.foreach{ x=>
           txn.send(x)
         }
-        txn.close()
+        txn.checkpoint()
       }
     })
 

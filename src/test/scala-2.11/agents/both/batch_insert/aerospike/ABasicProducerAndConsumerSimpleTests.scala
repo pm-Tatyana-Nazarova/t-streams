@@ -111,7 +111,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
     sendData.foreach{ x=>
       producerTransaction.send(x)
     }
-    producerTransaction.close()
+    producerTransaction.checkpoint()
     val txnOpt = consumer.getTransaction
     val txn = txnOpt.get
 
@@ -133,7 +133,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
     sendData.foreach{ x=>
       producerTransaction.send(x)
     }
-    producerTransaction.close()
+    producerTransaction.checkpoint()
     val txnOpt = consumer.getTransaction
     assert(txnOpt.isDefined)
     val txn = txnOpt.get
@@ -165,7 +165,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
         sendData.foreach{ x=>
           producerTransaction.send(x)
         }
-        producerTransaction.close()
+        producerTransaction.checkpoint()
     }
 
     var checkVal = true
@@ -197,7 +197,7 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
           txn.send(x)
           Thread.sleep(1000)
         }
-        txn.close()
+        txn.checkpoint()
       }
     })
 

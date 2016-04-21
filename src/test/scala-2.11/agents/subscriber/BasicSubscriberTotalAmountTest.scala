@@ -127,7 +127,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
       (0 until dataInTxn) foreach { _ =>
         txn.send(data)
       }
-      txn.close()
+      txn.checkpoint()
     }
     Thread.sleep(10000)
 

@@ -57,7 +57,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
   "BasicProducer.newTransaction()" should "return BasicProducerTransaction instance" in {
     val txn: BasicProducerTransaction[String, Array[Byte]] = producer.newTransaction(ProducerPolicies.errorIfOpen)
-    txn.close()
+    txn.checkpoint()
     txn.isInstanceOf[BasicProducerTransaction[_,_]] shouldEqual true
   }
 

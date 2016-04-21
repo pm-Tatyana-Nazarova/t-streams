@@ -106,7 +106,7 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
       dataToSend foreach { part =>
         txn.send(part)
       }
-      txn.close()
+      txn.checkpoint()
     }
 
     val firstPart = txnNum/3

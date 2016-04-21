@@ -58,7 +58,7 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
             Thread.sleep(2000)
             val txn = p.newTransaction(ProducerPolicies.errorIfOpen)
             dataToSend.foreach(x => txn.send(x))
-            txn.close()
+            txn.checkpoint()
             i+=1
           }
         }

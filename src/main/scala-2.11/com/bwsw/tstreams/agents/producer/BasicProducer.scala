@@ -2,6 +2,8 @@ package com.bwsw.tstreams.agents.producer
 
 import com.bwsw.tstreams.agents.group.{CommitInfo, Agent}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
+import com.bwsw.tstreams.coordination.Coordinator
+import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
@@ -56,7 +58,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
         if (!prevTxn.isClosed) {
           policy match {
             case ProducerPolicies.checkpointIfOpen =>
-              prevTxn.close()
+              prevTxn.checkpoint()
 
             case ProducerPolicies.cancelIfOpen =>
               prevTxn.cancel()
@@ -94,10 +96,10 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   /**
    * Close all opened transactions
    */
-  def checkPoint() : Unit = {
+  def checkpoint() : Unit = {
     mapPartitions.map{case(partition,txn)=>txn}.foreach{ x=>
       if (!x.isClosed)
-        x.close()
+        x.checkpoint()
     }
   }
 
@@ -106,7 +108,17 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
    */
   //TODO implement getting commit info from transactions
   override def getCommitInfo(): List[CommitInfo] = {
-    checkPoint()
+    checkpoint()
     List()
   }
+
+  /**
+   * @return Metadata storage link for concrete agent
+   */
+  override def getMetadataRef(): MetadataStorage = stream.metadataStorage
+
+  /**
+   * @return Coordinator link
+   */
+  override def getCoordinationRef(): Coordinator = stream.coordinator
 }

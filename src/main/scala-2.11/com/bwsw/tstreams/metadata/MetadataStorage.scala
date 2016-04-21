@@ -17,6 +17,11 @@ import org.slf4j.LoggerFactory
 class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
 
   /**
+   * Uniq id for this MetadataStorage
+   */
+  val id = java.util.UUID.randomUUID().toString
+
+  /**
    * MetadataStorage logger for logging
    */
   private val logger = Logger(LoggerFactory.getLogger(this.getClass))

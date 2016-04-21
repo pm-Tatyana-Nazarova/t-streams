@@ -135,7 +135,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
           txn.send(x)
           Thread.sleep(2000)
         }
-        txn.close()
+        txn.checkpoint()
       }
     })
 
@@ -146,7 +146,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
         dataToSend2.foreach{ x=>
           txn.send(x)
         }
-        txn.close()
+        txn.checkpoint()
       }
     })
 

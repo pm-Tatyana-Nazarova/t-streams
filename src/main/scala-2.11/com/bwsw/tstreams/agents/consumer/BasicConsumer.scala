@@ -2,7 +2,9 @@ package com.bwsw.tstreams.agents.consumer
 
 import java.util.UUID
 import com.bwsw.tstreams.agents.group.{ConsumerCommitInfo, CommitInfo, Agent}
+import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.entities.TransactionSettings
+import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
 import com.gilt.timeuuid.TimeUuid
 import com.typesafe.scalalogging.Logger
@@ -257,4 +259,14 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     offsetsForCheckpoint.clear()
     info.toList
   }
+
+  /**
+   * @return Metadata storage link for concrete agent
+   */
+  override def getMetadataRef(): MetadataStorage = stream.metadataStorage
+
+  /**
+   * @return Coordinator link
+   */
+  override def getCoordinationRef(): Coordinator = stream.coordinator
 }

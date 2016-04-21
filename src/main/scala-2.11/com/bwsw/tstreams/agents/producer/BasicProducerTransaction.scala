@@ -187,7 +187,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   /**
    * Submit transaction(transaction will be available by consumer only after closing)
    */
-  def close() : Unit = {
+  def checkpoint() : Unit = {
     if (closed)
       throw new IllegalStateException("transaction is already closed")
 
