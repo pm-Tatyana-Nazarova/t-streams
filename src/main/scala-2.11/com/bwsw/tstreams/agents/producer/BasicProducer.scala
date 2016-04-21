@@ -1,5 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
+import com.bwsw.tstreams.agents.group.{CommitInfo, Agent}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
 import com.bwsw.tstreams.streams.BasicStream
 import com.typesafe.scalalogging.Logger
@@ -15,7 +16,7 @@ import org.slf4j.LoggerFactory
  */
 class BasicProducer[USERTYPE,DATATYPE](val name : String,
                                        val stream : BasicStream[DATATYPE],
-                                       val producerOptions: BasicProducerOptions[USERTYPE,DATATYPE]){
+                                       val producerOptions: BasicProducerOptions[USERTYPE,DATATYPE]) extends Agent{
 
   /**
    * BasicProducer logger for logging
@@ -98,5 +99,14 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
       if (!x.isClosed)
         x.close()
     }
+  }
+
+  /**
+   * Info to commit
+   */
+  //TODO implement getting commit info from transactions
+  override def getCommitInfo(): List[CommitInfo] = {
+    checkPoint()
+    List()
   }
 }

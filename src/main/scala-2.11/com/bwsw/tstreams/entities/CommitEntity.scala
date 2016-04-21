@@ -64,7 +64,7 @@ class CommitEntity(commitLog : String, session: Session) {
     .prepare(s"select cnt,TTL(cnt) from $commitLog where stream=? AND partition=? AND transaction=? LIMIT 1")
   
   /**
-   * Opening/Closing some specific transaction
+   * Closing some specific transaction
    * @param streamName name of the stream
    * @param partition number of partition
    * @param transaction transaction unique id

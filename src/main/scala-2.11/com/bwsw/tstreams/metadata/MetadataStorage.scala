@@ -42,6 +42,11 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
   lazy val consumerEntity = new ConsumerEntity("consumers", session)
 
   /**
+   * Group commit entity instance
+   */
+  lazy val groupCommitEntity = new GroupCommitEntity("consumers", "commit_log", session)
+
+  /**
    * @return Closed this storage or not
    */
   def isClosed : Boolean = session.isClosed && cluster.isClosed

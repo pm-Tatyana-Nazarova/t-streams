@@ -1,11 +1,14 @@
 package com.bwsw.tstreams.agents.consumer
 
 import java.util.UUID
+import com.bwsw.tstreams.agents.group.{ConsumerCommitInfo, CommitInfo, Agent}
 import com.bwsw.tstreams.entities.TransactionSettings
 import com.bwsw.tstreams.streams.BasicStream
 import com.gilt.timeuuid.TimeUuid
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
+
+import scala.collection.mutable.ListBuffer
 
 
 /**
@@ -18,7 +21,7 @@ import org.slf4j.LoggerFactory
  */
 class BasicConsumer[DATATYPE, USERTYPE](val name : String,
                                         val stream : BasicStream[DATATYPE],
-                                        val options : BasicConsumerOptions[DATATYPE, USERTYPE]) {
+                                        val options : BasicConsumerOptions[DATATYPE, USERTYPE]) extends Agent{
 
 
   /**
@@ -242,4 +245,16 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, offsetsForCheckpoint)
       offsetsForCheckpoint.clear()
     }
+
+  /**
+   * Info to commit
+   */
+  override def getCommitInfo(): List[CommitInfo] = {
+    val info = ListBuffer[CommitInfo]()
+    offsetsForCheckpoint.foreach{case(partition, lastTxn) =>
+        info += ConsumerCommitInfo(name, stream.getName, partition, lastTxn)
+    }
+    offsetsForCheckpoint.clear()
+    info.toList
+  }
 }
