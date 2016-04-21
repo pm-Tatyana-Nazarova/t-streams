@@ -28,9 +28,11 @@ import scala.util.control.Breaks._
 class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
                                                      stream : BasicStream[DATATYPE],
                                                      options : BasicConsumerOptions[DATATYPE,USERTYPE],
-                                                     callBack : BasicConsumerCallback,
+                                                     callBack : BasicConsumerCallback[DATATYPE, USERTYPE],
                                                      persistentQueuePath : String)
   extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options){
+
+  private val link = this
 
   /**
    * Indicate finished or not subscribe job
@@ -97,7 +99,7 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
           latch.countDown()
           while (!finished.get()) {
             val txn = queue.get()
-            callBack.onEvent(partition, txn)
+            callBack.onEvent(link, partition, txn)
           }
         }
       })

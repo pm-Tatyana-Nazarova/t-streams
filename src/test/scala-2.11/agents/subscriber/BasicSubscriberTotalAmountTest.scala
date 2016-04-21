@@ -104,8 +104,8 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
   val lock = new ReentrantLock()
   var acc = 0
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
-  val callback = new BasicConsumerCallback {
-    override def onEvent(partition: Int, transactionUuid: UUID): Unit = {
+  val callback = new BasicConsumerCallback[Array[Byte], String] {
+    override def onEvent(subscriber : BasicConsumerWithSubscribe[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
       lock.lock()
       acc += 1
       lock.unlock()
