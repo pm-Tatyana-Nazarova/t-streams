@@ -137,15 +137,8 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
               val deserializedMsg = jsonSerializer.deserialize[ProducerTopicMessage](msg)
               if (deserializedMsg.status == ProducerTransactionStatus.canceled)
                 map.remove(deserializedMsg.txnUuid)
-              else {
-                if (map.containsKey(deserializedMsg.txnUuid)) {
-                  if (map.get(deserializedMsg.txnUuid)._1 != ProducerTransactionStatus.closed)
-                    map.put(deserializedMsg.txnUuid, (deserializedMsg.status, deserializedMsg.ttl))
-                }
-                else{
-                  map.put(deserializedMsg.txnUuid, (deserializedMsg.status, deserializedMsg.ttl))
-                }
-              }
+              else
+                map.put(deserializedMsg.txnUuid, (deserializedMsg.status, deserializedMsg.ttl))
               lock.unlock()
             }
           })

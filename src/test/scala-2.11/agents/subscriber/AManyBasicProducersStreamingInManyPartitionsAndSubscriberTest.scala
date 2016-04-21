@@ -166,7 +166,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     storageFactory.closeFactory()
     redissonClient.shutdown()
     val file = new File(path)
-//    remove(file)
+    remove(file)
   }
 
   def remove(f : File) : Unit = {
