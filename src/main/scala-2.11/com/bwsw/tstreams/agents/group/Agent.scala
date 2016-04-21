@@ -8,5 +8,5 @@ trait Agent {
   /**
    * Info to commit
    */
-  protected def getCommitInfo() : List[CommitInfo]
+  def getCommitInfo() : List[CommitInfo]
 }

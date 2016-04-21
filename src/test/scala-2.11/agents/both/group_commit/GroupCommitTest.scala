@@ -19,7 +19,7 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, CassandraHelper, RandomStringCreator}
 
 
-class GroupCommitTest  extends FlatSpec with Matchers with BeforeAndAfterAll{
+class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
