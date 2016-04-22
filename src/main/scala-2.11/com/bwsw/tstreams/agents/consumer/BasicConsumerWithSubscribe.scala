@@ -133,16 +133,23 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
               }
             }, tree)
 
+          //UUID to indicate on last handled transaction
+          var currentTransactionUUID = TimeUuid(0)
+
           val topic: RTopic[String] = stream.coordinator.getTopic[String](s"${stream.getName}/$partition/events")
 
           val listener = topic.addListener(new MessageListener[String] {
             override def onMessage(channel: String, msg: String): Unit = {
               lock.lock()
               val deserializedMsg = jsonSerializer.deserialize[ProducerTopicMessage](msg)
-              if (deserializedMsg.status == ProducerTransactionStatus.canceled)
-                map.remove(deserializedMsg.txnUuid)
-              else
-                map.put(deserializedMsg.txnUuid, (deserializedMsg.status, deserializedMsg.ttl))
+
+              if (deserializedMsg.txnUuid.timestamp() > currentTransactionUUID.timestamp()) {
+                if (deserializedMsg.status == ProducerTransactionStatus.canceled)
+                  map.remove(deserializedMsg.txnUuid)
+                else
+                  map.put(deserializedMsg.txnUuid, (deserializedMsg.status, deserializedMsg.ttl))
+              }
+
               lock.unlock()
             }
           })
@@ -198,6 +205,7 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
                 if (valueChecker.timestamp() >= key.timestamp())
                   throw new IllegalStateException("incorrect subscriber state")
 
+                currentTransactionUUID = key
                 valueChecker = key
                 it.remove()
               }
