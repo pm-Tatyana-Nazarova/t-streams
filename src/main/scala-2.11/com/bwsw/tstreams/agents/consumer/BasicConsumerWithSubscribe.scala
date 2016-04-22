@@ -143,6 +143,8 @@ class BasicConsumerWithSubscribe[DATATYPE, USERTYPE](name : String,
               lock.lock()
               val deserializedMsg = jsonSerializer.deserialize[ProducerTopicMessage](msg)
 
+              //TODO remove after complex debug
+              assert(deserializedMsg.txnUuid.timestamp() != currentTransactionUUID.timestamp())
               if (deserializedMsg.txnUuid.timestamp() > currentTransactionUUID.timestamp()) {
                 if (deserializedMsg.status == ProducerTransactionStatus.canceled)
                   map.remove(deserializedMsg.txnUuid)
