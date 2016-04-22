@@ -218,6 +218,11 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     def setLocalOffset(partition : Int, uuid : UUID) : Unit = {
       offsetsForCheckpoint(partition) = uuid
       currentOffsets(partition) = uuid
+      transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
+        stream.getName,
+        partition,
+        uuid,
+        options.transactionsPreload)
     }
 
   /**
