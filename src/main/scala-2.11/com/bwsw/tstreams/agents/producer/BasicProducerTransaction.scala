@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.producer
 import java.util.UUID
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 import com.bwsw.tstreams.common.JsonSerializer
-import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage}
+import com.bwsw.tstreams.coordination.{ProducerMessageSerializer, ProducerTransactionStatus, ProducerTopicMessage}
 import com.typesafe.scalalogging.Logger
 import org.redisson.core.{RTopic, RLock}
 import org.slf4j.LoggerFactory
@@ -67,11 +67,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   private val updateQueue = new LinkedBlockingQueue[Boolean](10)
 
   /**
-   * Json serializer inst
-   */
-  private val jsonSerializer = new JsonSerializer
-
-  /**
    * Topic reference for concrete producer on concrete stream/partition to publish events(cancel,close,update)
    */
   private val topicRef: RTopic[String] =
@@ -93,12 +88,12 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     totalCnt = -1,
     ttl = basicProducer.producerOptions.transactionTTL)
 
-  topicRef.publish(
-    jsonSerializer.serialize(
-    ProducerTopicMessage(
-    txnUuid = transactionUuid,
-    ttl = basicProducer.producerOptions.transactionTTL,
-    status = ProducerTransactionStatus.opened)))
+  val msg = ProducerTopicMessage(
+      txnUuid = transactionUuid,
+      ttl = basicProducer.producerOptions.transactionTTL,
+      status = ProducerTransactionStatus.opened)
+
+  topicRef.publish(ProducerMessageSerializer.serialize(msg))
 
   lockRef.unlock()
 
@@ -173,12 +168,9 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     //await till update future will close
     Await.ready(updateFuture, TIMEOUT)
 
-    topicRef.publish(
-      jsonSerializer.serialize(
-        ProducerTopicMessage(
-          txnUuid = transactionUuid,
-          ttl = -1,
-          status = ProducerTransactionStatus.cancelled)))
+    val msg = ProducerTopicMessage(txnUuid = transactionUuid, ttl = -1, status = ProducerTransactionStatus.cancelled)
+
+    topicRef.publish(ProducerMessageSerializer.serialize(msg))
 
     closed = true
     logger.info(s"Cancel transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
@@ -222,13 +214,13 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         totalCnt = part,
         ttl = basicProducer.stream.getTTL)
 
-      //publish that current txn is closed
-      topicRef.publish(
-        jsonSerializer.serialize(
-        ProducerTopicMessage(
+      val msg = ProducerTopicMessage(
         txnUuid = transactionUuid,
         ttl = -1,
-        status = ProducerTransactionStatus.closed)))
+        status = ProducerTransactionStatus.closed)
+
+      //publish that current txn is closed
+      topicRef.publish(ProducerMessageSerializer.serialize(msg))
     }
 
     closed = true
@@ -262,11 +254,13 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
           totalCnt = -1,
           ttl = basicProducer.producerOptions.transactionTTL)
 
-        //publish that current txn is being updating
-        topicRef.publish(jsonSerializer.serialize(ProducerTopicMessage(
+        val msg = ProducerTopicMessage(
           txnUuid = transactionUuid,
           ttl = basicProducer.producerOptions.transactionTTL,
-          status = ProducerTransactionStatus.opened)))
+          status = ProducerTransactionStatus.opened)
+
+        //publish that current txn is being updating
+        topicRef.publish(ProducerMessageSerializer.serialize(msg))
       }}
     }
   }

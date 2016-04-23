@@ -5,7 +5,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.{Comparator, UUID}
 import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.common.JsonSerializer
-import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage}
+import com.bwsw.tstreams.coordination.{ProducerMessageSerializer, ProducerTransactionStatus, ProducerTopicMessage}
 import com.bwsw.tstreams.coordination.ProducerTransactionStatus._
 import com.bwsw.tstreams.streams.BasicStream
 import java.util.concurrent.atomic.AtomicBoolean
@@ -93,7 +93,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         latch.await()
       }
 
-      //start tread to consume queue and doing call callback on it
+      //start tread to consume queue and doing callback's on it
       var latch = new CountDownLatch(1)
       val queueConsumer = new Thread(new Runnable {
         override def run(): Unit = {
@@ -111,26 +111,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       val subscriber = new Thread(new Runnable {
         override def run(): Unit = {
           latch.countDown()
-          val jsonSerializer = new JsonSerializer
           val lock = new ReentrantLock(true)
-
-          val tree = new util.TreeMap[UUID, (ProducerTransactionStatus, Long /*ttl*/ )](new Comparator[UUID] {
-            override def compare(first: UUID, second: UUID): Int = {
-              val tsFirst = first.timestamp()
-              val tsSecond = second.timestamp()
-              if (tsFirst > tsSecond) 1
-              else if (tsFirst < tsSecond) -1
-              else 0
-            }
-          })
-
-          val map = new PassiveExpiringMap[UUID, (ProducerTransactionStatus, Long)](
-            new PassiveExpiringMap.ExpirationPolicy[UUID, (ProducerTransactionStatus, Long)] {
-              override def expirationTime(key: UUID, value: (ProducerTransactionStatus, Long)): Long = {
-                if (value._2 == -1) -1
-                else System.currentTimeMillis() + value._2 * 1000L
-              }
-            }, tree)
+          val map = createExpiringMap()
 
           //UUID to indicate on last handled transaction
           var currentTransactionUUID = options.txnGenerator.getTimeUUID(0)
@@ -138,17 +120,15 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
           val topic: RTopic[String] = stream.coordinator.getTopic[String](s"${stream.getName}/$partition/events")
 
           val listener = topic.addListener(new MessageListener[String] {
-            override def onMessage(channel: String, msg: String): Unit = {
+            override def onMessage(channel: String, rawMsg: String): Unit = {
               lock.lock()
-              val deserializedMsg = jsonSerializer.deserialize[ProducerTopicMessage](msg)
+              val msg = ProducerMessageSerializer.deserialize(rawMsg)
 
-              //TODO remove after complex debug
-              assert(deserializedMsg.txnUuid.timestamp() != currentTransactionUUID.timestamp())
-              if (deserializedMsg.txnUuid.timestamp() > currentTransactionUUID.timestamp()) {
-                if (deserializedMsg.status == ProducerTransactionStatus.cancelled)
-                  map.remove(deserializedMsg.txnUuid)
+              if (msg.txnUuid.timestamp() > currentTransactionUUID.timestamp()) {
+                if (msg.status == ProducerTransactionStatus.cancelled)
+                  map.remove(msg.txnUuid)
                 else
-                  map.put(deserializedMsg.txnUuid, (deserializedMsg.status, deserializedMsg.ttl))
+                  map.put(msg.txnUuid, (msg.status, msg.ttl))
               }
 
               lock.unlock()
@@ -221,6 +201,36 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       subscriber.start()
       latch.await()
     }
+  }
+
+  /**
+   * Create sorted(based on UUID) expiring map
+   * @return
+   */
+  def createExpiringMap(): PassiveExpiringMap[UUID, (ProducerTransactionStatus, Long /*ttl*/ )] = {
+
+    //create tree structure which keeps their keys in sorted order based on keys UUID's
+    val treeMap = new util.TreeMap[UUID, (ProducerTransactionStatus, Long /*ttl*/ )](new Comparator[UUID] {
+      override def compare(first: UUID, second: UUID): Int = {
+        val tsFirst = first.timestamp()
+        val tsSecond = second.timestamp()
+        if (tsFirst > tsSecond) 1
+        else if (tsFirst < tsSecond) -1
+        else 0
+      }
+    })
+
+    //create map with expiring records
+    val map = new PassiveExpiringMap[UUID, (ProducerTransactionStatus, Long /*ttl*/ )](
+      new PassiveExpiringMap.ExpirationPolicy[UUID, (ProducerTransactionStatus, Long /*ttl*/ )] {
+        override def expirationTime(key: UUID, value: (ProducerTransactionStatus, Long /*ttl*/ )): Long = {
+          if (value._2 < 0)
+            -1 //just need to keep records without ttl
+          else
+            System.currentTimeMillis() + value._2 * 1000L
+        }
+      }, treeMap)
+    map
   }
 
   /**
