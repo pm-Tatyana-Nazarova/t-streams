@@ -112,7 +112,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         override def run(): Unit = {
           latch.countDown()
           val lock = new ReentrantLock(true)
-          val map = createExpiringMap()
+          val map = createSortedExpiringMap()
 
           //UUID to indicate on last handled transaction
           var currentTransactionUUID = options.txnGenerator.getTimeUUID(0)
@@ -207,7 +207,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
    * Create sorted(based on UUID) expiring map
    * @return
    */
-  def createExpiringMap(): PassiveExpiringMap[UUID, (ProducerTransactionStatus, Long /*ttl*/ )] = {
+  def createSortedExpiringMap(): PassiveExpiringMap[UUID, (ProducerTransactionStatus, Long /*ttl*/ )] = {
 
     //create tree structure which keeps their keys in sorted order based on keys UUID's
     val treeMap = new util.TreeMap[UUID, (ProducerTransactionStatus, Long /*ttl*/ )](new Comparator[UUID] {
