@@ -3,7 +3,7 @@ package data
 import java.util.UUID
 import com.bwsw.tstreams.data.cassandra.CassandraStorage
 import com.datastax.driver.core.Cluster
-import com.gilt.timeuuid.TimeUuid
+import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{CassandraHelper, RandomStringCreator}
 import scala.collection.mutable
@@ -49,7 +49,7 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
 
     val streamName: String = "stream_name"
     val partition: Int = 0
-    val transaction: UUID = TimeUuid()
+    val transaction: UUID = UUIDs.timeBased()
     val data = "some_data"
     val cnt = 1000
 

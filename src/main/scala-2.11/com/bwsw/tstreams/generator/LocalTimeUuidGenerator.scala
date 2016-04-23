@@ -6,14 +6,14 @@ import com.datastax.driver.core.utils.UUIDs
 /**
  * Entity for generating new transaction time UUID
  */
-class LocalTimeUuidGenerator extends IuuidGenerator{
+class LocalTimeUUIDGenerator extends IUUIDGenerator{
   /**
    * @return Transaction UUID
    */
-  def getTimeUUID(): UUID = UUIDs.timeBased()
+  override def getTimeUUID(): UUID = UUIDs.timeBased()
 
   /**
-   *
+   * @return UUID based on timestamp
    */
-  override val oldest: UUID = UUIDs.startOf(0)
+  override def getTimeUUID(timestamp: Long): UUID = UUIDs.startOf(timestamp)
 }

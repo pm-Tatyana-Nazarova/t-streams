@@ -2,7 +2,7 @@ package entities
 
 import com.bwsw.tstreams.entities.{TransactionSettings, CommitEntity}
 import com.datastax.driver.core.Cluster
-import com.gilt.timeuuid.TimeUuid
+import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{CassandraHelper, RandomStringCreator}
 import scala.collection.mutable
@@ -23,7 +23,7 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
     val commitEntity = new CommitEntity("commit_log", connectedSession)
     val stream = randomString
-    val txn = TimeUuid()
+    val txn = UUIDs.timeBased()
     val partition = 10
     val totalCnt = 123
     val ttl = 3
@@ -36,7 +36,7 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
     checkVal &= amount._1 == totalCnt
     Thread.sleep(3000)
-    val emptyQueue: mutable.Queue[TransactionSettings] = commitEntity.getTransactionsMoreThan(stream, partition, TimeUuid(0), 1)
+    val emptyQueue: mutable.Queue[TransactionSettings] = commitEntity.getTransactionsMoreThan(stream, partition, UUIDs.timeBased(), 1)
     checkVal &= emptyQueue.isEmpty
 
     checkVal shouldEqual true
@@ -48,8 +48,8 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
     val commitEntity = new CommitEntity("commit_log", connectedSession)
     val stream = randomString
-    val txn1 = TimeUuid(1)
-    val txn2 = TimeUuid(2)
+    val txn1 = UUIDs.timeBased()
+    val txn2 = UUIDs.timeBased()
     val partition = 10
     val totalCnt = 123
     val ttl = 3
@@ -59,7 +59,7 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
     var checkVal = true
 
-    val queue = commitEntity.getTransactionsMoreThan(stream, partition, TimeUuid(0), 2)
+    val queue = commitEntity.getTransactionsMoreThan(stream, partition, UUIDs.startOf(0), 2)
     checkVal &= queue.size == 2
     val txnSettings1 = queue.dequeue()
     checkVal &= txnSettings1.time == txn1 && txnSettings1.totalItems == totalCnt

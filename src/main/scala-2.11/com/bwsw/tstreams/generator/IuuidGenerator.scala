@@ -5,14 +5,14 @@ import java.util.UUID
 /**
  * Trait for producer/consumer transaction unique UUID generating
  */
-trait IuuidGenerator {
+trait IUUIDGenerator {
   /**
-   * oldest UUID
-   */
-  val oldest : UUID
-
-  /**
-   * @return Txn UUID
+   * @return UUID
    */
   def getTimeUUID() : UUID
+
+  /**
+   * @return UUID based on timestamp
+   */ 
+  def getTimeUUID(timestamp : Long) : UUID
 }

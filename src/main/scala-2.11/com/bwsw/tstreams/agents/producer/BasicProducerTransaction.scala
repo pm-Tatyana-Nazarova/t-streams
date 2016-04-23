@@ -178,7 +178,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         ProducerTopicMessage(
           txnUuid = transactionUuid,
           ttl = -1,
-          status = ProducerTransactionStatus.canceled)))
+          status = ProducerTransactionStatus.cancelled)))
 
     closed = true
     logger.info(s"Cancel transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")

@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.producer
 import com.bwsw.tstreams.agents.producer.InsertionType.InsertType
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.policy.AbstractPolicy
-import com.bwsw.tstreams.generator.IuuidGenerator
+import com.bwsw.tstreams.generator.IUUIDGenerator
 
 /**
  * Class for Basic Producer Options
@@ -22,7 +22,7 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
                                               val producerKeepAliveInterval : Int,
                                               val writePolicy : AbstractPolicy,
                                               val insertType: InsertType,
-                                              val txnGenerator: IuuidGenerator,
+                                              val txnGenerator: IUUIDGenerator,
                                               val converter : IConverter[USERTYPE,DATATYPE]) {
 
   /**

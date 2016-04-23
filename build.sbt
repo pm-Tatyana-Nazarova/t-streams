@@ -10,7 +10,6 @@ scalacOptions += "-deprecation"
 //COMMON
 libraryDependencies ++= Seq(
   "com.typesafe" % "config" % "1.3.0",
-  "com.gilt" % "gfc-timeuuid_2.11" % "0.0.6",
   "ch.qos.logback" % "logback-classic" % "1.1.6",
   "com.typesafe.scala-logging" % "scala-logging_2.11" % "3.1.0",
   "org.scalatest" % "scalatest_2.11" % "3.0.0-M15",
@@ -45,7 +44,6 @@ assemblyMergeStrategy in assembly := {
   case PathList("io", "netty-all", xs @ _*) => MergeStrategy.first
   case PathList("com", "datastax", "cassandra", xs @ _*) => MergeStrategy.first
   case PathList("com", "typesafe", xs @ _*) => MergeStrategy.first
-  case PathList("com", "gilt", xs @ _*) => MergeStrategy.first
   case PathList("ch", "qos", "logback", xs @ _*) => MergeStrategy.first
   case PathList("com", "typesafe", "scala-logging", xs @ _*) => MergeStrategy.first
   case PathList("org", "scalatest", xs @ _*) => MergeStrategy.first

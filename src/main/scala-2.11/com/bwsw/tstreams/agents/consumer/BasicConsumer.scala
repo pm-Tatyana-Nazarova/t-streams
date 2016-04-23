@@ -6,7 +6,6 @@ import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.entities.TransactionSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
-import com.gilt.timeuuid.TimeUuid
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
@@ -55,8 +54,8 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       options.offset match {
         case Offsets.Oldest =>
           for (i <- 0 until stream.getPartitions) {
-            currentOffsets(i) = TimeUuid(0)
-            offsetsForCheckpoint(i) = TimeUuid(0)
+            currentOffsets(i) = options.txnGenerator.getTimeUUID(0)
+            offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(0)
           }
 
         case Offsets.Newest =>
@@ -68,8 +67,8 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
 
         case dateTime : Offsets.DateTime =>
           for (i <- 0 until stream.getPartitions) {
-            currentOffsets(i) = TimeUuid(dateTime.startTime.getTime)
-            offsetsForCheckpoint(i) = TimeUuid(dateTime.startTime.getTime)
+            currentOffsets(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
+            offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
           }
 
         case offset : Offsets.UUID =>

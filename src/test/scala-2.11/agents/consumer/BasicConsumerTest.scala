@@ -14,7 +14,7 @@ import com.bwsw.tstreams.entities.CommitEntity
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import com.gilt.timeuuid.TimeUuid
+import com.datastax.driver.core.utils.UUIDs
 import org.redisson.{Redisson, Config}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, CassandraHelper, RandomStringCreator}
@@ -126,7 +126,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
   "consumer.getLastTransaction" should "return last closed transaction" in {
     val commitEntity = new CommitEntity("commit_log", connectedSession)
-    val txns = for (i <- 0 until 500) yield TimeUuid()
+    val txns = for (i <- 0 until 500) yield UUIDs.timeBased()
 
     val txn : UUID = txns.head
 

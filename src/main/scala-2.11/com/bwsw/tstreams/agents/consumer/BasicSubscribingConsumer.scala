@@ -10,7 +10,6 @@ import com.bwsw.tstreams.coordination.ProducerTransactionStatus._
 import com.bwsw.tstreams.streams.BasicStream
 import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
-import com.gilt.timeuuid.TimeUuid
 import org.apache.commons.collections4.map.PassiveExpiringMap
 import org.redisson.core.{RTopic, MessageListener}
 import scala.util.control.Breaks._
@@ -134,7 +133,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
             }, tree)
 
           //UUID to indicate on last handled transaction
-          var currentTransactionUUID = TimeUuid(0)
+          var currentTransactionUUID = options.txnGenerator.getTimeUUID(0)
 
           val topic: RTopic[String] = stream.coordinator.getTopic[String](s"${stream.getName}/$partition/events")
 
@@ -146,7 +145,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
               //TODO remove after complex debug
               assert(deserializedMsg.txnUuid.timestamp() != currentTransactionUUID.timestamp())
               if (deserializedMsg.txnUuid.timestamp() > currentTransactionUUID.timestamp()) {
-                if (deserializedMsg.status == ProducerTransactionStatus.canceled)
+                if (deserializedMsg.status == ProducerTransactionStatus.cancelled)
                   map.remove(deserializedMsg.txnUuid)
                 else
                   map.put(deserializedMsg.txnUuid, (deserializedMsg.status, deserializedMsg.ttl))
@@ -171,7 +170,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
               stream.metadataStorage.commitEntity.getTransactionsMoreThan(
                 stream.getName,
                 partition,
-                TimeUuid(0))
+                options.txnGenerator.getTimeUUID(0))
             }
 
           lock.lock()
@@ -184,7 +183,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
           lock.unlock()
 
           //TODO remove after complex debug
-          var valueChecker = TimeUuid(0)
+          var valueChecker = options.txnGenerator.getTimeUUID(0)
 
           //start handling map
           while (!finished.get()) {

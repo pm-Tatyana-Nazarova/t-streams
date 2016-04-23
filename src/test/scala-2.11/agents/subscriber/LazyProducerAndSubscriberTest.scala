@@ -22,7 +22,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils.{CassandraHelper, LocalGeneratorCreator, RandomStringCreator, RoundRobinPolicyCreator}
 import scala.collection.mutable.ListBuffer
 
-
+//TODO check this test harder
 class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
   //creating keyspace, metadata
   def randomString: String = RandomStringCreator.randomAlphaString(10)

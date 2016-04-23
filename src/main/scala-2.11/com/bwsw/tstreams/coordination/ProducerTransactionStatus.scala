@@ -17,8 +17,8 @@ object ProducerTransactionStatus extends Enumeration {
   val closed = Value
 
   /**
-   * If transaction canceled
+   * If transaction cancelled
    */
-  val canceled = Value
+  val cancelled = Value
 }
 

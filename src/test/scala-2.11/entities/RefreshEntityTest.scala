@@ -2,7 +2,7 @@ package entities
 
 import com.bwsw.tstreams.entities.CommitEntity
 import com.datastax.driver.core.Cluster
-import com.gilt.timeuuid.TimeUuid
+import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{CassandraHelper, RandomStringCreator}
 
@@ -19,7 +19,7 @@ class RefreshEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   "After dropping metadata tables and creating them again commit entity" should "work" in {
     val commitEntity = new CommitEntity("commit_log", connectedSession)
     val stream = randomString
-    val txn = TimeUuid()
+    val txn = UUIDs.timeBased()
     val partition = 10
     val totalCnt = 123
     val ttl = 3
