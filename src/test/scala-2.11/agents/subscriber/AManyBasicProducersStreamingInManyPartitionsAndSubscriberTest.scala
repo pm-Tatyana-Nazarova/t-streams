@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock
 import agents.both.batch_insert.BatchSizeTestVal
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumerCallback, BasicConsumerWithSubscribe, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumerCallback, BasicSubscribingConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -105,14 +105,14 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     }
 
     val callback = new BasicConsumerCallback[Array[Byte], String] {
-      override def onEvent(subscriber : BasicConsumerWithSubscribe[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
+      override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
         lock.lock()
         map(partition) += transactionUuid
         lock.unlock()
       }
       override val frequency: Int = 1
     }
-    val subscriber = new BasicConsumerWithSubscribe("test_consumer", streamInst, consumerOptions, callback, path)
+    val subscriber = new BasicSubscribingConsumer("test_consumer", streamInst, consumerOptions, callback, path)
     subscriber.start()
 
     producersThreads.foreach(x=>x.start())

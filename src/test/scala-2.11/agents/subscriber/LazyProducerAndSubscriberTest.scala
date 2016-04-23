@@ -8,7 +8,7 @@ import java.util.concurrent.locks.ReentrantLock
 import agents.both.batch_insert.BatchSizeTestVal
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumerCallback, BasicConsumerWithSubscribe, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumerCallback, BasicSubscribingConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -23,7 +23,7 @@ import testutils.{CassandraHelper, LocalGeneratorCreator, RandomStringCreator, R
 import scala.collection.mutable.ListBuffer
 
 
-class LazyProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
+class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
   //creating keyspace, metadata
   def randomString: String = RandomStringCreator.randomAlphaString(10)
   val path = randomString
@@ -106,14 +106,14 @@ class LazyProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll wit
     }
 
     val callback = new BasicConsumerCallback[Array[Byte], String] {
-      override def onEvent(subscriber : BasicConsumerWithSubscribe[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
+      override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
         lock.lock()
         map(partition) += transactionUuid
         lock.unlock()
       }
       override val frequency: Int = 1
     }
-    val subscriber = new BasicConsumerWithSubscribe("test_consumer", streamInst, consumerOptions, callback, path)
+    val subscriber = new BasicSubscribingConsumer("test_consumer", streamInst, consumerOptions, callback, path)
 
     producersThreads.foreach(x=>x.start())
     Thread.sleep(2000)

@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 import java.util.UUID
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{BasicConsumerCallback, BasicConsumerWithSubscribe, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{BasicConsumerCallback, BasicSubscribingConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
@@ -105,7 +105,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
   var acc = 0
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
   val callback = new BasicConsumerCallback[Array[Byte], String] {
-    override def onEvent(subscriber : BasicConsumerWithSubscribe[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
+    override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
       lock.lock()
       acc += 1
       lock.unlock()
@@ -113,7 +113,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     override val frequency: Int = 1
   }
   val path = randomString
-  val subscribeConsumer = new BasicConsumerWithSubscribe[Array[Byte],String]("test_consumer", streamForConsumer, consumerOptions, callback, path)
+  val subscribeConsumer = new BasicSubscribingConsumer[Array[Byte],String]("test_consumer", streamForConsumer, consumerOptions, callback, path)
 
   "subscribe consumer" should "retrieve all sent messages" in {
     val totalMsg = 30

@@ -11,7 +11,7 @@ trait BasicConsumerCallback[DATATYPE, USERTYPE] {
    * @param partition partition of the incoming transaction
    * @param transactionUuid time uuid of the incoming transaction
    */
-  def onEvent(subscriber : BasicConsumerWithSubscribe[DATATYPE, USERTYPE], partition : Int, transactionUuid : java.util.UUID) : Unit
+  def onEvent(subscriber : BasicSubscribingConsumer[DATATYPE, USERTYPE], partition : Int, transactionUuid : java.util.UUID) : Unit
 
   /**
    * Frequency of handling incoming transactions in seconds
