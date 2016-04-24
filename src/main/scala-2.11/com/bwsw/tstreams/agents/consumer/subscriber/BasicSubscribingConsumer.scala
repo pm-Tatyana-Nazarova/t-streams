@@ -1,21 +1,8 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import java.util
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
-import java.util.{Comparator, UUID}
-
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.common.JsonSerializer
-import com.bwsw.tstreams.coordination.ProducerTransactionStatus._
-import com.bwsw.tstreams.coordination.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
-import org.apache.commons.collections4.map.PassiveExpiringMap
-import org.redisson.core.{MessageListener, RTopic}
-
-import scala.util.control.Breaks._
 
 /**
  * Basic consumer with subscribe option
@@ -33,18 +20,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
                                                      callBack : BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                      persistentQueuePath : String)
   extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options){
-
-  private val link = this
-
-  /**
-   * Indicate finished or not subscribe job
-   */
-  private val finished = new AtomicBoolean(false)
-
-  /**
-   *
-   */
-  private val serializer = new JsonSerializer
 
   /**
    * Current subscriber state
@@ -104,6 +79,5 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       throw new IllegalStateException("subscriber not started")
 
     isStarted = false
-    finished.set(true)
   }
 }
