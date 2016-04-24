@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
@@ -27,6 +29,11 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   private var isStarted = false
 
   /**
+   * Indicate active subscriber or not
+   */
+  private val isQueueConsumed = new AtomicBoolean(false)
+
+  /**
    * Start to consume messages
    */
   def start() = {
@@ -48,7 +55,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
           new PersistentTransactionQueue(persistentQueuePath + s"/$partition", null)
         }
 
-      val transactionRelay = new SubscriberTransactionsRelay(this, currentOffsets(partition), partition, callBack, queue)
+      val transactionRelay = new SubscriberTransactionsRelay(this, currentOffsets(partition), partition, callBack, queue, isQueueConsumed)
 
       //start tread to consume queue and doing callback's on it
       transactionRelay.startConsumeAndCallbackQueueAsync()
@@ -78,6 +85,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     if (!isStarted)
       throw new IllegalStateException("subscriber not started")
 
+    isQueueConsumed.set(false)
     isStarted = false
   }
 }

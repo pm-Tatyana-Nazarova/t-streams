@@ -16,7 +16,8 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
                                                      offset: UUID,
                                                      partition : Int,
                                                      callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
-                                                     queue : PersistentTransactionQueue) {
+                                                     queue : PersistentTransactionQueue,
+                                                     isQueueConsumed : AtomicBoolean) {
 
   /**
    * Constant for Thread.sleep
@@ -42,11 +43,6 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
    * Last consumed transaction from map
    */
   private var lastConsumedTransaction : UUID = subscriber.options.txnGenerator.getTimeUUID(0)
-
-  /**
-   * Indicate consumed [[queue]] now or not
-   */
-  private val isQueueConsumed = new AtomicBoolean(false)
 
   /**
    * Name of the stream
@@ -81,12 +77,6 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
     queueConsumer.start()
     latch.await()
   }
-
-  /**
-   * Stop consume queue
-   */
-  def stopConsumeQueue() =
-    isQueueConsumed.set(false)
 
   /**
    * Consume all transactions in interval (offset;transactionUUID]
