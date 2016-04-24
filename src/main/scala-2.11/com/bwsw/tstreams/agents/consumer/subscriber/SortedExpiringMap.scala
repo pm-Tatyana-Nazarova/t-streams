@@ -19,4 +19,6 @@ class SortedExpiringMap[K,V] (comparator : Comparator[K], expirationPolicy: Expi
   def exist(key : K) : Boolean = map.containsKey(key)
 
   def remove(key : K) : Unit = map.remove(key)
+
+  def entrySetIterator() = map.entrySet().iterator()
 }

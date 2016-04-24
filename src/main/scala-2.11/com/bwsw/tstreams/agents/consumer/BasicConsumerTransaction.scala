@@ -21,7 +21,7 @@ class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATAT
   /**
    * Return transaction UUID
    */
-  def getTxnUUID: UUID = transaction.time
+  def getTxnUUID: UUID = transaction.txnUuid
 
   /**
    * Return transaction partition
@@ -48,7 +48,7 @@ class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATAT
     //try to update buffer
     if (buffer == null || buffer.isEmpty) {
       val newcnt = min2(cnt + consumer.options.dataPreload, transaction.totalItems - 1)
-      buffer = consumer.stream.dataStorage.get(consumer.stream.getName, partition, transaction.time, cnt, newcnt)
+      buffer = consumer.stream.dataStorage.get(consumer.stream.getName, partition, transaction.txnUuid, cnt, newcnt)
       cnt = newcnt + 1
     }
 
@@ -74,7 +74,7 @@ class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATAT
    * @return All consumed transaction
    */
   def getAll() : List[USERTYPE] = {
-    val data: mutable.Queue[DATATYPE] = consumer.stream.dataStorage.get(consumer.stream.getName, partition, transaction.time, cnt, transaction.totalItems-1)
+    val data: mutable.Queue[DATATYPE] = consumer.stream.dataStorage.get(consumer.stream.getName, partition, transaction.txnUuid, cnt, transaction.totalItems-1)
     data.toList.map(x=>consumer.options.converter.convert(x))
   }
 

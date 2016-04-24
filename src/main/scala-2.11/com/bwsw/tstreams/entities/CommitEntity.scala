@@ -9,11 +9,11 @@ import org.slf4j.LoggerFactory
 
 /**
  * Transactions settings
- * @param time Time of transaction
+ * @param txnUuid Time of transaction
  * @param totalItems Total packets in transaction
  * @param ttl Transaction expiration time in seconds
  */
-case class TransactionSettings(time : UUID, totalItems : Int, ttl : Int)
+case class TransactionSettings(txnUuid : UUID, totalItems : Int, ttl : Int)
 
 /**
  * Metadata entity for commits

@@ -60,8 +60,9 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     isStarted = true
 
     (0 until stream.getPartitions) foreach { partition =>
-      //getting last txn
+      //getting last txn for concrete partition
       val lastTransactionOpt = getLastTransaction(partition)
+
       //creating queue for concrete partition
       val queue =
         if (lastTransactionOpt.isDefined) {
@@ -72,174 +73,27 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
           new PersistentTransactionQueue(persistentQueuePath + s"/$partition", null)
         }
 
-      //start tread to consume all transactions before lasttxn
-      if (lastTransactionOpt.isDefined) {
-        val txnUuid = lastTransactionOpt.get.getTxnUUID
-        val latch = new CountDownLatch(1)
-        val transactionsConsumerBeforeLast = new Thread(new Runnable {
-          override def run(): Unit = {
-            latch.countDown()
-            val leftBorder = currentOffsets(partition)
-            val transactions = stream.metadataStorage.commitEntity.getTransactionsMoreThanAndLessOrEqualThan(
-              stream.getName,
-              partition,
-              leftBorder,
-              txnUuid)
-
-            //TODO remove after complex debug
-            if (transactions.nonEmpty) {
-              assert(transactions.last.time == txnUuid, "last transaction was not added in queue")
-            }
-
-            while (transactions.nonEmpty && !finished.get()) {
-              val uuid = transactions.dequeue().time
-              queue.put(uuid)
-            }
-          }
-        })
-        transactionsConsumerBeforeLast.start()
-        latch.await()
-      }
+      val transactionRelay = new SubscriberTransactionsRelay(this, currentOffsets(partition), partition, callBack, queue)
 
       //start tread to consume queue and doing callback's on it
-      var latch = new CountDownLatch(1)
-      val queueConsumer = new Thread(new Runnable {
-        override def run(): Unit = {
-          latch.countDown()
-          while (!finished.get()) {
-            val txn = queue.get()
-            callBack.onEvent(link, partition, txn)
-          }
-        }
-      })
-      queueConsumer.start()
-      latch.await()
+      transactionRelay.startConsumeAndCallbackQueueAsync()
 
-      latch = new CountDownLatch(1)
-      val subscriber = new Thread(new Runnable {
-        override def run(): Unit = {
-          latch.countDown()
-          val lock = new ReentrantLock(true)
-          val map = createSortedExpiringMap()
+      //start tread to consume all transactions before lasttxn including it
+      if (lastTransactionOpt.isDefined)
+        transactionRelay.consumeTransactionsLessOrEqualThanAsync(lastTransactionOpt.get.getTxnUUID)
 
-          //UUID to indicate on last handled transaction
-          var currentTransactionUUID = options.txnGenerator.getTimeUUID(0)
+      transactionRelay.startListenIncomingTransactions()
 
-          val topic: RTopic[String] = stream.coordinator.getTopic[String](s"${stream.getName}/$partition/events")
-
-          val listener = topic.addListener(new MessageListener[String] {
-            override def onMessage(channel: String, rawMsg: String): Unit = {
-              lock.lock()
-              val msg = serializer.deserialize[ProducerTopicMessage](rawMsg)
-
-              if (msg.txnUuid.timestamp() > currentTransactionUUID.timestamp()) {
-                if (msg.status == ProducerTransactionStatus.cancelled)
-                  map.remove(msg.txnUuid)
-                else
-                  map.put(msg.txnUuid, (msg.status, msg.ttl))
-              }
-
-              lock.unlock()
-            }
-          })
-          //wait listener start
-          Thread.sleep(5000)
-
-
-          //consume all messages greater than last
-          val messagesGreaterThanLast =
-            if (lastTransactionOpt.isDefined) {
-              val lastTransaction = lastTransactionOpt.get
-              stream.metadataStorage.commitEntity.getTransactionsMoreThan(
-                stream.getName,
-                partition,
-                lastTransaction.getTxnUUID)
-            }
-            else {
-              stream.metadataStorage.commitEntity.getTransactionsMoreThan(
-                stream.getName,
-                partition,
-                options.txnGenerator.getTimeUUID(0))
-            }
-
-          lock.lock()
-          messagesGreaterThanLast foreach { m =>
-            if (m.totalItems != -1)
-              map.put(m.time, (ProducerTransactionStatus.closed, -1))
-            else
-              map.put(m.time, (ProducerTransactionStatus.opened, m.ttl))
-          }
-          lock.unlock()
-
-          //TODO remove after complex debug
-          var valueChecker = options.txnGenerator.getTimeUUID(0)
-
-          //start handling map
-          while (!finished.get()) {
-            lock.lock()
-
-            val it = map.entrySet().iterator()
-            breakable {
-              while (it.hasNext) {
-                val entry = it.next()
-                val key: UUID = entry.getKey
-                val (status: ProducerTransactionStatus, _) = entry.getValue
-                status match {
-                  case ProducerTransactionStatus.opened =>
-                    break()
-                  case ProducerTransactionStatus.closed =>
-                    queue.put(key)
-                }
-
-                //TODO remove after complex testing
-                if (valueChecker.timestamp() >= key.timestamp())
-                  throw new IllegalStateException("incorrect subscriber state")
-
-                currentTransactionUUID = key
-                valueChecker = key
-                it.remove()
-              }
-            }
-
-            lock.unlock()
-            Thread.sleep(callBack.frequency * 1000L)
-          }
-          topic.removeListener(listener)
-        }
-      })
-      subscriber.start()
-      latch.await()
-    }
-  }
-
-  /**
-   * Create sorted(based on UUID) expiring map
-   * @return
-   */
-  def createSortedExpiringMap(): PassiveExpiringMap[UUID, (ProducerTransactionStatus, Long /*ttl*/ )] = {
-
-    //create tree structure which keeps their keys in sorted order based on keys UUID's
-    val treeMap = new util.TreeMap[UUID, (ProducerTransactionStatus, Long /*ttl*/ )](new Comparator[UUID] {
-      override def compare(first: UUID, second: UUID): Int = {
-        val tsFirst = first.timestamp()
-        val tsSecond = second.timestamp()
-        if (tsFirst > tsSecond) 1
-        else if (tsFirst < tsSecond) -1
-        else 0
+      //consume all messages greater than last
+      if (lastTransactionOpt.isDefined)
+        transactionRelay.consumeTransactionsMoreThan(lastTransactionOpt.get.getTxnUUID)
+      else{
+        val oldestUuid = options.txnGenerator.getTimeUUID(0)
+        transactionRelay.consumeTransactionsMoreThan(oldestUuid)
       }
-    })
 
-    //create map with expiring records
-    val map = new PassiveExpiringMap[UUID, (ProducerTransactionStatus, Long /*ttl*/ )](
-      new PassiveExpiringMap.ExpirationPolicy[UUID, (ProducerTransactionStatus, Long /*ttl*/ )] {
-        override def expirationTime(key: UUID, value: (ProducerTransactionStatus, Long /*ttl*/ )): Long = {
-          if (value._2 < 0)
-            -1 //just need to keep records without ttl
-          else
-            System.currentTimeMillis() + value._2 * 1000L
-        }
-      }, treeMap)
-    map
+      transactionRelay.startUpdatingQueueAsync()
+    }
   }
 
   /**

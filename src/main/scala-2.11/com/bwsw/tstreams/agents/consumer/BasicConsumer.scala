@@ -126,20 +126,20 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       val txn: TransactionSettings = transactionBuffer(curPartition).front
 
       if (txn.totalItems != -1) {
-        offsetsForCheckpoint(curPartition) = txn.time
-        currentOffsets(curPartition) = txn.time
+        offsetsForCheckpoint(curPartition) = txn.txnUuid
+        currentOffsets(curPartition) = txn.txnUuid
         transactionBuffer(curPartition).dequeue()
         return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, curPartition, txn))
       }
 
-      val updatedTxnOpt: Option[TransactionSettings] = updateTransaction(txn.time, curPartition)
+      val updatedTxnOpt: Option[TransactionSettings] = updateTransaction(txn.txnUuid, curPartition)
 
       if (updatedTxnOpt.isDefined) {
         val updatedTxn = updatedTxnOpt.get
 
         if (updatedTxn.totalItems != -1) {
-          offsetsForCheckpoint(curPartition) = txn.time
-          currentOffsets(curPartition) = txn.time
+          offsetsForCheckpoint(curPartition) = txn.txnUuid
+          currentOffsets(curPartition) = txn.txnUuid
           transactionBuffer(curPartition).dequeue()
           return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, curPartition, updatedTxn))
         }
@@ -181,7 +181,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
             val txn = queue.dequeue()
             if (txn.totalItems != -1)
               return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, partition, txn))
-            now = txn.time
+            now = txn.txnUuid
           }
         }
       }

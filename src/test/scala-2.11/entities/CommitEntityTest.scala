@@ -62,9 +62,9 @@ class CommitEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     val queue = commitEntity.getTransactionsMoreThan(stream, partition, UUIDs.startOf(0), 2)
     checkVal &= queue.size == 2
     val txnSettings1 = queue.dequeue()
-    checkVal &= txnSettings1.time == txn1 && txnSettings1.totalItems == totalCnt
+    checkVal &= txnSettings1.txnUuid == txn1 && txnSettings1.totalItems == totalCnt
     val txnSettings2 = queue.dequeue()
-    checkVal &= txnSettings2.time == txn2 && txnSettings2.totalItems == totalCnt
+    checkVal &= txnSettings2.txnUuid == txn2 && txnSettings2.totalItems == totalCnt
 
     checkVal shouldEqual true
   }
