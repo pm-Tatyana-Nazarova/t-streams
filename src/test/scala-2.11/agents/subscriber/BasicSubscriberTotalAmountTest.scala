@@ -132,7 +132,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     }
     Thread.sleep(10000)
 
-    subscribeConsumer.close()
+    subscribeConsumer.stop()
 
     acc shouldEqual totalMsg
   }

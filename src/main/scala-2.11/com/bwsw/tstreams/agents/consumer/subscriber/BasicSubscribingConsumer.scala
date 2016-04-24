@@ -38,6 +38,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   def start() = {
     if (isStarted)
       throw new IllegalStateException("subscriber already started")
+
     isStarted = true
 
     (0 until stream.getPartitions) foreach { partition =>
@@ -80,7 +81,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   /**
    * Stop consumer handle incoming messages
    */
-  def close() = {
+  def stop() = {
     if (!isStarted)
       throw new IllegalStateException("subscriber not started")
 
