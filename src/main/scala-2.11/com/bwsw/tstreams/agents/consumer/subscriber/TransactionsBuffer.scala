@@ -5,7 +5,7 @@ import com.bwsw.tstreams.coordination.ProducerTransactionStatus
 import com.bwsw.tstreams.coordination.ProducerTransactionStatus._
 
 /**
- * Buffer for consumed maintaining transactions
+ * Buffer for maintain consumed transactions in memory
  */
 class TransactionsBuffer() {
   private val map : SortedExpiringMap[UUID, (ProducerTransactionStatus, Long)] =
