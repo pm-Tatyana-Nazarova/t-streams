@@ -89,10 +89,10 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
         latch.countDown()
 
         val transactions = subscriber.stream.metadataStorage.commitEntity.getTransactionsMoreThanAndLessOrEqualThan(
-          streamName,
-          partition,
-          offset,
-          transactionUUID)
+          streamName = streamName,
+          partition = partition,
+          leftBorder = offset,
+          rightBorder = transactionUUID)
 
         while (transactions.nonEmpty) {
           val uuid = transactions.dequeue().txnUuid
