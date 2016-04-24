@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.producer
 import java.util.UUID
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 import com.bwsw.tstreams.common.JsonSerializer
-import com.bwsw.tstreams.coordination.{ProducerMessageSerializer, ProducerTransactionStatus, ProducerTopicMessage}
+import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage}
 import com.typesafe.scalalogging.Logger
 import org.redisson.core.{RTopic, RLock}
 import org.slf4j.LoggerFactory
@@ -52,6 +52,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   private var part = 0
 
   /**
+   * Serializer to serialize ProducerTopicMessages
+   */
+  private val serializer = new JsonSerializer
+
+  /**
    * Max awaiting time on Await.ready() method for futures
    */
   private val TIMEOUT = 2 seconds
@@ -93,7 +98,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       ttl = basicProducer.producerOptions.transactionTTL,
       status = ProducerTransactionStatus.opened)
 
-  topicRef.publish(ProducerMessageSerializer.serialize(msg))
+  topicRef.publish(serializer.serialize(msg))
 
   lockRef.unlock()
 
@@ -170,7 +175,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
     val msg = ProducerTopicMessage(txnUuid = transactionUuid, ttl = -1, status = ProducerTransactionStatus.cancelled)
 
-    topicRef.publish(ProducerMessageSerializer.serialize(msg))
+    topicRef.publish(serializer.serialize(msg))
 
     closed = true
     logger.info(s"Cancel transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
@@ -220,7 +225,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         status = ProducerTransactionStatus.closed)
 
       //publish that current txn is closed
-      topicRef.publish(ProducerMessageSerializer.serialize(msg))
+      topicRef.publish(serializer.serialize(msg))
     }
 
     closed = true
@@ -260,7 +265,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
           status = ProducerTransactionStatus.opened)
 
         //publish that current txn is being updating
-        topicRef.publish(ProducerMessageSerializer.serialize(msg))
+        topicRef.publish(serializer.serialize(msg))
       }}
     }
   }

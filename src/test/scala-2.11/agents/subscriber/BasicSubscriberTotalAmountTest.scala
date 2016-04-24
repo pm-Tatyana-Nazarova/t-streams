@@ -5,7 +5,8 @@ import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 import java.util.UUID
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{BasicConsumerCallback, BasicSubscribingConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.BasicConsumerOptions
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
@@ -104,7 +105,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
   val lock = new ReentrantLock()
   var acc = 0
   val producer = new BasicProducer("test_producer", streamForProducer, producerOptions)
-  val callback = new BasicConsumerCallback[Array[Byte], String] {
+  val callback = new BasicSubscriberCallback[Array[Byte], String] {
     override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
       lock.lock()
       acc += 1

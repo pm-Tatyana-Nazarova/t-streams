@@ -1,17 +1,20 @@
-package com.bwsw.tstreams.agents.consumer
+package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util
 import java.util.concurrent.CountDownLatch
-import java.util.{Comparator, UUID}
-import java.util.concurrent.locks.ReentrantLock
-import com.bwsw.tstreams.common.JsonSerializer
-import com.bwsw.tstreams.coordination.{ProducerMessageSerializer, ProducerTransactionStatus, ProducerTopicMessage}
-import com.bwsw.tstreams.coordination.ProducerTransactionStatus._
-import com.bwsw.tstreams.streams.BasicStream
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.ReentrantLock
+import java.util.{Comparator, UUID}
+
+import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.common.JsonSerializer
+import com.bwsw.tstreams.coordination.ProducerTransactionStatus._
+import com.bwsw.tstreams.coordination.{ProducerTopicMessage, ProducerTransactionStatus}
+import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.apache.commons.collections4.map.PassiveExpiringMap
-import org.redisson.core.{RTopic, MessageListener}
+import org.redisson.core.{MessageListener, RTopic}
+
 import scala.util.control.Breaks._
 
 /**
@@ -27,7 +30,7 @@ import scala.util.control.Breaks._
 class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
                                                      stream : BasicStream[DATATYPE],
                                                      options : BasicConsumerOptions[DATATYPE,USERTYPE],
-                                                     callBack : BasicConsumerCallback[DATATYPE, USERTYPE],
+                                                     callBack : BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                      persistentQueuePath : String)
   extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options){
 
@@ -37,6 +40,11 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
    * Indicate finished or not subscribe job
    */
   private val finished = new AtomicBoolean(false)
+
+  /**
+   *
+   */
+  private val serializer = new JsonSerializer
 
   /**
    * Current subscriber state
@@ -122,7 +130,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
           val listener = topic.addListener(new MessageListener[String] {
             override def onMessage(channel: String, rawMsg: String): Unit = {
               lock.lock()
-              val msg = ProducerMessageSerializer.deserialize(rawMsg)
+              val msg = serializer.deserialize[ProducerTopicMessage](rawMsg)
 
               if (msg.txnUuid.timestamp() > currentTransactionUUID.timestamp()) {
                 if (msg.status == ProducerTransactionStatus.cancelled)
@@ -136,6 +144,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
           })
           //wait listener start
           Thread.sleep(5000)
+
 
           //consume all messages greater than last
           val messagesGreaterThanLast =

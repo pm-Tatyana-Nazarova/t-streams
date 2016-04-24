@@ -1,11 +1,10 @@
-package com.bwsw.tstreams.agents.consumer
-
+package com.bwsw.tstreams.agents.consumer.subscriber
 
 
 /**
  * Trait to implement to handle incoming messages
  */
-trait BasicConsumerCallback[DATATYPE, USERTYPE] {
+trait BasicSubscriberCallback[DATATYPE, USERTYPE] {
   /**
    * Callback which is called on every closed partition/transaction
    * @param partition partition of the incoming transaction

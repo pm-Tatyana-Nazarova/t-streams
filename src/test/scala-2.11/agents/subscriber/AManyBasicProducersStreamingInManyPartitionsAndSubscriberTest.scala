@@ -7,7 +7,8 @@ import java.util.concurrent.locks.ReentrantLock
 import agents.both.batch_insert.BatchSizeTestVal
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumerCallback, BasicSubscribingConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.BasicConsumerOptions
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -104,7 +105,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
       map(partition) = ListBuffer.empty[UUID]
     }
 
-    val callback = new BasicConsumerCallback[Array[Byte], String] {
+    val callback = new BasicSubscriberCallback[Array[Byte], String] {
       override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
         lock.lock()
         map(partition) += transactionUuid
