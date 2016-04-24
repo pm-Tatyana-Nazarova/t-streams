@@ -54,7 +54,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   private val streamName = subscriber.stream.getName
 
   /**
-   *
+   * Listener for this relay (!only one must be)
    */
   private var listener : Option[Int] = None
 
@@ -137,6 +137,9 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
    * @return Listener ID
    */
   def startListenIncomingTransactions() : Unit = {
+    if (listener.isDefined)
+      throw new IllegalStateException("listener for this stream/partition already exist")
+    
     val listenerId = topic.addListener(new MessageListener[String] {
       override def onMessage(channel: String, rawMsg: String): Unit = {
         fairLock.lock()
