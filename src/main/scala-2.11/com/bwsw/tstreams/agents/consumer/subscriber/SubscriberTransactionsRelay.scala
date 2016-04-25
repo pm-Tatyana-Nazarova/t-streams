@@ -82,6 +82,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
    * Consume all transactions in interval (offset;transactionUUID]
    * @param transactionUUID Right border to consume
    */
+  //TODO check that queue correctly sorted
   def consumeTransactionsLessOrEqualThanAsync(transactionUUID : UUID) = {
     val latch = new CountDownLatch(1)
     val transactionsConsumerBeforeLast = new Thread(new Runnable {
@@ -197,7 +198,9 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
           Thread.sleep(callback.frequency * 1000L)
         }
 
-        assert(listener.isDefined)
+        if (listener.isEmpty)
+          throw new IllegalStateException("listener on this stage must be defined")
+        
         topic.removeListener(listener.get)
       }
     })

@@ -81,6 +81,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   /**
    * Stop consumer handle incoming messages
    */
+  //TODO add in txnsrelay threads join
   def stop() = {
     if (!isStarted)
       throw new IllegalStateException("subscriber not started")
