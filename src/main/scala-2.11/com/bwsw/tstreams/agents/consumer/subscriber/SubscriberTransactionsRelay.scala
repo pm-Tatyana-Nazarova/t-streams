@@ -126,7 +126,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
    * Starting listen updates from producers about incoming transactions
    * @return Listener ID
    */
-  def startListenIncomingTransactions() : Unit = {
+  def startListen() : Unit = {
     if (listener.isDefined)
       throw new IllegalStateException("listener for this stream/partition already exist")
     
@@ -150,7 +150,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
 
   /**
    * Remove topic listener
-   * @param listenerId Listener ID which can be acquired by [[startListenIncomingTransactions()]]
+   * @param listenerId Listener ID which can be acquired by [[startListen()]]
    */
   def removeListener(listenerId : Int) =
     topic.removeListener(listenerId)
@@ -159,7 +159,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   /**
    * Start pushing data in persistent queue from transaction buffer
    */
-  def startUpdatingQueueAsync() : Unit = {
+  def startUpdate() : Unit = {
     val latch = new CountDownLatch(1)
 
     val updateThread =

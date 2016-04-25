@@ -55,26 +55,26 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
           new PersistentTransactionQueue(persistentQueuePath + s"/$partition", null)
         }
 
-      val transactionRelay = new SubscriberTransactionsRelay(this, currentOffsets(partition), partition, callBack, queue, isQueueConsumed)
+      val transactionsRelay = new SubscriberTransactionsRelay(this, currentOffsets(partition), partition, callBack, queue, isQueueConsumed)
 
       //start tread to consume queue and doing callback's on it
-      transactionRelay.startConsumeAndCallbackQueueAsync()
+      transactionsRelay.startConsumeAndCallbackQueueAsync()
 
       //start tread to consume all transactions before lasttxn including it
       if (lastTransactionOpt.isDefined)
-        transactionRelay.consumeTransactionsLessOrEqualThanAsync(lastTransactionOpt.get.getTxnUUID)
+        transactionsRelay.consumeTransactionsLessOrEqualThanAsync(lastTransactionOpt.get.getTxnUUID)
 
-      transactionRelay.startListenIncomingTransactions()
+      transactionsRelay.startListen()
 
       //consume all messages greater than last
       if (lastTransactionOpt.isDefined)
-        transactionRelay.consumeTransactionsMoreThan(lastTransactionOpt.get.getTxnUUID)
+        transactionsRelay.consumeTransactionsMoreThan(lastTransactionOpt.get.getTxnUUID)
       else{
         val oldestUuid = options.txnGenerator.getTimeUUID(0)
-        transactionRelay.consumeTransactionsMoreThan(oldestUuid)
+        transactionsRelay.consumeTransactionsMoreThan(oldestUuid)
       }
 
-      transactionRelay.startUpdatingQueueAsync()
+      transactionsRelay.startUpdate()
     }
   }
 
