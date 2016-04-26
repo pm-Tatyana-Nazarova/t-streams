@@ -85,6 +85,10 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   //TODO check that queue correctly sorted
   def consumeTransactionsLessOrEqualThanAsync(transactionUUID : UUID) = {
     val latch = new CountDownLatch(1)
+
+    //TODO DEBUG ONLY
+    var lasttxn : UUID = null
+
     val transactionsConsumerBeforeLast = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
@@ -98,7 +102,12 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
         while (transactions.nonEmpty) {
           val uuid = transactions.dequeue().txnUuid
           queue.put(uuid)
+          lasttxn = uuid
         }
+
+        //TODO DEBUG ONLY
+        if (lasttxn!=null)
+          assert(lasttxn.timestamp() == transactionUUID.timestamp())
       }
     })
     transactionsConsumerBeforeLast.start()
