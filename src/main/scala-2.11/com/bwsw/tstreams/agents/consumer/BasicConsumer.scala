@@ -1,11 +1,16 @@
 package com.bwsw.tstreams.agents.consumer
 
 import java.util.UUID
+import com.bwsw.tstreams.agents.group.{ConsumerCommitInfo, CommitInfo, Agent}
+import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.entities.TransactionSettings
+import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
-import com.gilt.timeuuid.TimeUuid
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
+
+import scala.collection.mutable.ListBuffer
+
 
 /**
  * Basic consumer class
@@ -17,7 +22,7 @@ import org.slf4j.LoggerFactory
  */
 class BasicConsumer[DATATYPE, USERTYPE](val name : String,
                                         val stream : BasicStream[DATATYPE],
-                                        val options : BasicConsumerOptions[DATATYPE, USERTYPE]) {
+                                        val options : BasicConsumerOptions[DATATYPE, USERTYPE]) extends Agent{
 
 
   /**
@@ -35,35 +40,54 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
   /**
    * Local offsets
    */
-    private val currentOffsets = scala.collection.mutable.Map[Int, UUID]()
+    protected val currentOffsets = scala.collection.mutable.Map[Int, UUID]()
 
-    //update consumer offsets
+  /**
+   * Indicate set offsets or not
+   */
+    private var isSet = false
+
+    //set consumer offsets
     if(!stream.metadataStorage.consumerEntity.exist(name) || !options.useLastOffset){
+      isSet = true
+
       options.offset match {
-        case Oldest =>
-          for (i <- 0 until stream.getPartitions)
-            currentOffsets(i) = TimeUuid(0)
+        case Offsets.Oldest =>
+          for (i <- 0 until stream.getPartitions) {
+            currentOffsets(i) = options.txnGenerator.getTimeUUID(0)
+            offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(0)
+          }
 
-        case Newest =>
+        case Offsets.Newest =>
           val newestUuid = options.txnGenerator.getTimeUUID()
-          for (i <- 0 until stream.getPartitions)
+          for (i <- 0 until stream.getPartitions) {
             currentOffsets(i) = newestUuid
+            offsetsForCheckpoint(i) = newestUuid
+          }
 
-        case offset : DateTime =>
-          for (i <- 0 until stream.getPartitions)
-            currentOffsets(i) = TimeUuid(offset.startTime.getTime)
+        case dateTime : Offsets.DateTime =>
+          for (i <- 0 until stream.getPartitions) {
+            currentOffsets(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
+            offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
+          }
+
+        case offset : Offsets.UUID =>
+          for (i <- 0 until stream.getPartitions) {
+            currentOffsets(i) = offset.startUUID
+            offsetsForCheckpoint(i) = offset.startUUID
+          }
 
         case _ => throw new IllegalStateException("offset cannot be resolved")
       }
 
-      stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, currentOffsets)
     }
 
-    //fill start offsets
-    for (i <- 0 until stream.getPartitions) {
-      val offset = stream.metadataStorage.consumerEntity.getOffset(name, stream.getName, i)
-      offsetsForCheckpoint(i) = offset
-      currentOffsets(i) = offset
+    if (!isSet) {
+      for (i <- 0 until stream.getPartitions) {
+        val offset = stream.metadataStorage.consumerEntity.getOffset(name, stream.getName, i)
+        offsetsForCheckpoint(i) = offset
+        currentOffsets(i) = offset
+      }
     }
 
   /**
@@ -72,7 +96,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[TransactionSettings]]()
     //fill transaction buffer using current offsets
     for (i <- 0 until stream.getPartitions)
-      transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactions(
+      transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
         stream.getName,
         i,
         currentOffsets(i),
@@ -89,7 +113,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       val curPartition = options.readPolicy.getNextPartition
 
       if (transactionBuffer(curPartition).isEmpty) {
-        transactionBuffer(curPartition) = stream.metadataStorage.commitEntity.getTransactions(
+        transactionBuffer(curPartition) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
           stream.getName,
           curPartition,
           currentOffsets(curPartition),
@@ -102,20 +126,20 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       val txn: TransactionSettings = transactionBuffer(curPartition).front
 
       if (txn.totalItems != -1) {
-        offsetsForCheckpoint(curPartition) = txn.time
-        currentOffsets(curPartition) = txn.time
+        offsetsForCheckpoint(curPartition) = txn.txnUuid
+        currentOffsets(curPartition) = txn.txnUuid
         transactionBuffer(curPartition).dequeue()
         return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, curPartition, txn))
       }
 
-      val updatedTxnOpt: Option[TransactionSettings] = updateTransaction(txn, curPartition)
+      val updatedTxnOpt: Option[TransactionSettings] = updateTransaction(txn.txnUuid, curPartition)
 
       if (updatedTxnOpt.isDefined) {
         val updatedTxn = updatedTxnOpt.get
 
         if (updatedTxn.totalItems != -1) {
-          offsetsForCheckpoint(curPartition) = txn.time
-          currentOffsets(curPartition) = txn.time
+          offsetsForCheckpoint(curPartition) = txn.txnUuid
+          currentOffsets(curPartition) = txn.txnUuid
           transactionBuffer(curPartition).dequeue()
           return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, curPartition, updatedTxn))
         }
@@ -138,17 +162,82 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     }
 
   /**
-   * Update single transaction (if transaction is not closed it will have total packets value -1 so we need to wait while it will close)
+   * Getting last transaction from concrete partition
+   * @param partition Partition to get last transaction
+   * @return Last txn
+   */
+    def getLastTransaction(partition : Int): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+      var now = options.txnGenerator.getTimeUUID()
+      var done = false
+      while(!done){
+        val queue = stream.metadataStorage.commitEntity.getLastTransactionHelper(
+          stream.getName,
+          partition,
+          now)
+        if (queue.isEmpty)
+          done = true
+        else {
+          while (queue.nonEmpty) {
+            val txn = queue.dequeue()
+            if (txn.totalItems != -1)
+              return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, partition, txn))
+            now = txn.txnUuid
+          }
+        }
+      }
+
+      None
+    }
+
+  /**
+   *
+   * @param partition Partition from which historic transaction will be retrieved
+   * @param uuid Uuid for this transaction
+   * @return BasicConsumerTransaction
+   */
+    def getTransactionById(partition : Int, uuid : UUID): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+      logger.info(s"Start new historic transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+      val txnOpt = updateTransaction(uuid, partition)
+      if (txnOpt.isDefined){
+        val txn = txnOpt.get
+        if (txn.totalItems != -1)
+          Some(new BasicConsumerTransaction[DATATYPE,USERTYPE](this, partition, txn))
+        else
+          None
+      }
+      else
+        None
+    }
+
+  /**
+   * Sets offset on concrete partition
+   * @param partition partition to set offset
+   * @param uuid offset value
+   */
+    def setLocalOffset(partition : Int, uuid : UUID) : Unit = {
+      offsetsForCheckpoint(partition) = uuid
+      currentOffsets(partition) = uuid
+      transactionBuffer(partition) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
+        stream.getName,
+        partition,
+        uuid,
+        options.transactionsPreload)
+    }
+
+  /**
+   * Update transaction (if transaction is not closed it will have total packets value -1 so we need to wait while it will close)
    * @param txn Transaction to update
    * @return Updated transaction
    */
-    private def updateTransaction(txn : TransactionSettings, partition : Int) : Option[TransactionSettings] = {
-      val amount: Option[Int] = stream.metadataStorage.commitEntity.getTransactionAmount(
+    private def updateTransaction(txn : UUID, partition : Int) : Option[TransactionSettings] = {
+      val amount: Option[(Int,Int)] = stream.metadataStorage.commitEntity.getTransactionAmount(
         stream.getName,
         partition,
-        txn.time)
-      if (amount.isDefined)
-        Some(TransactionSettings(txn.time, amount.get))
+        txn)
+      if (amount.isDefined) {
+        val (cnt, ttl) = amount.get
+        Some(TransactionSettings(txn, cnt, ttl))
+      }
       else
         None
     }
@@ -162,4 +251,26 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, offsetsForCheckpoint)
       offsetsForCheckpoint.clear()
     }
+
+  /**
+   * Info to commit
+   */
+  override def getCommitInfo(): List[CommitInfo] = {
+    val info = ListBuffer[CommitInfo]()
+    offsetsForCheckpoint.foreach{case(partition, lastTxn) =>
+        info += ConsumerCommitInfo(name, stream.getName, partition, lastTxn)
+    }
+    offsetsForCheckpoint.clear()
+    info.toList
+  }
+
+  /**
+   * @return Metadata storage link for concrete agent
+   */
+  override def getMetadataRef(): MetadataStorage = stream.metadataStorage
+
+  /**
+   * @return Coordinator link
+   */
+  override def getCoordinationRef(): Coordinator = stream.coordinator
 }

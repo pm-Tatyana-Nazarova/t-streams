@@ -1,23 +1,25 @@
 package com.bwsw.tstreams.metadata
 
 import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.entities._
-import com.bwsw.tstreams.txngenerator.LocalTimeTxnGenerator
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core._
-import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging._
 import org.slf4j.LoggerFactory
 
 
 /**
- * Class of MetadataStorage
+ * Class of the MetadataStorage
  * @param cluster Cluster instance for metadata storage
  * @param session Session instance for metadata storage
  * @param keyspace Keyspace for metadata storage
  */
 class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
+
+  /**
+   * Uniq id for this MetadataStorage
+   */
+  val id = java.util.UUID.randomUUID().toString
 
   /**
    * MetadataStorage logger for logging
@@ -45,22 +47,14 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
   lazy val consumerEntity = new ConsumerEntity("consumers", session)
 
   /**
-   * @return Keyspace
+   * Group commit entity instance
    */
-  def getKeyspace = keyspace
+  lazy val groupCommitEntity = new GroupCommitEntity("consumers", "commit_log", session)
 
   /**
    * @return Closed this storage or not
    */
   def isClosed : Boolean = session.isClosed && cluster.isClosed
-
-  /**
-   * Closes MetadataStorage
-   */
-  def close() = {
-    session.close()
-    cluster.close()
-  }
 
   /**
     * Removes MetadataStorage
@@ -154,12 +148,6 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
     logger.info("finished truncating MetadataStorage tables\n")
   }
 
-  /**
-   * Validates that metadata created correctly
-   * @return Correctness of created metadata
-   */
-  // TODO: implement validate and then delete deprecated annotation
-  def validate() : Boolean = ???
 }
 
 
@@ -173,6 +161,16 @@ class MetadataStorageFactory {
   private val logger = Logger(LoggerFactory.getLogger(this.getClass))
 
   /**
+   * Map for memorize clusters which are already created
+   */
+  private val clusterMap = scala.collection.mutable.Map[List[InetSocketAddress], Cluster]()
+
+  /**
+   * Map for memorize Storage instances which are already created
+   */
+  private val instancesMap = scala.collection.mutable.Map[(List[InetSocketAddress], String), Session]()
+
+  /**
     * Fabric method which returns new MetadataStorage
     * @param cassandraHosts List of hosts to connect in C* cluster
     * @param keyspace Keyspace to use for metadata storage
@@ -181,28 +179,42 @@ class MetadataStorageFactory {
   def getInstance(cassandraHosts : List[InetSocketAddress], keyspace : String): MetadataStorage = {
     logger.info("start MetadataStorage instance creation\n")
 
-    val builder: Builder = Cluster.builder()
-    cassandraHosts.foreach(x => builder.addContactPointsWithPorts(x))
-    val cluster = builder.build()
+    val sortedHosts = cassandraHosts.map(x=>(x,x.hashCode())).sortBy(_._2).map(x=>x._1)
 
-    logger.debug(s"start connecting cluster to keyspace: {$keyspace}\n")
-    val session: Session = cluster.connect(keyspace)
+    val cluster = {
+      if (clusterMap.contains(sortedHosts))
+        clusterMap(sortedHosts)
+      else{
+        val builder: Builder = Cluster.builder()
+        cassandraHosts.foreach(x => builder.addContactPointsWithPorts(x))
+        val cluster = builder.build()
+        clusterMap(sortedHosts) = cluster
+        cluster
+      }
+    }
 
-    val inst = new MetadataStorage(cluster, session, keyspace)
-    instances += inst
+    val session = {
+      if (instancesMap.contains((sortedHosts,keyspace)))
+        instancesMap((sortedHosts,keyspace))
+      else{
+        val session: Session = cluster.connect(keyspace)
+        instancesMap((sortedHosts, keyspace)) = session
+        session
+      }
+    }
+
     logger.info("finished MetadataStorage instance creation\n")
-    inst
+    new MetadataStorage(cluster,session,keyspace)
   }
-
-  /**
-   * Storage for all MetadataStorage instances
-   */
-  private var instances = ListBuffer[MetadataStorage]()
 
   /**
    * Closes all factory MetadataStorage instances
    */
-  def closeFactory() = instances.foreach(_.close())
-
+  def closeFactory() = {
+    clusterMap.foreach(x=>x._2.close()) //close all clusters for each instance
+    instancesMap.foreach(x=>x._2.close()) //close all sessions for each instance
+    clusterMap.clear()
+    instancesMap.clear()
+  }
 }
 

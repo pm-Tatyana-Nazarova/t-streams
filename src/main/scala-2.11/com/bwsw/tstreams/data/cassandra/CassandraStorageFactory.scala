@@ -1,12 +1,10 @@
 package com.bwsw.tstreams.data.cassandra
 
-import com.bwsw.tstreams.data.IStorage
+import java.net.InetSocketAddress
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core.{Cluster, Session}
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
-
-import scala.collection.mutable.ListBuffer
 
 
 /**
@@ -14,14 +12,19 @@ import scala.collection.mutable.ListBuffer
  */
 class CassandraStorageFactory {
   /**
-   * Instances of all CassandraStorage
-   */
-  private var instances = ListBuffer[IStorage[Array[Byte]]]()
-
-  /**
    * CassandraStorageFactory logger for logging
    */
   private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+
+  /**
+   * Map for memorize clusters which are already created
+   */
+  private val clusterMap = scala.collection.mutable.Map[List[InetSocketAddress], Cluster]()
+
+  /**
+   * Map for memorize sessions which are already created
+   */
+  private val sessionMap = scala.collection.mutable.Map[(List[InetSocketAddress], String), Session]()
 
   /**
    *
@@ -31,27 +34,41 @@ class CassandraStorageFactory {
   def getInstance(cassandraStorageOptions: CassandraStorageOptions) : CassandraStorage = {
     logger.info(s"start CassandraStorage instance creation with keyspace : {${cassandraStorageOptions.keyspace}}\n")
 
-    val builder: Builder = Cluster.builder()
+    val sortedHosts = cassandraStorageOptions.cassandraHosts.map(x=>(x,x.hashCode())).sortBy(_._2).map(x=>x._1)
 
-    cassandraStorageOptions.cassandraHosts.foreach(x => builder.addContactPointsWithPorts(x))
+    val cluster = {
+      if (clusterMap.contains(sortedHosts))
+        clusterMap(sortedHosts)
+      else{
+        val builder: Builder = Cluster.builder()
+        cassandraStorageOptions.cassandraHosts.foreach(x => builder.addContactPointsWithPorts(x))
+        val cluster = builder.build()
+        clusterMap(sortedHosts) = cluster
+        cluster
+      }
+    }
 
-    val cluster = builder.build()
-
-    logger.debug(s"start connecting cluster to keyspace: {${cassandraStorageOptions.keyspace}}\n")
-    val session: Session = cluster.connect(cassandraStorageOptions.keyspace)
-
-    logger.debug(s"start creating CassandraStorage with keyspace {${cassandraStorageOptions.keyspace}}:\n")
-    val inst = new CassandraStorage(cluster, session, cassandraStorageOptions.keyspace)
-
-    instances += inst
+    val session = {
+      if (sessionMap.contains((sortedHosts,cassandraStorageOptions.keyspace)))
+        sessionMap((sortedHosts,cassandraStorageOptions.keyspace))
+      else{
+        val session: Session = cluster.connect(cassandraStorageOptions.keyspace)
+        sessionMap((sortedHosts, cassandraStorageOptions.keyspace)) = session
+        session
+      }
+    }
 
     logger.info(s"finished CassandraStorage instance creation with keyspace : {${cassandraStorageOptions.keyspace}}\n")
-    inst
+    new CassandraStorage(cluster, session, cassandraStorageOptions.keyspace)
   }
-
 
   /**
    * Close all factory storage instances
    */
-  def closeFactory() : Unit = instances.foreach(_.close())
+  def closeFactory() : Unit = {
+    clusterMap.foreach{x=>x._2.close()}
+    sessionMap.foreach{x=>x._2.close()}
+    clusterMap.clear()
+    sessionMap.clear()
+  }
 }

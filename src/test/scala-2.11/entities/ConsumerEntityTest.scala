@@ -3,14 +3,13 @@ package entities
 import java.util.UUID
 import com.bwsw.tstreams.entities.ConsumerEntity
 import com.datastax.driver.core.Cluster
-import com.gilt.timeuuid.TimeUuid
+import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraHelper, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringCreator}
 
 
 class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
-  def randomString: String = RandomStringGen.randomAlphaString(10)
-
+  def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
   val temporarySession = temporaryCluster.connect()
@@ -20,12 +19,11 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
   "ConsumerEntity.saveSingleOffset() ConsumerEntity.exist() ConsumerEntity.getOffset()" should "create new consumer with particular offset," +
     " then check consumer existence, then get this consumer offset" in {
-
     val consumerEntity = new ConsumerEntity("consumers", connectedSession)
     val consumer = randomString
     val stream = randomString
     val partition = 1
-    val offset = TimeUuid()
+    val offset = UUIDs.timeBased()
     consumerEntity.saveSingleOffset(consumer, stream, partition, offset)
     val checkExist: Boolean = consumerEntity.exist(consumer)
     val retValOffset: UUID = consumerEntity.getOffset(consumer, stream, partition)
@@ -52,13 +50,12 @@ class ConsumerEntityTest extends FlatSpec with Matchers with BeforeAndAfterAll{
 
   "ConsumerEntity.saveBatchOffset(); ConsumerEntity.getOffset()" should "create new consumer with particular offsets and " +
     "then validate this consumer offsets" in {
-
     val consumerEntity = new ConsumerEntity("consumers", connectedSession)
     val consumer = randomString
     val stream = randomString
     val offsets = scala.collection.mutable.Map[Int,UUID]()
     for (i <- 0 to 100)
-      offsets(i) = TimeUuid()
+      offsets(i) = UUIDs.timeBased()
 
     consumerEntity.saveBatchOffset(consumer,stream,offsets)
 

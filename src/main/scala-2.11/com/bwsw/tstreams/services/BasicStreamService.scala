@@ -1,14 +1,13 @@
 package com.bwsw.tstreams.services
 
+import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.entities.StreamSettings
-
-
-import com.bwsw.tstreams.lockservice.traits.ILockerFactory
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
+
 
 /**
  * Service for streams
@@ -31,7 +30,7 @@ object BasicStreamService {
   def loadStream[T](streamName : String,
                     metadataStorage: MetadataStorage,
                     dataStorage: IStorage[T],
-                    lockService: ILockerFactory) : BasicStream[T] = {
+                    lockService: Coordinator) : BasicStream[T] = {
 
 
     logger.info(s"start load stream with name : {$streamName}\n")
@@ -66,7 +65,7 @@ object BasicStreamService {
                    description : String,
                    metadataStorage: MetadataStorage,
                    dataStorage : IStorage[T],
-                   lockService: ILockerFactory) : BasicStream[T] = {
+                   lockService: Coordinator) : BasicStream[T] = {
 
 
     logger.info(s"start stream creation with name : {$streamName}, {$partitions}, {$ttl}\n")
@@ -88,6 +87,19 @@ object BasicStreamService {
     logger.info(s"start deleting stream with name : $streamName\n")
     metadataStorage.streamEntity.deleteStream(streamName)
     logger.info(s"finished deleting stream with name : $streamName\n")
+  }
+
+
+  /**
+   * Checking exist concrete stream or not
+   * @param streamName Name of the stream to check
+   * @param metadataStorage Name of metadata storage where concrete stream exist
+   */
+  def isExist(streamName : String, metadataStorage: MetadataStorage) : Boolean = {
+    logger.info(s"start checking existence stream with name : $streamName\n")
+    val checkVal = metadataStorage.streamEntity.isExist(streamName)
+    logger.info(s"finished checking existence stream with name : $streamName\n")
+    checkVal
   }
 
 }

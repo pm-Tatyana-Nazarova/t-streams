@@ -1,5 +1,9 @@
 package com.bwsw.tstreams.agents.producer
 
+import com.bwsw.tstreams.agents.group.{CommitInfo, Agent}
+import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
+import com.bwsw.tstreams.coordination.Coordinator
+import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
@@ -14,7 +18,7 @@ import org.slf4j.LoggerFactory
  */
 class BasicProducer[USERTYPE,DATATYPE](val name : String,
                                        val stream : BasicStream[DATATYPE],
-                                       val producerOptions: BasicProducerOptions[USERTYPE,DATATYPE]) {
+                                       val producerOptions: BasicProducerOptions[USERTYPE,DATATYPE]) extends Agent{
 
   /**
    * BasicProducer logger for logging
@@ -23,34 +27,98 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
   /**
-   * Current transaction instance for checking it state
+   * Map for memorize opened transaction on partitions
    */
-  private var currentTransaction : BasicProducerTransaction[USERTYPE,DATATYPE] = null
-
+  private val mapPartitions = scala.collection.mutable.Map[Int, BasicProducerTransaction[USERTYPE,DATATYPE]]()
 
   /**
-   *
-   * @param checkpointPrev If true -> previous transaction will be closed automatically,
-   *                       if false -> previous transaction will not be closed automatically and if it is not closed by user,
-   *                       exception will be thrown
+   * @param policy Policy for previous transaction on concrete partition
+   * @param nextPartition Next partition to use for transaction (default -1 which mean that write policy will be used)
    * @return BasicProducerTransaction instance
    */
-  def newTransaction(checkpointPrev : Boolean) : BasicProducerTransaction[USERTYPE,DATATYPE] = {
+  def newTransaction(policy: ProducerPolicy, nextPartition : Int = -1) : BasicProducerTransaction[USERTYPE,DATATYPE] = {
+
+    val partition = {
+      if (nextPartition == -1)
+        producerOptions.writePolicy.getNextPartition
+      else
+        nextPartition
+    }
+
+    if (!(partition >= 0 && partition < stream.getPartitions))
+      throw new IllegalArgumentException("invalid partition")
+
     logger.info(s"Start new BasicProducerTransaction for BasicProducer " +
-      s"with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+      s"with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions} on partition $partition\n")
 
-    if (checkpointPrev)
-      if (currentTransaction!=null && !currentTransaction.isClosed)
-        currentTransaction.close()
+    val transaction = {
+      val txn = new BasicProducerTransaction[USERTYPE, DATATYPE](partition, this)
+      if (mapPartitions.contains(partition)) {
+        val prevTxn = mapPartitions(partition)
+        if (!prevTxn.isClosed) {
+          policy match {
+            case ProducerPolicies.checkpointIfOpen =>
+              prevTxn.checkpoint()
 
-    if (currentTransaction!=null && !currentTransaction.isClosed)
-      throw new IllegalStateException("current transaction is not closed")
+            case ProducerPolicies.cancelIfOpen =>
+              prevTxn.cancel()
 
-    val transaction = new BasicProducerTransaction[USERTYPE,DATATYPE](
-      producerOptions.writePolicy.getNextPartition,
-      this)
+            case ProducerPolicies.errorIfOpen =>
+              throw new IllegalStateException("previous transaction was not closed")
+          }
+        }
+      }
+      mapPartitions(partition) = txn
+      txn
+    }
 
-    currentTransaction = transaction
     transaction
   }
+
+  /**
+   * Return reference for transaction from concrete partition
+   * @param partition Partition from which transaction will be retrieved
+   * @return Transaction reference if it exist or not closed
+   */
+  def getTransaction(partition : Int) : Option[BasicProducerTransaction[USERTYPE,DATATYPE]] = {
+    if (!(partition >= 0 && partition < stream.getPartitions))
+      throw new IllegalArgumentException("invalid partition")
+    if (mapPartitions.contains(partition)) {
+      val txn = mapPartitions(partition)
+      if (txn.isClosed)
+        return None
+      Some(txn)
+    }
+    else
+      None
+  }
+
+  /**
+   * Close all opened transactions
+   */
+  def checkpoint() : Unit = {
+    mapPartitions.map{case(partition,txn)=>txn}.foreach{ x=>
+      if (!x.isClosed)
+        x.checkpoint()
+    }
+  }
+
+  /**
+   * Info to commit
+   */
+  //TODO implement getting commit info from transactions
+  override def getCommitInfo(): List[CommitInfo] = {
+    checkpoint()
+    List()
+  }
+
+  /**
+   * @return Metadata storage link for concrete agent
+   */
+  override def getMetadataRef(): MetadataStorage = stream.metadataStorage
+
+  /**
+   * @return Coordinator link
+   */
+  override def getCoordinationRef(): Coordinator = stream.coordinator
 }

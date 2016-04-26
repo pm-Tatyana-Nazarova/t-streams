@@ -3,16 +3,16 @@ package data
 import java.util.UUID
 import com.bwsw.tstreams.data.cassandra.CassandraStorage
 import com.datastax.driver.core.Cluster
-import com.gilt.timeuuid.TimeUuid
+import com.datastax.driver.core.utils.UUIDs
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{CassandraHelper, RandomStringGen}
+import testutils.{CassandraHelper, RandomStringCreator}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
 
 
 class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll{
-  def randomString: String = RandomStringGen.randomAlphaString(10)
+  def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
   var cluster = Cluster.builder().addContactPoint("localhost").build()
   var session = cluster.connect()
@@ -20,37 +20,13 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
   CassandraHelper.createDataTable(session,randomKeyspace)
   var connectedSession = cluster.connect(randomKeyspace)
 
-  "CassandraStorage.close()" should "close session and cluster connection" in {
-
-    val cassandraStorage = new CassandraStorage(
-      cluster = cluster,
-      session = connectedSession,
-      keyspace = randomKeyspace)
-
-    cassandraStorage.close()
-
-    val equation1 = cluster.isClosed
-    val equation2 = connectedSession.isClosed
-
-    //used for future tests
-    if (cluster.isClosed || session.isClosed || connectedSession.isClosed){
-      cluster = Cluster.builder().addContactPoint("localhost").build()
-      session = cluster.connect()
-      connectedSession = cluster.connect(randomKeyspace)
-    }
-
-    equation1 && equation2 shouldEqual true
-  }
-
-
   "CassandraStorage.init(), CassandraStorage.truncate() and CassandraStorage.remove()" should "create, truncate and remove data table" in {
-
     val cassandraStorage = new CassandraStorage(
       cluster = cluster,
       session = connectedSession,
       keyspace = randomKeyspace)
 
-    var checkIfOk = true
+    var checkVal = true
 
     try {
       //here we already have created tables for entitiesRepository
@@ -59,14 +35,13 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
       cassandraStorage.truncate()
     }
     catch{
-      case e : Exception => checkIfOk = false
+      case e : Exception => checkVal = false
     }
 
-    checkIfOk shouldEqual true
+    checkVal shouldEqual true
   }
 
   "CassandraStorage.put() CassandraStorage.get()" should "insert data in cassandra storage and retrieve it" in {
-
     val cassandraStorage = new CassandraStorage(
       cluster = cluster,
       session = connectedSession,
@@ -74,7 +49,7 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
 
     val streamName: String = "stream_name"
     val partition: Int = 0
-    val transaction: UUID = TimeUuid()
+    val transaction: UUID = UUIDs.timeBased()
     val data = "some_data"
     val cnt = 1000
 
@@ -102,7 +77,7 @@ class CassandraStorageTest extends FlatSpec with Matchers with BeforeAndAfterAll
         checkVal = false
     }
 
-    checkVal shouldBe true
+    checkVal shouldEqual true
   }
 
 

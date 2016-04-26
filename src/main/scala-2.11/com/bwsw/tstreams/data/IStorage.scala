@@ -14,12 +14,6 @@ trait IStorage[T] {
   def isClosed() : Boolean
 
   /**
-   * @return Correctness of created data storage(not supported now)
-   */
-  @deprecated("will be available in future releases","1.0")
-  def validate() : Boolean
-
-  /**
    * Initialize data storage
    */
   def init()
@@ -29,10 +23,6 @@ trait IStorage[T] {
    */
   def truncate()
 
-  /**
-   * Close storage
-   */
-  def close()
 
   /**
    * Remove storage

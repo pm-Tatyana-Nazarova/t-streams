@@ -2,7 +2,6 @@ package com.bwsw.tstreams.agents.consumer
 
 
 import java.util.UUID
-
 import com.bwsw.tstreams.entities.TransactionSettings
 import scala.collection.mutable
 
@@ -20,9 +19,14 @@ class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATAT
                                                    transaction : TransactionSettings) {
 
   /**
-   * Return transaction unique number
+   * Return transaction UUID
    */
-  def getTxnID: UUID = transaction.time
+  def getTxnUUID: UUID = transaction.txnUuid
+
+  /**
+   * Return transaction partition
+   */
+  def getPartition : Int = partition
 
   /**
    * Transaction data pointer
@@ -44,7 +48,7 @@ class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATAT
     //try to update buffer
     if (buffer == null || buffer.isEmpty) {
       val newcnt = min2(cnt + consumer.options.dataPreload, transaction.totalItems - 1)
-      buffer = consumer.stream.dataStorage.get(consumer.stream.getName, partition, transaction.time, cnt, newcnt)
+      buffer = consumer.stream.dataStorage.get(consumer.stream.getName, partition, transaction.txnUuid, cnt, newcnt)
       cnt = newcnt + 1
     }
 
@@ -61,14 +65,16 @@ class BasicConsumerTransaction[DATATYPE, USERTYPE](consumer: BasicConsumer[DATAT
   /**
    * Refresh BasicConsumerTransaction iterator to read from the beginning
    */
-  def replay() : Unit =
+  def replay() : Unit = {
+    buffer.clear()
     cnt = 0
+  }
 
   /**
    * @return All consumed transaction
    */
   def getAll() : List[USERTYPE] = {
-    val data: mutable.Queue[DATATYPE] = consumer.stream.dataStorage.get(consumer.stream.getName, partition, transaction.time, cnt, transaction.totalItems-1)
+    val data: mutable.Queue[DATATYPE] = consumer.stream.dataStorage.get(consumer.stream.getName, partition, transaction.txnUuid, cnt, transaction.totalItems-1)
     data.toList.map(x=>consumer.options.converter.convert(x))
   }
 

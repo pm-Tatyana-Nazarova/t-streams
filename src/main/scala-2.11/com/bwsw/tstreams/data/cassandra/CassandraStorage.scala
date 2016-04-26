@@ -57,7 +57,7 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
       .executeAsync(statementWithBindings)
     logger.debug(s"finished inserting data for stream:{$streamName}, partition:{$partition}, partNum:{$partNum}\n")
 
-    val job: () => Unit = () => res.getUninterruptibly(1, TimeUnit.SECONDS)
+    val job: () => Unit = () => res.getUninterruptibly()
     job
   }
 
@@ -93,19 +93,6 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
 
     data
   }
-
-  /**
-   * Close storage
-   */
-  def close() = {
-    session.close()
-    cluster.close()
-  }
-
-  /**
-   * Validate that data storage created successfully
-   */
-  override def validate(): Boolean = ???
 
   /**
    * Initialize data storage

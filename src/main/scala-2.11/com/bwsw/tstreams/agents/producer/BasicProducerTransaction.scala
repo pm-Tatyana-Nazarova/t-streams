@@ -2,8 +2,10 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
-import com.bwsw.tstreams.lockservice.traits.ILocker
+import com.bwsw.tstreams.common.JsonSerializer
+import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage}
 import com.typesafe.scalalogging.Logger
+import org.redisson.core.{RTopic, RLock}
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{Await, Future}
@@ -21,13 +23,23 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * @tparam DATATYPE Storage data type
  */
 class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
-                                                  basicProducer: BasicProducer[USERTYPE,DATATYPE]) {
+                                                  basicProducer: BasicProducer[USERTYPE,DATATYPE]){
 
   /**
    * BasicProducerTransaction logger for logging
    */
   private val logger = Logger(LoggerFactory.getLogger(this.getClass))
   logger.info(s"Open transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
+
+  /**
+   * Return transaction partition
+   */
+  def getPartition : Int = partition
+
+  /**
+   * Return transaction UUID
+   */
+  def getTxnUUID: UUID = transactionUuid
 
   /**
    * Variable for indicating transaction state
@@ -38,6 +50,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
    * Transaction part index
    */
   private var part = 0
+
+  /**
+   * Serializer to serialize ProducerTopicMessages
+   */
+  private val serializer = new JsonSerializer
 
   /**
    * Max awaiting time on Await.ready() method for futures
@@ -54,34 +71,41 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
    */
   private val updateQueue = new LinkedBlockingQueue[Boolean](10)
 
+  /**
+   * Topic reference for concrete producer on concrete stream/partition to publish events(cancel,close,update)
+   */
+  private val topicRef: RTopic[String] =
+    basicProducer.stream.coordinator.getTopic[String](s"${basicProducer.stream.getName}/$partition/events")
 
   /**
-   * Locker reference for concrete producer on concrete stream/partition
+   * Lock reference for concrete producer on concrete stream/partition
    */
-  private val lockerRef: ILocker = basicProducer.stream.lockService.getLocker(s"/${basicProducer.stream.getName}/$partition")
+  private val lockRef: RLock = basicProducer.stream.coordinator.getLock(s"${basicProducer.stream.getName}/$partition")
 
+  lockRef.lock()
 
-  lockerRef.lock()
+  private val transactionUuid = basicProducer.producerOptions.txnGenerator.getTimeUUID()
 
-  private val transaction = basicProducer.producerOptions.txnGenerator.getTimeUUID()
   basicProducer.stream.metadataStorage.commitEntity.commit(
-    basicProducer.stream.getName,
-    partition,
-    transaction,
+    streamName = basicProducer.stream.getName,
+    partition = partition,
+    transaction = transactionUuid,
     totalCnt = -1,
-    ttl = basicProducer.stream.getTTL)
+    ttl = basicProducer.producerOptions.transactionTTL)
 
-  lockerRef.unlock()
+  val msg = ProducerTopicMessage(
+      txnUuid = transactionUuid,
+      ttl = basicProducer.producerOptions.transactionTTL,
+      status = ProducerTransactionStatus.opened)
+
+  topicRef.publish(serializer.serialize(msg))
+
+  lockRef.unlock()
 
   /**
    * Future to keep this transaction alive
    */
-  private val updateFuture: Future[Unit] = startAsyncKeepAlive(
-    basicProducer.stream.getName,
-    partition,
-    transaction,
-    basicProducer.producerOptions.transactionTTL,
-    basicProducer.producerOptions.transactionKeepAliveInterval)
+  private val updateFuture: Future[Unit] = startAsyncKeepAlive()
 
   /**
    * Send data to storage
@@ -92,11 +116,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       throw new IllegalStateException("transaction is closed")
 
     basicProducer.producerOptions.insertType match {
-      case BatchInsert(size) =>
+      case InsertionType.BatchInsert(size) =>
         basicProducer.stream.dataStorage.putInBuffer(
           basicProducer.stream.getName,
           partition,
-          transaction,
+          transactionUuid,
           basicProducer.stream.getTTL,
           basicProducer.producerOptions.converter.convert(obj),
           part)
@@ -107,11 +131,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
           basicProducer.stream.dataStorage.clearBuffer()
         }
 
-      case SingleElementInsert =>
+      case InsertionType.SingleElementInsert =>
         val job: () => Unit = basicProducer.stream.dataStorage.put(
           basicProducer.stream.getName,
           partition,
-          transaction,
+          transactionUuid,
           basicProducer.stream.getTTL,
           basicProducer.producerOptions.converter.convert(obj),
           part)
@@ -133,9 +157,9 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       throw new IllegalStateException("transaction is already closed")
 
     basicProducer.producerOptions.insertType match {
-      case SingleElementInsert =>
+      case InsertionType.SingleElementInsert =>
 
-      case BatchInsert(_) =>
+      case InsertionType.BatchInsert(_) =>
         basicProducer.stream.dataStorage.clearBuffer()
 
       case _ =>
@@ -149,6 +173,10 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     //await till update future will close
     Await.ready(updateFuture, TIMEOUT)
 
+    val msg = ProducerTopicMessage(txnUuid = transactionUuid, ttl = -1, status = ProducerTransactionStatus.cancelled)
+
+    topicRef.publish(serializer.serialize(msg))
+
     closed = true
     logger.info(s"Cancel transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
   }
@@ -156,14 +184,14 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   /**
    * Submit transaction(transaction will be available by consumer only after closing)
    */
-  def close() : Unit = {
+  def checkpoint() : Unit = {
     if (closed)
       throw new IllegalStateException("transaction is already closed")
 
     basicProducer.producerOptions.insertType match {
-      case SingleElementInsert =>
+      case InsertionType.SingleElementInsert =>
 
-      case BatchInsert(size) =>
+      case InsertionType.BatchInsert(size) =>
         if (basicProducer.stream.dataStorage.getBufferSize() > 0) {
           val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer()
           if (job != null)
@@ -182,14 +210,22 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     //await till update future will close
     Await.ready(updateFuture, TIMEOUT)
 
-    //close ttl from streams
+    //close transaction using stream ttl
     if (part > 0) {
       basicProducer.stream.metadataStorage.commitEntity.commit(
-        basicProducer.stream.getName,
-        partition,
-        transaction,
-        part,
-        basicProducer.stream.getTTL)
+        streamName = basicProducer.stream.getName,
+        partition = partition,
+        transaction = transactionUuid,
+        totalCnt = part,
+        ttl = basicProducer.stream.getTTL)
+
+      val msg = ProducerTopicMessage(
+        txnUuid = transactionUuid,
+        ttl = -1,
+        status = ProducerTransactionStatus.closed)
+
+      //publish that current txn is closed
+      topicRef.publish(serializer.serialize(msg))
     }
 
     closed = true
@@ -204,33 +240,32 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
   /**
    * Async job for keeping alive current transaction
-   * @param streamName Stream name of current transaction
-   * @param partition Partition of current transaction
-   * @param transaction Current transaction UUID
-   * @param ttl Transaction live time in seconds
-   * @param keepAliveInterval Ttl update frequency in seconds
    */
-  private def startAsyncKeepAlive(streamName : String,
-                                  partition : Int,
-                                  transaction : UUID,
-                                  ttl : Int,
-                                  keepAliveInterval : Int) : Future[Unit] = {
+  private def startAsyncKeepAlive() : Future[Unit] = {
 
     Future {
       breakable { while (true) {
 
-        val value = updateQueue.poll(keepAliveInterval * 1000, TimeUnit.MILLISECONDS)
+        val value = updateQueue.poll(basicProducer.producerOptions.transactionKeepAliveInterval * 1000, TimeUnit.MILLISECONDS)
+
         if (value)
           break()
 
         //-1 here indicate that transaction is started but not finished yet
-          basicProducer.stream.metadataStorage.producerCommitEntity.commit(
-            streamName,
-            partition,
-            transaction,
-            totalCnt = -1,
-            ttl)
+        basicProducer.stream.metadataStorage.producerCommitEntity.commit(
+          streamName = basicProducer.stream.getName,
+          partition = partition,
+          transaction = transactionUuid,
+          totalCnt = -1,
+          ttl = basicProducer.producerOptions.transactionTTL)
 
+        val msg = ProducerTopicMessage(
+          txnUuid = transactionUuid,
+          ttl = basicProducer.producerOptions.transactionTTL,
+          status = ProducerTransactionStatus.opened)
+
+        //publish that current txn is being updating
+        topicRef.publish(serializer.serialize(msg))
       }}
     }
   }

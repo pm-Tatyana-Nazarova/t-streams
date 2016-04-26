@@ -1,19 +1,20 @@
 package com.bwsw.tstreams.data.aerospike
 
-import com.bwsw.tstreams.data.IStorage
+import com.aerospike.client.policy.ClientPolicy
+import com.aerospike.client.{Host, AerospikeClient}
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable.ListBuffer
 
 /**
  * Factory for creating Aerospike storage instances
  */
 class AerospikeStorageFactory{
+
   /**
-   * Instances of all Aerospike storage
+   * Map for memorize clients which are already created
    */
-  private var instances = ListBuffer[IStorage[Array[Byte]]]()
+  private val aerospikeClients = scala.collection.mutable.Map[(List[Host], ClientPolicy), AerospikeClient]()
 
   /**
    * AerospikeStorage logger for logging
@@ -24,12 +25,22 @@ class AerospikeStorageFactory{
    * @param aerospikeOptions Options of aerospike client
    * @return Instance of CassandraStorage
    */
-  def getInstance(aerospikeOptions: AerospikeStorageOptions) : IStorage[Array[Byte]] = {
+  def getInstance(aerospikeOptions: AerospikeStorageOptions) : AerospikeStorage = {
     logger.info(s"start AerospikeStorage instance creation\n")
-    val inst = new AerospikeStorage(aerospikeOptions)
+
+    val client = {
+      if (aerospikeClients.contains((aerospikeOptions.hosts, aerospikeOptions.clientPolicy))) {
+        aerospikeClients((aerospikeOptions.hosts, aerospikeOptions.clientPolicy))
+      }
+      else{
+        val client = new AerospikeClient(aerospikeOptions.clientPolicy,aerospikeOptions.hosts:_*)
+        aerospikeClients((aerospikeOptions.hosts, aerospikeOptions.clientPolicy)) = client
+        client
+      }
+    }
+
     logger.info(s"finished AerospikeStorage instance creation\n")
-    instances += inst
-    inst
+    new AerospikeStorage(client, aerospikeOptions)
   }
 
   /**
@@ -37,7 +48,8 @@ class AerospikeStorageFactory{
    */
   def closeFactory() : Unit = {
     logger.info("start closing Aerospike Storage Factory")
-    instances.foreach(_.close())
+    aerospikeClients.foreach(x=>x._2.close())
+    aerospikeClients.clear()
     logger.info("finished closing Aerospike Storage Factory")
   }
 }

@@ -1,20 +1,17 @@
 package metadata
 
 import java.net.InetSocketAddress
-
 import com.bwsw.tstreams.metadata.{MetadataStorage, MetadataStorageFactory}
 import com.datastax.driver.core.Cluster
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
-import testutils.{RandomStringGen, CassandraHelper}
+import testutils.{RandomStringCreator, CassandraHelper}
 
 
 class MetadataStorageFactoryTest extends FlatSpec with Matchers with BeforeAndAfterAll {
-  def randomString: String = RandomStringGen.randomAlphaString(10)
-
+  def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
   val temporaryCluster = Cluster.builder().addContactPoint("localhost").build()
   val temporarySession = temporaryCluster.connect()
-
   CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
   CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
 

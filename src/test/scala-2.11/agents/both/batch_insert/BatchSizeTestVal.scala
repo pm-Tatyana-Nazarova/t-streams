@@ -8,5 +8,5 @@ trait BatchSizeTestVal {
   /**
    * Current testing batch value
    */
-  protected val batchSizeVal = 7
+  protected val batchSizeVal = 5
 }
