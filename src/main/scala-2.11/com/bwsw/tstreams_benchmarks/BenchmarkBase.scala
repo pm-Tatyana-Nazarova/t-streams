@@ -16,28 +16,24 @@ trait BenchmarkBase {
   def checkParams(args: Array[String]): Unit = {
     // Check that params were passed
     if (args.size < 2) {
-      System.err.println("Config file and result directory are required")
-      System.exit(1)
+      throw new IllegalArgumentException("Config file and result directory are required")
     }
 
     // Check config file
     val configFilePath = Paths.get(args(0))
     if (!Files.exists(configFilePath) || Files.isDirectory(configFilePath)) {
-      System.err.println("Config file doesn't exist")
-      System.exit(1)
+      throw new IllegalArgumentException("Config file doesn't exist")
     }
 
     // Check result directory
     val resultDirectoryPath = Paths.get(args(1))
     if (Files.exists(resultDirectoryPath) && !Files.isDirectory(resultDirectoryPath)) {
-      System.err.println("Name of result directory is already used by an existing file")
-      System.exit(1)
+      throw new IllegalArgumentException("Name of result directory is already used by an existing file")
     }
     if (!Files.exists(resultDirectoryPath)) {
-      val resultDirectory = new File(args(1))
+      val resultDirectory = new File(args(1) + "/")
       if (!resultDirectory.mkdirs()) {
-        System.err.println("Failed to create result directory")
-        System.exit(1)
+        throw new RuntimeException("Failed to create result directory")
       }
     }
   }

@@ -63,11 +63,11 @@ object CassandraHelper {
   }
 
   /**
-   * Cassandra data table creator helper
+    * Cassandra data table creator helper
     *
     * @param session Session
-   * @param keyspace Keyspace name
-   */
+    * @param keyspace Keyspace name
+    */
   private def createDataTable(session: Session, keyspace: String) = {
 
     session.execute(s"CREATE TABLE $keyspace.data_queue ( " +

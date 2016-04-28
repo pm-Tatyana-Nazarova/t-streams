@@ -29,6 +29,8 @@ trait MetricsCalculator {
    * @return Percentile
    */
   def getPercentile(data : List[Long], percent : Double): Long = {
+    if (data.length == 0)
+      return 0
     assert(percent >= 0.0 && percent <= 1)
     val index = ((data.size.toDouble-1) * percent).toInt
     val sorted = data.sorted
