@@ -185,6 +185,7 @@ object SingleProducerToOnePartitionDegradation extends MetricsCalculator with Me
 
     // Calculate statistics data
     case class IntervalStatistics(transactionGroupsPerInterval : Int,
+                                  transactionsNumberPerInterval : Int,
                                   totalTime : Long,
                                   averageTime : Double,
                                   percentile95 : Long,
@@ -209,6 +210,7 @@ object SingleProducerToOnePartitionDegradation extends MetricsCalculator with Me
 
         val intervalStatistics = IntervalStatistics(
           intervalTiming.size,
+          intervalTiming.size * configFile.TransactionsPerGroup,
           totalTime,
           average,
           percentile,

@@ -179,7 +179,7 @@ object SingleProducerToOnePartition extends MetricsCalculator with MetadataCreat
     case class timing(groupsCount: Int, transactionGroupTiming: List[Long])
 
     val totalStatistics = statistics(
-      configFile.TransactionsNumber,
+      timePerTransactionGroup.size * configFile.TransactionsPerGroup,
       configFile.TransactionsPerGroup,
       configFile.RecordsPerTransaction,
       configFile.RecordByteSize,

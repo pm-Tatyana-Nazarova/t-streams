@@ -12,4 +12,6 @@ case class ConfigLimitedByTransactions(InitMetadata: Boolean,
                                        RecordsPerTransaction: Int,
                                        TransactionsNumber: Int,
                                        TransactionsPerGroup: Int,
+                                       TransactionsPreload : Int,
+                                       DataPreload : Int,
                                        TTL: Int)
