@@ -3,10 +3,8 @@ package com.bwsw.tstreams.data.cassandra
 import java.nio.ByteBuffer
 import java.util
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 import com.bwsw.tstreams.data.IStorage
 import com.datastax.driver.core._
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 
@@ -18,7 +16,7 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
   /**
    * CassandraStorage logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Prepared C* statement for data insertion

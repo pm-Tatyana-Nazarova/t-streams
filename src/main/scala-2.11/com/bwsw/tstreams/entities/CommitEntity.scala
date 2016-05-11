@@ -3,7 +3,6 @@ package com.bwsw.tstreams.entities
 import java.util
 import java.util.{Comparator, UUID}
 import com.datastax.driver.core.{Row, Session}
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 
@@ -25,7 +24,7 @@ class CommitEntity(commitLog : String, session: Session) {
   /**
    * Commit Entity logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Session prepared statement using for inserting info in metadata in commit log

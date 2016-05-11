@@ -5,7 +5,6 @@ import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 /**
@@ -23,7 +22,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   /**
    * BasicProducer logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
   /**

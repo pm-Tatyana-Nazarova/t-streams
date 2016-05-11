@@ -3,7 +3,6 @@ package com.bwsw.tstreams.data.aerospike
 import java.util.UUID
 import com.aerospike.client.{AerospikeClient, Bin, Key, Record}
 import com.bwsw.tstreams.data.IStorage
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 import scala.collection.mutable
 
@@ -18,7 +17,7 @@ class AerospikeStorage(client : AerospikeClient, options : AerospikeStorageOptio
   /**
    * AerospikeStorage logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * @return Closed concrete storage or not

@@ -5,7 +5,6 @@ import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.entities.StreamSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 
@@ -17,7 +16,7 @@ object BasicStreamService {
   /**
    * Basic Stream logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Getting existing stream

@@ -2,7 +2,6 @@ package com.bwsw.tstreams.entities
 
 import java.util.UUID
 import com.datastax.driver.core.{Session, BatchStatement}
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 /**
@@ -15,7 +14,7 @@ class ConsumerEntity(entityName : String, session : Session) {
   /**
    * Consumer Entity logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Statement for check exist or not some specific consumer

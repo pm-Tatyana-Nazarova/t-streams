@@ -9,9 +9,7 @@ scalacOptions += "-deprecation"
 
 //COMMON
 libraryDependencies ++= Seq(
-  "com.typesafe" % "config" % "1.3.0",
-  "ch.qos.logback" % "logback-classic" % "1.1.6",
-  "com.typesafe.scala-logging" % "scala-logging_2.11" % "3.1.0",
+  "org.slf4j" % "slf4j-api" % "1.7.21",
   "org.scalatest" % "scalatest_2.11" % "3.0.0-M15",
   "io.netty" % "netty-all" % "4.0.34.Final",
   "com.aerospike" % "aerospike-client" % "3.2.1",
@@ -41,11 +39,9 @@ libraryDependencies += ("org.redisson" % "redisson" % "2.2.11")
 assemblyJarName in assembly := "t-streams.jar"
 
 assemblyMergeStrategy in assembly := {
-  case PathList("io", "netty-all", xs @ _*) => MergeStrategy.first
+  case PathList("io", "netty", xs @ _*) => MergeStrategy.first
   case PathList("com", "datastax", "cassandra", xs @ _*) => MergeStrategy.first
-  case PathList("com", "typesafe", xs @ _*) => MergeStrategy.first
-  case PathList("ch", "qos", "logback", xs @ _*) => MergeStrategy.first
-  case PathList("com", "typesafe", "scala-logging", xs @ _*) => MergeStrategy.first
+  case PathList("org", "slf4j", xs @ _*) => MergeStrategy.first
   case PathList("org", "scalatest", xs @ _*) => MergeStrategy.first
   case PathList("org", "redisson", xs @ _*) => MergeStrategy.first
   case PathList("com", "aerospike", xs @ _*) => MergeStrategy.first

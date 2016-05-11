@@ -4,7 +4,6 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.entities._
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core._
-import com.typesafe.scalalogging._
 import org.slf4j.LoggerFactory
 
 
@@ -24,7 +23,7 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
   /**
    * MetadataStorage logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Stream entity instance
@@ -158,7 +157,7 @@ class MetadataStorageFactory {
   /**
    * MetadataStorageFactory logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Map for memorize clusters which are already created

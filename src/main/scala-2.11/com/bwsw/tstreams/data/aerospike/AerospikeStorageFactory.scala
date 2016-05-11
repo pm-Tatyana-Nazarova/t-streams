@@ -2,7 +2,6 @@ package com.bwsw.tstreams.data.aerospike
 
 import com.aerospike.client.policy.ClientPolicy
 import com.aerospike.client.{Host, AerospikeClient}
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 
@@ -19,7 +18,7 @@ class AerospikeStorageFactory{
   /**
    * AerospikeStorage logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * @param aerospikeOptions Options of aerospike client

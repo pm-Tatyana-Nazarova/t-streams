@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.entities
 
 import com.datastax.driver.core.Session
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 /**
@@ -22,7 +21,7 @@ class StreamEntity(entityName : String, session: Session){
   /**
    * StreamEntity logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Session prepared statement for stream creation

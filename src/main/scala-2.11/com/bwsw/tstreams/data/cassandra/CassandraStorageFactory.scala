@@ -3,7 +3,6 @@ package com.bwsw.tstreams.data.cassandra
 import java.net.InetSocketAddress
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core.{Cluster, Session}
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 
@@ -14,7 +13,7 @@ class CassandraStorageFactory {
   /**
    * CassandraStorageFactory logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Map for memorize clusters which are already created

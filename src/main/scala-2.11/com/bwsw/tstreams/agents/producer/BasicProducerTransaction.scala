@@ -4,7 +4,6 @@ import java.util.UUID
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 import com.bwsw.tstreams.common.JsonSerializer
 import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage}
-import com.typesafe.scalalogging.Logger
 import org.redisson.core.{RTopic, RLock}
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
@@ -28,7 +27,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   /**
    * BasicProducerTransaction logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
   logger.info(s"Open transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
 
   /**

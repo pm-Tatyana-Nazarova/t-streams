@@ -3,7 +3,6 @@ package com.bwsw.tstreams.entities
 
 import com.bwsw.tstreams.agents.group.{ProducerCommitInfo, ConsumerCommitInfo, CommitInfo}
 import com.datastax.driver.core.{BatchStatement, Session}
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 
@@ -12,7 +11,7 @@ class GroupCommitEntity(consumerEntityName: String, producerEntityName: String, 
   /**
    * Group Commit Entity logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Statement for saving consumer single offset

@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.txnqueue
 
-import com.typesafe.scalalogging.Logger
 import net.openhft.chronicle.queue.{ExcerptAppender, ChronicleQueueBuilder, ExcerptTailer}
 import java.util.UUID
 import java.util.concurrent.locks._
@@ -20,7 +19,7 @@ class PersistentTransactionQueue (private val basePath : String,
     /**
      * Transaction queue logger for logging
      */
-    private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+    private val logger = LoggerFactory.getLogger(this.getClass)
 
     private val q1: SingleChronicleQueue = ChronicleQueueBuilder.single(basePath + "/q1").build()
     private val q2: SingleChronicleQueue = ChronicleQueueBuilder.single(basePath + "/q2").build()
