@@ -109,7 +109,7 @@ class TcpTransport(msgHandleInterval : Int) extends ITransport{
    * @param timeout Timeout to wait master
    * @return TransactionResponse or null
    */
-  override def transactionRequest(msg: TransactionRequest, timeout: Int): TransactionResponse = {
+  override def transactionRequest(msg: TransactionRequest, timeout: Int): IMessage = {
     if (msg.receiverID == msg.senderID){
       msgQueue.put(msg)
       val response = localResponseQueue.poll(timeout, TimeUnit.SECONDS)
@@ -123,7 +123,7 @@ class TcpTransport(msgHandleInterval : Int) extends ITransport{
       response.asInstanceOf[TransactionResponse]
     }
     else {
-      val response: TransactionResponse = sender.sendAndWaitResponse[TransactionResponse](msg, timeout)
+      val response: IMessage = sender.sendAndWaitResponse[IMessage](msg, timeout)
       response
     }
   }

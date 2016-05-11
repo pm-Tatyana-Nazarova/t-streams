@@ -11,6 +11,7 @@ import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByt
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.interaction.transport.impl.tcptransport.TcpTransport
+import com.bwsw.tstreams.interaction.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -220,6 +221,9 @@ class ABasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Befo
   }
 
   override def afterAll(): Unit = {
+    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
+    zkService.deleteRecursive("")
+    zkService.close()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

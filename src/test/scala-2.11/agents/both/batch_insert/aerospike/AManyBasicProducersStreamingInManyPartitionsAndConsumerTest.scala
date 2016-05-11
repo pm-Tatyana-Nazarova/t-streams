@@ -6,10 +6,12 @@ import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{PeerToPeerAgentSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
+import com.bwsw.tstreams.interaction.transport.impl.tcptransport.TcpTransport
+import com.bwsw.tstreams.interaction.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -19,6 +21,8 @@ import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelpe
 
 
 class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
+  var port = 8000
+
   //creating keyspace, metadata
   def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
@@ -133,6 +137,17 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
   def getProducer(usedPartitions : List[Int], totalPartitions : Int) : BasicProducer[String,Array[Byte]] = {
     val stream = getStream(totalPartitions)
 
+    val agentSettings = new PeerToPeerAgentSettings(
+      agentAddress = s"localhost:$port",
+      zkHosts = List(new InetSocketAddress("localhost", 2181)),
+      zkRootPath = "/unit",
+      zkTimeout = 7000,
+      isLowPriorityToBeMaster = false,
+      transport = new TcpTransport(200),
+      transportTimeout = 5)
+
+    port += 1
+
     val producerOptions = new BasicProducerOptions[String, Array[Byte]](
       transactionTTL = 6,
       transactionKeepAliveInterval = 2,
@@ -140,7 +155,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions),
       BatchInsert(batchSizeVal),
       LocalGeneratorCreator.getGen(),
-      null, //TODO
+      agentSettings,
       converter = stringToArrayByteConverter)
 
     val producer = new BasicProducer("test_producer1", stream, producerOptions)
@@ -165,6 +180,9 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
   }
 
   override def afterAll(): Unit = {
+    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
+    zkService.deleteRecursive("")
+    zkService.close()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

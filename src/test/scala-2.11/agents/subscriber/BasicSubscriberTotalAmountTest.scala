@@ -8,11 +8,13 @@ import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
 import com.bwsw.tstreams.agents.consumer.BasicConsumerOptions
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{PeerToPeerAgentSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
+import com.bwsw.tstreams.interaction.transport.impl.tcptransport.TcpTransport
+import com.bwsw.tstreams.interaction.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -81,6 +83,15 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     ttl = 60 * 10,
     description = "some_description")
 
+  val agentSettings = new PeerToPeerAgentSettings(
+    agentAddress = s"localhost:8000",
+    zkHosts = List(new InetSocketAddress("localhost", 2181)),
+    zkRootPath = "/unit",
+    zkTimeout = 7000,
+    isLowPriorityToBeMaster = false,
+    transport = new TcpTransport(200),
+    transportTimeout = 5)
+
   //producer/consumer options
   val producerOptions = new BasicProducerOptions[String, Array[Byte]](
     transactionTTL = 6,
@@ -89,7 +100,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)),
     BatchInsert(5),
     LocalGeneratorCreator.getGen(),
-    null, //TODO
+    agentSettings,
     stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
@@ -139,6 +150,9 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
   }
 
   override def afterAll(): Unit = {
+    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
+    zkService.deleteRecursive("")
+    zkService.close()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

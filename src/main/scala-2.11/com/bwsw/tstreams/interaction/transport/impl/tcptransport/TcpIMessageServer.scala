@@ -22,7 +22,8 @@ class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit, msgHa
   private val isListen: AtomicBoolean = new AtomicBoolean(false)
   private var clientSockets : scala.collection.mutable.Set[(Socket,BufferedReader)] = scala.collection.mutable.Set[(Socket,BufferedReader)]()
   private val addressToConnection = scala.collection.mutable.Map[String, (Socket,PrintWriter)]()
-  private val lock = new ReentrantLock(true)
+  private val lockAddressToConnection = new ReentrantLock(true)
+  private val lockClientSockets = new ReentrantLock(true)
   private val serializer = new JsonSerializer
 
   /**
@@ -34,6 +35,7 @@ class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit, msgHa
       override def run(): Unit = {
         syncPoint.countDown()
         while (isListen.get()){
+          lockClientSockets.lock()
           clientSockets.retain{case(socket,_) => socket.isConnected && !socket.isInputShutdown && !socket.isClosed}
           clientSockets.foreach{case(sock,bufferedReader) =>
             try {
@@ -41,11 +43,11 @@ class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit, msgHa
                 val string = bufferedReader.readLine()
                 val msg = serializer.deserialize[IMessage](string)
 
-                lock.lock()
+                lockAddressToConnection.lock()
                 addressToConnection.retain{case(_,(socket,_)) => socket.isConnected && !socket.isInputShutdown && !socket.isClosed}
                 if (!addressToConnection.contains(msg.senderID))
                   addressToConnection(msg.senderID) = (sock, new PrintWriter(new OutputStreamWriter(sock.getOutputStream)))
-                lock.unlock()
+                lockAddressToConnection.unlock()
 
                 newMessageCallback(msg)
               }
@@ -57,6 +59,7 @@ class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit, msgHa
                 println(e.getMessage)
             }
           }
+          lockClientSockets.unlock()
           Thread.sleep(msgHandleInterval)
         }
       }
@@ -76,7 +79,9 @@ class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit, msgHa
         syncPoint.countDown()
         while (isListen.get()) {
           val sock = serverSocket.accept()
+          lockClientSockets.lock()
           clientSockets += ((sock, new BufferedReader(new InputStreamReader(sock.getInputStream))))
+          lockClientSockets.unlock()
         }
       }
     })
@@ -89,11 +94,11 @@ class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit, msgHa
    * @param msg Response msg
    */
   def response(msg : IMessage) : Unit = {
-    lock.lock()
+    lockAddressToConnection.lock()
     addressToConnection.retain{case(_,(socket,_)) => socket.isConnected && !socket.isInputShutdown && !socket.isClosed}
     val condition = addressToConnection.contains(msg.receiverID)
     val (_,writer) = if (condition) addressToConnection(msg.receiverID) else (null,null)
-    lock.unlock()
+    lockAddressToConnection.unlock()
 
     if (condition) {
       val string = serializer.serialize(msg)

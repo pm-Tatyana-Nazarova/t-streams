@@ -1,15 +1,16 @@
 package agents.both.batch_insert.cassandra
 
 import java.net.InetSocketAddress
-
 import agents.both.batch_insert.BatchSizeTestVal
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.{PeerToPeerAgentSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
+import com.bwsw.tstreams.interaction.transport.impl.tcptransport.TcpTransport
+import com.bwsw.tstreams.interaction.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -77,6 +78,15 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     ttl = 60 * 10,
     description = "some_description")
 
+  val agentSettings = new PeerToPeerAgentSettings(
+    agentAddress = "localhost:8888",
+    zkHosts = List(new InetSocketAddress("localhost", 2181)),
+    zkRootPath = "/unit",
+    zkTimeout = 7000,
+    isLowPriorityToBeMaster = false,
+    transport = new TcpTransport(200),
+    transportTimeout = 5)
+
   //producer/consumer options
   val producerOptions = new BasicProducerOptions[String, Array[Byte]](
     transactionTTL = 6,
@@ -85,7 +95,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)),
     BatchInsert(batchSizeVal),
     LocalGeneratorCreator.getGen(),
-    null, //TODO
+    agentSettings,
     stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
@@ -231,6 +241,9 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
   }
 
   override def afterAll(): Unit = {
+    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
+    zkService.deleteRecursive("")
+    zkService.close()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()
@@ -239,4 +252,3 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     redissonClient.shutdown()
   }
 }
-

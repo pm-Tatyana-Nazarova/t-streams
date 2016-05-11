@@ -257,12 +257,19 @@ class PeerToPeerAgent(agentAddress : String,
     val localMaster = if (condition) localMasters(partition) else null
     lockLocalMasters.unlock()
     if (condition){
-      val txn : UUID = transport.transactionRequest(new TransactionRequest(agentAddress, localMaster, partition), transportTimeout).txnUUID
-      if (txn == null){
-        updateMaster(partition, init = false)
-        getNewTxn(partition)
+      val txnResponse = transport.transactionRequest(new TransactionRequest(agentAddress, localMaster, partition), transportTimeout)
+      txnResponse match {
+        case null =>
+          updateMaster(partition, init = false)
+          getNewTxn(partition)
+
+        case EmptyResponse(snd,rcv) =>
+          updateMaster(partition, init = false)
+          getNewTxn(partition)
+
+        case TransactionResponse(snd, rcv, uuid) =>
+          uuid
       }
-      else txn
     } else {
       updateMaster(partition, init = false)
       getNewTxn(partition)

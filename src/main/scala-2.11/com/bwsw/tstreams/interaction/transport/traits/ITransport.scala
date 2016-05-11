@@ -29,7 +29,7 @@ trait ITransport {
    * @param timeout Timeout to wait master
    * @return TransactionResponse or null
    */
-  def transactionRequest(msg: TransactionRequest, timeout: Int): TransactionResponse
+  def transactionRequest(msg: TransactionRequest, timeout: Int): IMessage
 
   /**
    * Request to figure out state of receiver
