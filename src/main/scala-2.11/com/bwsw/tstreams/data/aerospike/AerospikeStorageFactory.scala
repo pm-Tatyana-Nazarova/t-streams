@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.data.aerospike
 
+import java.util.concurrent.locks.ReentrantLock
+
 import com.aerospike.client.policy.ClientPolicy
 import com.aerospike.client.{Host, AerospikeClient}
 import org.slf4j.LoggerFactory
@@ -21,10 +23,16 @@ class AerospikeStorageFactory{
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
+   * Lock for providing getInstance thread safeness
+   */
+  private val lock = new ReentrantLock(true)
+
+  /**
    * @param aerospikeOptions Options of aerospike client
    * @return Instance of CassandraStorage
    */
   def getInstance(aerospikeOptions: AerospikeStorageOptions) : AerospikeStorage = {
+    lock.lock()
     logger.info(s"start AerospikeStorage instance creation\n")
 
     val client = {
@@ -39,7 +47,10 @@ class AerospikeStorageFactory{
     }
 
     logger.info(s"finished AerospikeStorage instance creation\n")
-    new AerospikeStorage(client, aerospikeOptions)
+    val inst = new AerospikeStorage(client, aerospikeOptions)
+    lock.unlock()
+
+    inst
   }
 
   /**
