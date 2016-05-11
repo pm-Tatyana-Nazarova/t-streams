@@ -136,6 +136,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions),
       BatchInsert(batchSizeVal),
       LocalGeneratorCreator.getGen(),
+      null, //TODO
       converter = stringToArrayByteConverter)
 
     val producer = new BasicProducer("test_producer1", stream, producerOptions)

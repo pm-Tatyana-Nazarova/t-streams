@@ -89,6 +89,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)),
     BatchInsert(5),
     LocalGeneratorCreator.getGen(),
+    null, //TODO
     stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](

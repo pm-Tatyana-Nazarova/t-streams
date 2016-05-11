@@ -1,10 +1,16 @@
 package com.bwsw.tstreams.agents.producer
 
+import java.util.UUID
+
 import com.bwsw.tstreams.agents.group.{CommitInfo, Agent}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
-import com.bwsw.tstreams.coordination.Coordinator
+import com.bwsw.tstreams.common.JsonSerializer
+import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage, Coordinator}
+import com.bwsw.tstreams.interaction.PeerToPeerAgent
+import com.bwsw.tstreams.interaction.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
+import org.redisson.core.RTopic
 import org.slf4j.LoggerFactory
 
 /**
@@ -17,7 +23,9 @@ import org.slf4j.LoggerFactory
  */
 class BasicProducer[USERTYPE,DATATYPE](val name : String,
                                        val stream : BasicStream[DATATYPE],
-                                       val producerOptions: BasicProducerOptions[USERTYPE,DATATYPE]) extends Agent{
+                                       val producerOptions: BasicProducerOptions[USERTYPE,DATATYPE]) extends Agent with Interaction{
+
+  private val serializer = new JsonSerializer
 
   /**
    * BasicProducer logger for logging
@@ -51,7 +59,8 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
       s"with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions} on partition $partition\n")
 
     val transaction = {
-      val txn = new BasicProducerTransaction[USERTYPE, DATATYPE](partition, this)
+      val txnUUID = agent.getNewTxn(partition)
+      val txn = new BasicProducerTransaction[USERTYPE, DATATYPE](partition, txnUUID, this)
       if (mapPartitions.contains(partition)) {
         val prevTxn = mapPartitions(partition)
         if (!prevTxn.isClosed) {
@@ -120,4 +129,43 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
    * @return Coordinator link
    */
   override def getCoordinationRef(): Coordinator = stream.coordinator
+
+  /**
+   * Method to implement for concrete producer
+   * Need only if this producer is master
+   * @return UUID
+   */
+  override def getLocalTxn(partition : Int): UUID = {
+    val topicRef: RTopic[String] = stream.coordinator.getTopic[String](s"${stream.getName}/$partition/events")
+    val transactionUuid = producerOptions.txnGenerator.getTimeUUID()
+
+    stream.metadataStorage.commitEntity.commit(
+      streamName = stream.getName,
+      partition = partition,
+      transaction = transactionUuid,
+      totalCnt = -1,
+      ttl = producerOptions.transactionTTL)
+
+    val msg = ProducerTopicMessage(
+      txnUuid = transactionUuid,
+      ttl = producerOptions.transactionTTL,
+      status = ProducerTransactionStatus.opened)
+
+    topicRef.publish(serializer.serialize(msg))
+    transactionUuid
+  }
+
+  /**
+   * P2P Agent for producers interaction
+   */
+  override val agent: PeerToPeerAgent = new PeerToPeerAgent(
+    agentAddress = producerOptions.peerToPeerAgentSettings.agentAddress,
+    zkHosts = producerOptions.peerToPeerAgentSettings.zkHosts,
+    zkRootPath = producerOptions.peerToPeerAgentSettings.zkRootPath,
+    zkTimeout = producerOptions.peerToPeerAgentSettings.zkTimeout,
+    producer = this,
+    usedPartitions = producerOptions.writePolicy.getUsedPartition(),
+    isLowPriorityToBeMaster = producerOptions.peerToPeerAgentSettings.isLowPriorityToBeMaster,
+    transport = producerOptions.peerToPeerAgentSettings.transport,
+    transportTimeout = producerOptions.peerToPeerAgentSettings.transportTimeout)
 }

@@ -49,4 +49,10 @@ abstract class AbstractPolicy(stream : BasicStream[_], usedPartitions : List[Int
    * @return Finished round or not
    */
   def isRoundFinished() : Boolean = roundPos >= usedPartitions.size
+
+  /**
+   * Getter for used partitions
+   * @return Used partitions
+   */
+  def getUsedPartition() : List[Int] = usedPartitions
 }

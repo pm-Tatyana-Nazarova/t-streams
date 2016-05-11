@@ -18,10 +18,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * Transaction retrieved by BasicProducer.newTransaction method
  * @param partition Concrete partition for saving this transaction
  * @param basicProducer Producer class which was invoked newTransaction method
+ * @param transactionUuid UUID for this transaction
  * @tparam USERTYPE User data type
  * @tparam DATATYPE Storage data type
  */
 class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
+                                                  transactionUuid : UUID,
                                                   basicProducer: BasicProducer[USERTYPE,DATATYPE]){
 
   /**
@@ -75,31 +77,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
    */
   private val topicRef: RTopic[String] =
     basicProducer.stream.coordinator.getTopic[String](s"${basicProducer.stream.getName}/$partition/events")
-
-  /**
-   * Lock reference for concrete producer on concrete stream/partition
-   */
-  private val lockRef: RLock = basicProducer.stream.coordinator.getLock(s"${basicProducer.stream.getName}/$partition")
-
-  lockRef.lock()
-
-  private val transactionUuid = basicProducer.producerOptions.txnGenerator.getTimeUUID()
-
-  basicProducer.stream.metadataStorage.commitEntity.commit(
-    streamName = basicProducer.stream.getName,
-    partition = partition,
-    transaction = transactionUuid,
-    totalCnt = -1,
-    ttl = basicProducer.producerOptions.transactionTTL)
-
-  val msg = ProducerTopicMessage(
-      txnUuid = transactionUuid,
-      ttl = basicProducer.producerOptions.transactionTTL,
-      status = ProducerTransactionStatus.opened)
-
-  topicRef.publish(serializer.serialize(msg))
-
-  lockRef.unlock()
 
   /**
    * Future to keep this transaction alive

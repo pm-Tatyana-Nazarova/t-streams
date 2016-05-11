@@ -84,6 +84,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)),
     SingleElementInsert,
     LocalGeneratorCreator.getGen(),
+    null, //TODO
     stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](

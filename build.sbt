@@ -34,11 +34,15 @@ libraryDependencies += ("org.redisson" % "redisson" % "2.2.11")
   .exclude("io.netty", "netty-buffer")
   .exclude("io.netty", "netty-handler")
 
+resolvers += "twitter resolver" at "http://maven.twttr.com"
+libraryDependencies += "com.twitter.common.zookeeper" % "lock" % "0.0.7"
+
 
 //ASSEMBLY STRATEGY
 assemblyJarName in assembly := "t-streams.jar"
 
 assemblyMergeStrategy in assembly := {
+  case PathList("com","twitter","common","zookeeper", xs @ _*) => MergeStrategy.first
   case PathList("io", "netty", xs @ _*) => MergeStrategy.first
   case PathList("com", "datastax", "cassandra", xs @ _*) => MergeStrategy.first
   case PathList("org", "slf4j", xs @ _*) => MergeStrategy.first

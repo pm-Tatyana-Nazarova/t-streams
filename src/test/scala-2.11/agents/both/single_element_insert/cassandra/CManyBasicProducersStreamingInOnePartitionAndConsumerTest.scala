@@ -121,6 +121,7 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0)),
       SingleElementInsert,
       LocalGeneratorCreator.getGen(),
+      null, //TODO
       converter = stringToArrayByteConverter)
 
     val producer = new BasicProducer("test_producer1", stream, producerOptions)

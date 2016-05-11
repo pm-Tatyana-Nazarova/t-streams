@@ -95,6 +95,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer1, List(0,1,2)),
     BatchInsert(batchSizeVal),
     LocalGeneratorCreator.getGen(),
+    null, //TODO
     stringToArrayByteConverter)
 
   val producerOptions2 = new BasicProducerOptions[String, Array[Byte]](
@@ -104,6 +105,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer2, List(0,1,2)),
     BatchInsert(batchSizeVal),
     LocalGeneratorCreator.getGen(),
+    null, //TODO
     stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](

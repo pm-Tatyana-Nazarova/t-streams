@@ -139,6 +139,7 @@ with Matchers with BeforeAndAfterAll{
       writePolicy = RoundRobinPolicyCreator.getRoundRobinPolicy(stream, usedPartitions),
       SingleElementInsert,
       LocalGeneratorCreator.getGen(),
+      null, //TODO
       converter = stringToArrayByteConverter)
 
     val producer = new BasicProducer("test_producer1", stream, producerOptions)
