@@ -16,10 +16,9 @@ class TcpIMessageClient {
    * Method for send IMessage and wait response from rcv agent
    * @param msg Message to send
    * @param timeout Timeout for waiting response(null will be returned in case of timeout)
-   * @tparam T Response type
    * @return Response message
    */
-  def sendAndWaitResponse[T <: IMessage : Manifest](msg : IMessage, timeout : Int) : T = {
+  def sendAndWaitResponse(msg : IMessage, timeout : Int) : IMessage = {
     val rcvAddress = msg.receiverID
     if (addressToConnection.contains(rcvAddress)){
       val (sock,reader,writer) = addressToConnection(rcvAddress)
@@ -28,7 +27,7 @@ class TcpIMessageClient {
         sendAndWaitResponse(msg, timeout)
       }
       else
-        writeMsgAndWaitResponse[T]((sock,reader,writer), msg, timeout)
+        writeMsgAndWaitResponse((sock,reader,writer), msg, timeout)
     } else {
       try {
         val splits = rcvAddress.split(":")
@@ -39,10 +38,10 @@ class TcpIMessageClient {
         val reader = new BufferedReader(new InputStreamReader(sock.getInputStream))
         val writer = new PrintWriter(new OutputStreamWriter(sock.getOutputStream))
         addressToConnection(rcvAddress) = (sock, reader, writer)
-        writeMsgAndWaitResponse[T]((sock,reader,writer), msg, timeout)
+        writeMsgAndWaitResponse((sock,reader,writer), msg, timeout)
       }
       catch {
-        case e: ConnectException => null.asInstanceOf[T]
+        case e: ConnectException => null.asInstanceOf[IMessage]
       }
     }
   }
@@ -52,10 +51,9 @@ class TcpIMessageClient {
    * @param tuple triplet of Socket its output writer and input reader
    * @param msg Msg to send
    * @param timeout Timeout for waiting response(null will be returned in case of timeout)
-   * @tparam T Type of response
    * @return Response message
    */
-  private def writeMsgAndWaitResponse[T <: IMessage : Manifest](tuple : (Socket,BufferedReader,PrintWriter), msg : IMessage, timeout : Int) : T = {
+  private def writeMsgAndWaitResponse(tuple : (Socket,BufferedReader,PrintWriter), msg : IMessage, timeout : Int) : IMessage = {
     val (socket,reader,writer) = tuple
     socket.setSoTimeout(timeout*1000)
     //do request
@@ -66,12 +64,12 @@ class TcpIMessageClient {
     val answer = {
       try {
         val string = reader.readLine()
-        val response = serializer.deserialize[IMessage](string).asInstanceOf[T]
+        val response = serializer.deserialize[IMessage](string)
         response
       }
       catch {
-        case e: java.net.SocketTimeoutException => null.asInstanceOf[T]
-        case e: SocketException => null.asInstanceOf[T]
+        case e: java.net.SocketTimeoutException => null.asInstanceOf[IMessage]
+        case e: SocketException => null.asInstanceOf[IMessage]
       }
     }
     if (answer == null) {

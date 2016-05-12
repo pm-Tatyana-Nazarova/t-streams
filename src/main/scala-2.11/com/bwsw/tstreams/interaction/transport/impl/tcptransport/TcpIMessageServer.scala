@@ -96,15 +96,13 @@ class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit, msgHa
   def response(msg : IMessage) : Unit = {
     lockAddressToConnection.lock()
     addressToConnection.retain{case(_,(socket,_)) => socket.isConnected && !socket.isInputShutdown && !socket.isClosed}
-    val condition = addressToConnection.contains(msg.receiverID)
-    val (_,writer) = if (condition) addressToConnection(msg.receiverID) else (null,null)
-    lockAddressToConnection.unlock()
-
-    if (condition) {
+    if (addressToConnection.contains(msg.receiverID)) {
+      val (_,writer) = addressToConnection(msg.receiverID)
       val string = serializer.serialize(msg)
       writer.println(string)
       writer.flush()
     }
+    lockAddressToConnection.unlock()
   }
 
   /**

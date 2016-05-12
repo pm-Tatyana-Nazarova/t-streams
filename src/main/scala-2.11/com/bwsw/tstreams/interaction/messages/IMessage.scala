@@ -25,22 +25,23 @@ trait IMessage {
   var msgID : String = UUID.randomUUID().toString
   val senderID : String
   val receiverID : String
+  val partition : Int
 }
 
 case class TransactionRequest(senderID : String, receiverID : String, partition : Int) extends IMessage
-case class TransactionResponse(senderID : String, receiverID : String, txnUUID : UUID) extends IMessage
+case class TransactionResponse(senderID : String, receiverID : String, txnUUID : UUID, partition : Int) extends IMessage
 
 case class DeleteMasterRequest(senderID : String, receiverID : String, partition : Int) extends IMessage
-case class DeleteMasterResponse(senderID : String, receiverID : String) extends IMessage
+case class DeleteMasterResponse(senderID : String, receiverID : String, partition : Int) extends IMessage
 
 case class SetMasterRequest(senderID : String, receiverID : String, partition : Int) extends IMessage
-case class SetMasterResponse(senderID : String, receiverID : String) extends IMessage
+case class SetMasterResponse(senderID : String, receiverID : String, partition : Int) extends IMessage
 
 case class PingRequest(senderID : String, receiverID : String, partition : Int) extends IMessage
-case class PingResponse(senderID : String, receiverID : String) extends IMessage
+case class PingResponse(senderID : String, receiverID : String, partition : Int) extends IMessage
 
-case class EmptyResponse(senderID : String, receiverID : String) extends IMessage
+case class EmptyResponse(senderID : String, receiverID : String, partition : Int) extends IMessage
 
 
 //just for testing
-case class EmptyRequest(senderID : String, receiverID : String) extends IMessage
+case class EmptyRequest(senderID : String, receiverID : String, partition : Int) extends IMessage

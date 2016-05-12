@@ -21,7 +21,7 @@ trait ITransport {
    * @param timeout Timeout to wait master
    * @return SetMasterResponse or null
    */
-  def setMasterRequest(msg : SetMasterRequest, timeout : Int) : SetMasterResponse
+  def setMasterRequest(msg : SetMasterRequest, timeout : Int) : IMessage
 
   /**
    * Request to get Txn

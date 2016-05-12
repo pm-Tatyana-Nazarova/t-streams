@@ -2,9 +2,8 @@ package com.bwsw.tstreams.interaction
 
 import java.net.InetSocketAddress
 import java.util.UUID
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.{ExecutorService, Executors, CountDownLatch}
 import java.util.concurrent.locks.ReentrantLock
-
 import com.bwsw.tstreams.agents.producer.BasicProducer
 import com.bwsw.tstreams.interaction.messages._
 import com.bwsw.tstreams.interaction.transport.traits.ITransport
@@ -102,7 +101,12 @@ class PeerToPeerAgent(agentAddress : String,
             Thread.sleep(1000)
             startVotingInternal(partition, retries - 1)
 
-          case SetMasterResponse(_,_) =>
+          case SetMasterResponse(_,_,p) =>
+            assert(p == partition)
+            bestMaster
+
+          case EmptyResponse(_,_,p) =>
+            assert(p == partition)
             bestMaster
         }
       }
@@ -143,11 +147,13 @@ class PeerToPeerAgent(agentAddress : String,
             Thread.sleep(1000)
             updateMaster(partition, init, retries-1)
 
-          case EmptyResponse(_, _) =>
+          case EmptyResponse(_, _, p) =>
+            assert(p == partition)
             Thread.sleep(1000)
             updateMaster(partition, init, zkRetriesAmount)
 
-          case DeleteMasterResponse(_, _) =>
+          case DeleteMasterResponse(_, _, p) =>
+            assert(p == partition)
             val newMaster = startVoting(partition)
             lockLocalMasters.lock()
             localMasters(partition) = newMaster
@@ -163,11 +169,13 @@ class PeerToPeerAgent(agentAddress : String,
             Thread.sleep(1000)
             updateMaster(partition, init, retries-1)
 
-          case EmptyResponse(_,_) =>
+          case EmptyResponse(_,_, p) =>
+            assert(p == partition)
             Thread.sleep(1000)
             updateMaster(partition, init, zkRetriesAmount)
 
-          case PingResponse(_,_) =>
+          case PingResponse(_,_,p) =>
+            assert(p == partition)
             lockLocalMasters.lock()
             localMasters(partition) = master
             lockLocalMasters.unlock()
@@ -263,11 +271,13 @@ class PeerToPeerAgent(agentAddress : String,
           updateMaster(partition, init = false)
           getNewTxn(partition)
 
-        case EmptyResponse(snd,rcv) =>
+        case EmptyResponse(snd,rcv,p) =>
+          assert(p == partition)
           updateMaster(partition, init = false)
           getNewTxn(partition)
 
-        case TransactionResponse(snd, rcv, uuid) =>
+        case TransactionResponse(snd, rcv, uuid, p) =>
+          assert(p == partition)
           uuid
       }
     } else {
@@ -284,75 +294,96 @@ class PeerToPeerAgent(agentAddress : String,
     val messageHandler = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
+        val executors = scala.collection.mutable.Map[Int/*used partition*/, ExecutorService]()
+        usedPartitions foreach { p =>
+          executors(p) = Executors.newSingleThreadExecutor()
+        }
         while (true) {
           val request: IMessage = transport.waitRequest()
-          request match {
-            case PingRequest(snd, rcv, partition) =>
-              lockLocalMasters.lock()
-              //TODO remove after debug
-              assert(rcv == agentAddress)
-              val response = {
-                if (localMasters.contains(partition) && localMasters(partition) == agentAddress)
-                  PingResponse(rcv, snd)
-                else
-                  EmptyResponse(rcv, snd)
-              }
-              lockLocalMasters.unlock()
-              response.msgID = request.msgID
-              transport.response(response)
-
-            case SetMasterRequest(snd, rcv, partition) =>
-              lockLocalMasters.lock()
-              //TODO remove after debug
-              assert(rcv == agentAddress)
-              localMasters(partition) = agentAddress
-              setThisAgentAsMaster(partition)
-              usedPartitions foreach { partition =>
-                updateThisAgentPriority(partition, value = -1)
-              }
-              val response = SetMasterResponse(rcv, snd)
-              lockLocalMasters.unlock()
-              response.msgID = request.msgID
-              transport.response(response)
-
-            case DeleteMasterRequest(snd, rcv, partition) =>
-              lockLocalMasters.lock()
-              //TODO remove after debug
-              assert(rcv == agentAddress)
-              val response = {
-                if (localMasters.contains(partition) && localMasters(partition) == agentAddress) {
-                  localMasters.remove(partition)
-                  deleteThisAgentFromMasters(partition)
-                  usedPartitions foreach { partition =>
-                    updateThisAgentPriority(partition, value = 1)
-                  }
-                  DeleteMasterResponse(rcv, snd)
-                } else
-                  EmptyResponse(rcv, snd)
-              }
-              lockLocalMasters.unlock()
-              response.msgID = request.msgID
-              transport.response(response)
-
-            case TransactionRequest(snd, rcv, partition) =>
-              lockLocalMasters.lock()
-              //TODO remove after debug
-              assert(rcv == agentAddress)
-              val response = {
-                if (localMasters.contains(partition) && localMasters(partition) == agentAddress) {
-                  val txnUUID: UUID = producer.getLocalTxn(partition)
-                  TransactionResponse(rcv, snd, txnUUID)
-                } else
-                  EmptyResponse(rcv, snd)
-              }
-              lockLocalMasters.unlock()
-              response.msgID = request.msgID
-              transport.response(response)
-          }
+          val task : Runnable = createTask(request)
+          assert(executors.contains(request.partition))
+          executors(request.partition).execute(task)
         }
       }
     })
     messageHandler.start()
     latch.await()
+  }
+
+  /**
+   * Create task to handle incoming message
+   * @param request Requested message
+   * @return Task
+   */
+  protected def createTask(request : IMessage): Runnable = {
+    new Runnable {
+      override def run(): Unit = {
+        request match {
+          case PingRequest(snd, rcv, partition) =>
+            lockLocalMasters.lock()
+            assert(rcv == agentAddress)
+            val response = {
+              if (localMasters.contains(partition) && localMasters(partition) == agentAddress)
+                PingResponse(rcv, snd, partition)
+              else
+                EmptyResponse(rcv, snd, partition)
+            }
+            lockLocalMasters.unlock()
+            response.msgID = request.msgID
+            transport.response(response)
+
+          case SetMasterRequest(snd, rcv, partition) =>
+            lockLocalMasters.lock()
+            assert(rcv == agentAddress)
+            val response = {
+              if (localMasters.contains(partition) && localMasters(partition) == agentAddress)
+                EmptyResponse(rcv,snd,partition)
+              else {
+                localMasters(partition) = agentAddress
+                setThisAgentAsMaster(partition)
+                usedPartitions foreach { partition =>
+                  updateThisAgentPriority(partition, value = -1)
+                }
+                SetMasterResponse(rcv, snd, partition)
+              }
+            }
+            lockLocalMasters.unlock()
+            response.msgID = request.msgID
+            transport.response(response)
+
+          case DeleteMasterRequest(snd, rcv, partition) =>
+            lockLocalMasters.lock()
+            assert(rcv == agentAddress)
+            val response = {
+              if (localMasters.contains(partition) && localMasters(partition) == agentAddress) {
+                localMasters.remove(partition)
+                deleteThisAgentFromMasters(partition)
+                usedPartitions foreach { partition =>
+                  updateThisAgentPriority(partition, value = 1)
+                }
+                DeleteMasterResponse(rcv, snd, partition)
+              } else
+                EmptyResponse(rcv, snd, partition)
+            }
+            lockLocalMasters.unlock()
+            response.msgID = request.msgID
+            transport.response(response)
+
+          case TransactionRequest(snd, rcv, partition) =>
+            lockLocalMasters.lock()
+            assert(rcv == agentAddress)
+            val response = {
+              if (localMasters.contains(partition) && localMasters(partition) == agentAddress) {
+                val txnUUID: UUID = producer.getLocalTxn(partition)
+                TransactionResponse(rcv, snd, txnUUID, partition)
+              } else
+                EmptyResponse(rcv, snd, partition)
+            }
+            lockLocalMasters.unlock()
+            response.msgID = request.msgID
+            transport.response(response)
+        }
+      }
+    }
   }
 }

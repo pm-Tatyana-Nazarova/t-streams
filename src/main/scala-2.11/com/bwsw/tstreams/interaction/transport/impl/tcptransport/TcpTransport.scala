@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.interaction.transport.impl.tcptransport
 
-import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.{TimeUnit, LinkedBlockingQueue}
+import java.util.concurrent.LinkedBlockingQueue
 
 import com.bwsw.tstreams.interaction.messages._
 import com.bwsw.tstreams.interaction.transport.traits.ITransport
@@ -10,9 +9,6 @@ class TcpTransport(msgHandleInterval : Int) extends ITransport{
   private var listener : TcpIMessageServer = null
   private val sender : TcpIMessageClient = new TcpIMessageClient
   private val msgQueue = new LinkedBlockingQueue[IMessage]()
-  private val localResponseQueue = new LinkedBlockingQueue[IMessage](7)
-  private val lock = new ReentrantLock(true)
-  private val unresponsiveLocalMessages = scala.collection.mutable.Set[String]()
 
   /**
    * Request to disable concrete master
@@ -21,22 +17,8 @@ class TcpTransport(msgHandleInterval : Int) extends ITransport{
    * @return DeleteMasterResponse or null
    */
   override def deleteMasterRequest(msg: DeleteMasterRequest, timeout: Int): IMessage = {
-    if (msg.receiverID == msg.senderID){
-      msgQueue.put(msg)
-      val response = localResponseQueue.poll(timeout, TimeUnit.SECONDS)
-      assert(response.msgID == msg.msgID)
-      if (response == null){
-        lock.lock()
-        unresponsiveLocalMessages += msg.msgID
-        lock.unlock()
-        localResponseQueue.clear()
-      }
-      response
-    }
-    else {
-      val response = sender.sendAndWaitResponse[IMessage](msg, timeout)
-      response
-    }
+    val response = sender.sendAndWaitResponse(msg, timeout)
+    response
   }
 
   /**
@@ -45,22 +27,8 @@ class TcpTransport(msgHandleInterval : Int) extends ITransport{
    * @return PingResponse or null
    */
   override def pingRequest(msg: PingRequest, timeout: Int): IMessage = {
-    if (msg.receiverID == msg.senderID){
-      msgQueue.put(msg)
-      val response = localResponseQueue.poll(timeout, TimeUnit.SECONDS)
-      assert(response.msgID == msg.msgID)
-      if (response == null){
-        lock.lock()
-        unresponsiveLocalMessages += msg.msgID
-        lock.unlock()
-        localResponseQueue.clear()
-      }
-      response
-    }
-    else {
-      val response = sender.sendAndWaitResponse[IMessage](msg, timeout)
-      response
-    }
+    val response = sender.sendAndWaitResponse(msg, timeout)
+    response
   }
 
   /**
@@ -84,23 +52,9 @@ class TcpTransport(msgHandleInterval : Int) extends ITransport{
    * @param timeout Timeout to wait master
    * @return SetMasterResponse or null
    */
-  override def setMasterRequest(msg: SetMasterRequest, timeout: Int): SetMasterResponse = {
-    if (msg.receiverID == msg.senderID){
-      msgQueue.put(msg)
-      val response = localResponseQueue.poll(timeout, TimeUnit.SECONDS)
-      assert(response.msgID == msg.msgID)
-      if (response == null){
-        lock.lock()
-        unresponsiveLocalMessages += msg.msgID
-        lock.unlock()
-        localResponseQueue.clear()
-      }
-      response.asInstanceOf[SetMasterResponse]
-    }
-    else {
-      val response: SetMasterResponse = sender.sendAndWaitResponse[SetMasterResponse](msg, timeout)
-      response
-    }
+  override def setMasterRequest(msg: SetMasterRequest, timeout: Int): IMessage = {
+    val response: IMessage = sender.sendAndWaitResponse(msg, timeout)
+    response
   }
 
   /**
@@ -110,22 +64,8 @@ class TcpTransport(msgHandleInterval : Int) extends ITransport{
    * @return TransactionResponse or null
    */
   override def transactionRequest(msg: TransactionRequest, timeout: Int): IMessage = {
-    if (msg.receiverID == msg.senderID){
-      msgQueue.put(msg)
-      val response = localResponseQueue.poll(timeout, TimeUnit.SECONDS)
-      assert(response.msgID == msg.msgID)
-      if (response == null){
-        lock.lock()
-        unresponsiveLocalMessages += msg.msgID
-        lock.unlock()
-        localResponseQueue.clear()
-      }
-      response.asInstanceOf[TransactionResponse]
-    }
-    else {
-      val response: IMessage = sender.sendAndWaitResponse[IMessage](msg, timeout)
-      response
-    }
+    val response: IMessage = sender.sendAndWaitResponse(msg, timeout)
+    response
   }
 
   /**
@@ -133,16 +73,7 @@ class TcpTransport(msgHandleInterval : Int) extends ITransport{
    * @param msg IMessage
    */
   override def response(msg: IMessage): Unit = {
-    if (msg.senderID == msg.receiverID){
-      lock.lock()
-      if (!unresponsiveLocalMessages.contains(msg.msgID))
-        localResponseQueue.put(msg)
-      else
-        unresponsiveLocalMessages.remove(msg.msgID)
-      lock.unlock()
-    } else {
-      listener.response(msg)
-    }
+    listener.response(msg)
   }
 
   /**
