@@ -1,7 +1,7 @@
 package com.bwsw.tstreams_benchmarks
 
-import java.io.File
 import java.net.InetSocketAddress
+import java.util.concurrent.{Callable, FutureTask, RunnableFuture}
 import java.util.concurrent.locks.ReentrantLock
 
 import com.aerospike.client.Host
@@ -37,7 +37,61 @@ import scala.util.Random
   *
   * Total number of transactions and number of transactions per group are defined in the configuration file.
   */
-object MultipleProducersToOnePartition extends MetricsCalculator with MetadataCreator with BenchmarkBase {
+object MultipleProducersToOnePartition extends BenchmarkBase with MetricsCalculator with MetadataCreator {
+
+  var configFile: ConfigLimitedByTransactions = null
+
+  /**
+    * Calculates and saves benchmark statistics
+    *
+    * @param resultDirectoryPath - path to the folder where to store results
+    * @param timePerTransactionGroup - list with raw benchmark timing data
+    * @param tCommonStart - benchmark start time
+    * @param tCommonEnd - benchmark end time
+    */
+  def calculateAndSaveStatistics(resultDirectoryPath: String, timePerTransactionGroup: List[Long], tCommonStart: Long,
+                                 tCommonEnd: Long) {
+    if (configFile == null)
+      throw new IllegalArgumentException("Config file is not set")
+
+    // Calculate statistics data
+    val average = getMedian(timePerTransactionGroup)
+    val percentile = getPercentile(timePerTransactionGroup, 0.95)
+    val variance = getVariance(timePerTransactionGroup)
+    val totalTime = (tCommonEnd - tCommonStart) / (1000 * 1000)
+
+    case class statistics(producersNumber: Int,
+                          transactionsNumber: Int,
+                          transactionsPerGroup: Int,
+                          recordsPerTransaction: Int,
+                          recordByteSize: Int,
+                          timeUnit: String,
+                          totalTime: Long,
+                          averageTime: Double,
+                          percentile95: Long,
+                          variance: Double
+                         )
+    case class timing(groupsCount: Int, transactionGroupTiming: List[Long])
+
+    val totalStatistics = statistics(
+      producersNumber = configFile.ProducersNumber,
+      transactionsNumber = timePerTransactionGroup.size * configFile.TransactionsPerGroup,
+      transactionsPerGroup = configFile.TransactionsPerGroup,
+      recordsPerTransaction = configFile.RecordsPerTransaction,
+      recordByteSize = configFile.RecordByteSize,
+      timeUnit = "ms",
+      totalTime = totalTime,
+      averageTime = average,
+      percentile95 = percentile,
+      variance = variance
+    )
+    val timingStatistics = timing(timePerTransactionGroup.length, timePerTransactionGroup)
+
+    // Write statistics to files
+    saveStatistics(resultDirectoryPath, JsonUtils.toPrettyJson(totalStatistics), totalStatistics = true)
+    saveStatistics(resultDirectoryPath, JsonUtils.toPrettyJson(timingStatistics))
+  }
+
   /**
     * @param args 1) Path to configuration file
     *             2) Path to result folder
@@ -49,7 +103,7 @@ object MultipleProducersToOnePartition extends MetricsCalculator with MetadataCr
 
     val inputString: String = Source.fromFile(configFilePath).getLines().toList.mkString("")
     val jsonSerializer = new JsonSerializer
-    val configFile: ConfigLimitedByTransactions = jsonSerializer.deserialize[ConfigLimitedByTransactions](inputString)
+    configFile = jsonSerializer.deserialize[ConfigLimitedByTransactions](inputString)
 
     // cassandra
     val cassandraKeyspace = configFile.Cassandra("Keyspace").asInstanceOf[String]
@@ -93,10 +147,11 @@ object MultipleProducersToOnePartition extends MetricsCalculator with MetadataCr
     val groupsExtra = configFile.TransactionsNumber % (configFile.ProducersNumber * configFile.TransactionsPerGroup) /
       configFile.TransactionsPerGroup
 
-    val threadList = new ListBuffer[Thread]()
+    val threadList = new ListBuffer[Thread]
+    val futureTaskList = new ListBuffer[RunnableFuture[Boolean]]
     (1 until configFile.ProducersNumber + 1).foreach { i =>
-      threadList += new Thread(new Runnable {
-        override def run(): Unit = {
+      val futureTask = new FutureTask[Boolean](new Callable[Boolean] {
+        override def call(): Boolean = {
           // TODO: move metadataFactory out of thread once it becomes thread-safe
           val metadataFactory = new MetadataStorageFactory
           val metadataInstance = metadataFactory.getInstance(cassandraHosts, cassandraKeyspace)
@@ -176,7 +231,9 @@ object MultipleProducersToOnePartition extends MetricsCalculator with MetadataCr
             }
           }
           catch {
-            case e : Throwable => throw e
+            case e: Throwable =>
+              e.printStackTrace()
+              return false
           }
           finally {
             if (cassandraStorageFactory != null) {
@@ -187,8 +244,11 @@ object MultipleProducersToOnePartition extends MetricsCalculator with MetadataCr
             }
             metadataFactory.closeFactory()
           }
+          true
         }
       })
+      futureTaskList += futureTask
+      threadList += new Thread(futureTask)
     }
 
     val tCommonStart = System.nanoTime()
@@ -196,49 +256,12 @@ object MultipleProducersToOnePartition extends MetricsCalculator with MetadataCr
     threadList.foreach { t => t.join() }
     val tCommonEnd = System.nanoTime()
 
-    // Calculate statistics data
-    val average = getMedian(timePerTransactionGroup.toList)
-    val percentile = getPercentile(timePerTransactionGroup.toList, 0.95)
-    val variance = getVariance(timePerTransactionGroup.toList)
-    val totalTime = (tCommonEnd - tCommonStart) / (1000 * 1000)
-
-    case class statistics(producersNumber: Int,
-                          transactionsNumber: Int,
-                          transactionsPerGroup: Int,
-                          recordsPerTransaction: Int,
-                          recordByteSize: Int,
-                          timeUnit: String,
-                          totalTime: Long,
-                          averageTime: Double,
-                          percentile95: Long,
-                          variance: Double
-                         )
-    case class timing(groupsCount: Int, transactionGroupTiming: List[Long])
-
-    val totalStatistics = statistics(
-      producersNumber = configFile.ProducersNumber,
-      transactionsNumber = timePerTransactionGroup.size * configFile.TransactionsPerGroup,
-      transactionsPerGroup = configFile.TransactionsPerGroup,
-      recordsPerTransaction = configFile.RecordsPerTransaction,
-      recordByteSize = configFile.RecordByteSize,
-      timeUnit = "ms",
-      totalTime = totalTime,
-      averageTime = average,
-      percentile95 = percentile,
-      variance = variance
-    )
-    val timingStatistics = timing(timePerTransactionGroup.length, timePerTransactionGroup.toList)
-
-    // Write statistics to files
-    val file1 = new File(resultDirectoryPath + "Total_statistics.json")
-    val file2 = new File(resultDirectoryPath + "Transactions_timing.json")
-    val pw1 = new java.io.PrintWriter(file1)
-    val pw2 = new java.io.PrintWriter(file2)
-    pw1.write(JsonUtils.toPrettyJson(totalStatistics))
-    pw1.close()
-    pw2.write(JsonUtils.toPrettyJson(timingStatistics))
-    pw2.close()
-
     client.shutdown()
+
+    // Check that all threads have finished successfully
+    futureTaskList.foreach { f => if (!f.get()) System.exit(1)}
+
+    // Save statistics data
+    calculateAndSaveStatistics(resultDirectoryPath, timePerTransactionGroup.toList, tCommonStart, tCommonEnd)
   }
 }
