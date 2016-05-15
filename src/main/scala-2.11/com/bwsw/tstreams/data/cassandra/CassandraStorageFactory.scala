@@ -4,17 +4,12 @@ import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core.{Cluster, Session}
-import org.slf4j.LoggerFactory
 
 
 /**
  * Factory for creating cassandra storage instances
  */
 class CassandraStorageFactory {
-  /**
-   * CassandraStorageFactory logger for logging
-   */
-  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Map for memorize clusters which are already created
@@ -38,7 +33,6 @@ class CassandraStorageFactory {
    */
   def getInstance(cassandraStorageOptions: CassandraStorageOptions) : CassandraStorage = {
     lock.lock()
-    logger.info(s"start CassandraStorage instance creation with keyspace : {${cassandraStorageOptions.keyspace}}\n")
 
     val sortedHosts = cassandraStorageOptions.cassandraHosts.map(x=>(x,x.hashCode())).sortBy(_._2).map(x=>x._1)
 
@@ -64,7 +58,6 @@ class CassandraStorageFactory {
       }
     }
 
-    logger.info(s"finished CassandraStorage instance creation with keyspace : {${cassandraStorageOptions.keyspace}}\n")
     val inst = new CassandraStorage(cluster, session, cassandraStorageOptions.keyspace)
     lock.unlock()
 

@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 import com.bwsw.tstreams.common.JsonSerializer
 import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage}
-import org.redisson.core.{RTopic, RLock}
+import org.redisson.core.RTopic
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{Await, Future}

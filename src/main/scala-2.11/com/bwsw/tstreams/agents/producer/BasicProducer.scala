@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
-
 import com.bwsw.tstreams.agents.group.{CommitInfo, Agent}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
 import com.bwsw.tstreams.common.JsonSerializer

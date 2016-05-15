@@ -195,7 +195,8 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * @return BasicConsumerTransaction
    */
     def getTransactionById(partition : Int, uuid : UUID): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
-      logger.info(s"Start new historic transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+      logger.info(s"Start retrieving new historic transaction for consumer with" +
+        s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
       val txnOpt = updateTransaction(uuid, partition)
       if (txnOpt.isDefined){
         val txn = txnOpt.get
@@ -245,7 +246,8 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * Save current offsets in metadata to read later from them (in case of system stop/failure)
    */
     def checkpoint() : Unit = {
-      logger.info(s"Start saving checkpoints for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+      logger.info(s"Start saving checkpoints for " +
+        s"consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
       stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, offsetsForCheckpoint)
       offsetsForCheckpoint.clear()

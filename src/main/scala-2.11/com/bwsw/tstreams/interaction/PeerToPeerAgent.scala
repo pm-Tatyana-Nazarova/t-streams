@@ -217,6 +217,8 @@ class PeerToPeerAgent(agentAddress : String,
     val masterOpt = zkService.get[String](s"/producers/master/$streamName/$partition")
     lock.unlock()
     lockManagingMaster.unlock()
+    logger.debug(s"Agent:{${masterOpt.getOrElse("None")}} is current master on" +
+      s" stream:{$streamName},partition:{$partition}\n")
     masterOpt
   }
 
@@ -343,7 +345,8 @@ class PeerToPeerAgent(agentAddress : String,
           assert(executors.contains(request.partition))
           executors(request.partition).execute(task)
         }
-        executors.foreach(x=>x._2.shutdown()) //graceful shutdown all executors after finishing handling messages
+        //graceful shutdown all executors after finishing handling messages
+        executors.foreach(x=>x._2.shutdown())
       }
     })
     messageHandler.start()

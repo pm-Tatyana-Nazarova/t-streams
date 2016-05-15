@@ -3,7 +3,6 @@ package com.bwsw.tstreams.streams
 import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.coordination.Coordinator
-import org.slf4j.LoggerFactory
 
 
 /**
@@ -33,11 +32,6 @@ class BasicStream[T](val name : String,
     throw new IllegalArgumentException(s"ttl should be greater or equal than $minTxnTTL")
 
   /**
-   * Basic Stream logger for logging
-   */
-  private val logger = LoggerFactory.getLogger(this.getClass)
-
-  /**
    * @return Name
    */
   def getName =
@@ -65,9 +59,7 @@ class BasicStream[T](val name : String,
    * Save stream info in metadata
    */
   def save() : Unit = {
-    logger.info(s"start alternating stream with name : {$name}, partitions : {$partitions}, ttl : {$ttl}, description : {$description}\n")
     metadataStorage.streamEntity.alternateStream(name, partitions, ttl, description)
-    logger.info(s"finished alternating stream with name : {$name}, partitions : {$partitions}, ttl : {$ttl}, description : {$description}\n")
   }
 
   /**

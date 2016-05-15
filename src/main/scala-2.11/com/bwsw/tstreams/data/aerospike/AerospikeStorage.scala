@@ -44,9 +44,9 @@ class AerospikeStorage(client : AerospikeClient, options : AerospikeStorageOptio
   override def get(streamName: String, partition: Int, transaction: UUID, from: Int, to: Int): mutable.Queue[Array[Byte]] = {
     val key : Key = new Key(options.namespace, s"$streamName/$partition", transaction.toString)
     val names = (from to to).toList.map(x=>x.toString)
-    logger.debug(s"Start retrieving data from aerospike for streamName: {$streamName}, partition: {$partition}")
+//    logger.debug(s"Start retrieving data from aerospike for streamName: {$streamName}, partition: {$partition}")
     val record: Record = client.get(options.readPolicy, key, names:_*)
-    logger.debug(s"Finished retrieving data from aerospike for streamName: {$streamName}, partition: {$partition}")
+//    logger.debug(s"Finished retrieving data from aerospike for streamName: {$streamName}, partition: {$partition}")
 
     val data = scala.collection.mutable.Queue[Array[Byte]]()
     for (name <- names){
@@ -69,9 +69,9 @@ class AerospikeStorage(client : AerospikeClient, options : AerospikeStorageOptio
     options.writePolicy.expiration = ttl
     val key: Key = new Key(options.namespace, s"$streamName/$partition", transaction.toString)
     val bin = new Bin(partNum.toString, data)
-    logger.debug(s"Start putting data in aerospike for streamName: {$streamName}, partition: {$partition}")
+//    logger.debug(s"Start putting data in aerospike for streamName: {$streamName}, partition: {$partition}")
     client.put(options.writePolicy, key, bin)
-    logger.debug(s"Finished putting data in aerospike for streamName: {$streamName}, partition: {$partition}")
+//    logger.debug(s"Finished putting data in aerospike for streamName: {$streamName}, partition: {$partition}")
     null
   }
 
@@ -102,9 +102,9 @@ class AerospikeStorage(client : AerospikeClient, options : AerospikeStorageOptio
       new Bin(elem.partNum.toString, elem.data)
     }
 
-    logger.debug(s"Start putting batch of data with size:${getBufferSize()} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
+//    logger.debug(s"Start putting batch of data with size:${getBufferSize()} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
     client.put(options.writePolicy, key, mapped:_*)
-    logger.debug(s"Finished putting batch of data with size:${getBufferSize()} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
+//    logger.debug(s"Finished putting batch of data with size:${getBufferSize()} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
 
     null
   }

@@ -3,16 +3,9 @@ package com.bwsw.tstreams.entities
 
 import com.bwsw.tstreams.agents.group.{ProducerCommitInfo, ConsumerCommitInfo, CommitInfo}
 import com.datastax.driver.core.{BatchStatement, Session}
-import org.slf4j.LoggerFactory
 
 
 class GroupCommitEntity(consumerEntityName: String, producerEntityName: String, session: Session) {
-
-  /**
-   * Group Commit Entity logger for logging
-   */
-  private val logger = LoggerFactory.getLogger(this.getClass)
-
   /**
    * Statement for saving consumer single offset
    */
@@ -34,9 +27,6 @@ class GroupCommitEntity(consumerEntityName: String, producerEntityName: String, 
       case ProducerCommitInfo(streamName, partition, transaction, totalCnt, ttl) =>
           batchStatement.add(producerCommitStatement.bind(streamName, new Integer(partition), transaction, new Integer(totalCnt), new Integer(ttl)))
     }
-
-    logger.debug(s"start executing group commit statement with size:{${info.size}}\n")
     session.execute(batchStatement)
-    logger.debug(s"finished executing group commit statement with size:{${info.size}}\n")
   }
 }

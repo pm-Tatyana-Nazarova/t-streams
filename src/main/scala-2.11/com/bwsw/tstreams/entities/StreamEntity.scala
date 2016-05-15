@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.entities
 
 import com.datastax.driver.core.Session
-import org.slf4j.LoggerFactory
 
 /**
  * Settings of stream in metadata storage
@@ -17,11 +16,6 @@ case class StreamSettings(name : String, partitions : Int, ttl : Int, descriptio
   * @param entityName name of certain table in C*
   */
 class StreamEntity(entityName : String, session: Session){
-
-  /**
-   * StreamEntity logger for logging
-   */
-  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Session prepared statement for stream creation
@@ -53,28 +47,12 @@ class StreamEntity(entityName : String, session: Session){
                    partitions : Int,
                    ttl : Int,
                    description: String) : Unit = {
-
-    logger.info(s"start creating stream with name : {$name}," +
-      s" partitions : {$partitions}," +
-      s" ttl : {$ttl}," +
-      s" description : {$description}\n")
     if (isExist(name))
       throw new IllegalArgumentException("stream already exist")
-
     val values = List(name, new Integer(partitions), new Integer(ttl), description)
-
     val statementWithBindings = createStreamStatement.bind(values:_*)
 
-    logger.debug(s"start executing create stream statement with name : {$name}," +
-      s" partitions : {$partitions}," +
-      s" ttl : {$ttl}," +
-      s" description : {$description}\n")
     session.execute(statementWithBindings)
-
-    logger.info(s"finished creating stream with name : {$name}," +
-      s" partitions : {$partitions}," +
-      s" ttl : {$ttl}," +
-      s" description : {$description}\n")
   }
 
   /**
@@ -86,21 +64,12 @@ class StreamEntity(entityName : String, session: Session){
    * @return StreamSettings
    */
   def alternateStream(name: String, partitions : Int, ttl : Int, description : String) : Unit = {
-    logger.info(s"start alternating stream with name : {$name}," +
-      s" partitions : {$partitions}, ttl : {$ttl}, description : {$description}\n")
     if (!isExist(name))
       throw new IllegalArgumentException("stream to alternate does not exist")
-
     val values = List(name, new Integer(partitions), new Integer(ttl), description)
-
     val statementWithBindings = createStreamStatement.bind(values:_*)
-
-    logger.debug(s"start executing alternating stream stream statement with name : {$name}," +
-      s" partitions : {$partitions}, ttl : {$ttl}, description : {$description}\n")
     session.execute(statementWithBindings)
 
-    logger.info(s"finished alternating stream with name : {$name}," +
-      s" partitions : {$partitions}, ttl : {$ttl}, description : {$description}\n")
     StreamSettings(name,partitions,ttl,description)
   }
 
@@ -109,17 +78,10 @@ class StreamEntity(entityName : String, session: Session){
     * @param name Stream name to delete
     */
   def deleteStream(name : String): Unit = {
-    logger.info(s"start deleting stream with name : {$name}\n")
-
     if (!isExist(name))
       throw new IllegalArgumentException("stream not exist")
-
     val statementWithBindings = deleteStreamStatement.bind(name)
-
-    logger.debug(s"start executing stream deletion statement for stream with name : {$name}\n")
     session.execute(statementWithBindings)
-
-    logger.info(s"finished deleting stream with name : {$name}\n")
   }
 
   /**
@@ -128,9 +90,7 @@ class StreamEntity(entityName : String, session: Session){
     * @return Exist stream or not
     */
   def isExist(name : String) : Boolean = {
-    logger.info(s"start checking stream existence with name : {$name}\n")
     val checkVal = getStream(name).isDefined
-    logger.info(s"finished checking stream existence with name : {$name}\n")
     checkVal
   }
 
@@ -141,15 +101,9 @@ class StreamEntity(entityName : String, session: Session){
     * @return StreamSettings
     */
   def getStream(name : String) : Option[StreamSettings] = {
-    logger.info(s"start retrieving stream with name : {$name}\n")
-
     val statementWithBindings = getStreamStatement.bind(name)
-
-    logger.debug(s"start executing stream retrieving statement with name : {$name}\n")
     val stream = session.execute(statementWithBindings).all()
 
-
-    logger.info(s"finished retrieving stream with name : {$name}\n")
     if (stream.isEmpty) None
     else {
       val value = stream.get(0)

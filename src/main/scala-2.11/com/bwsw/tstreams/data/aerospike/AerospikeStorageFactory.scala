@@ -4,7 +4,6 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.aerospike.client.policy.ClientPolicy
 import com.aerospike.client.{Host, AerospikeClient}
-import org.slf4j.LoggerFactory
 
 
 /**
@@ -17,10 +16,6 @@ class AerospikeStorageFactory{
    */
   private val aerospikeClients = scala.collection.mutable.Map[(List[Host], ClientPolicy), AerospikeClient]()
 
-  /**
-   * AerospikeStorage logger for logging
-   */
-  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Lock for providing getInstance thread safeness
@@ -33,7 +28,6 @@ class AerospikeStorageFactory{
    */
   def getInstance(aerospikeOptions: AerospikeStorageOptions) : AerospikeStorage = {
     lock.lock()
-    logger.info(s"start AerospikeStorage instance creation\n")
 
     val client = {
       if (aerospikeClients.contains((aerospikeOptions.hosts, aerospikeOptions.clientPolicy))) {
@@ -46,7 +40,6 @@ class AerospikeStorageFactory{
       }
     }
 
-    logger.info(s"finished AerospikeStorage instance creation\n")
     val inst = new AerospikeStorage(client, aerospikeOptions)
     lock.unlock()
 
@@ -57,9 +50,7 @@ class AerospikeStorageFactory{
    * Close all factory storage instances
    */
   def closeFactory() : Unit = {
-    logger.info("start closing Aerospike Storage Factory")
     aerospikeClients.foreach(x=>x._2.close())
     aerospikeClients.clear()
-    logger.info("finished closing Aerospike Storage Factory")
   }
 }

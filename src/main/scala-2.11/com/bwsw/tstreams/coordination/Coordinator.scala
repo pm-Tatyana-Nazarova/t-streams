@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.coordination
 
 import org.redisson.RedissonClient
-import org.redisson.core.{RTopic, RLock}
+import org.redisson.core.RTopic
 
 
 /**
@@ -16,13 +16,6 @@ class Coordinator(prefix : String,
    * Unique id for concrete coordinator
    */
   val id = java.util.UUID.randomUUID().toString
-
-  /**
-   * Creating lock on concrete prefix+path
-   * @param path Lock path
-   * @return Redisson RLock instance
-   */
-  def getLock(path : String): RLock = client.getLock(prefix + "/" + path)
 
   /**
    * Creating topic on concrete prefix+name
