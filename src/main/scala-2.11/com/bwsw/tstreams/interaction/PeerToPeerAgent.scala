@@ -12,7 +12,6 @@ import com.bwsw.tstreams.interaction.zkservice.{AgentSettings, ZkService}
 import org.apache.zookeeper.CreateMode
 import org.slf4j.LoggerFactory
 
-//TODO add verbose logging
 /**
  * Agent for providing peer to peer interaction between producers
  * @param agentAddress Concrete agent address
@@ -46,11 +45,11 @@ class PeerToPeerAgent(agentAddress : String,
   private var zkConnectionValidator : Thread = null
   private var messageHandler : Thread = null
 
+  logger.debug(s"Start initialize agent with address:{$agentAddress}" +
+    s",stream:{$streamName},partitions:{${usedPartitions.mkString(",")}}\n")
   transport.bindLocalAddress(agentAddress)
   startValidator()
   startHandleMessages()
-  logger.debug(s"Start initialize agent with address:{$agentAddress}" +
-    s" on stream:{$streamName} with partitions: {$usedPartitions}\n")
   usedPartitions foreach {p =>
     val penalty = if (isLowPriorityToBeMaster) 1000*1000 else 0
     zkService.create[AgentSettings](s"/producers/agents/$streamName/$p/unique_agent_$agentAddress" + "_",
@@ -60,8 +59,8 @@ class PeerToPeerAgent(agentAddress : String,
   usedPartitions foreach { p =>
     updateMaster(p, init = true)
   }
-  logger.debug(s"Finished initialize agent with address:{$agentAddress}" +
-    s" on stream:{$streamName} with partitions: {$usedPartitions}\n")
+  logger.debug(s"Finish initialize agent with address:{$agentAddress}" +
+    s",stream:{$streamName},partitions:{${usedPartitions.mkString(",")}\n")
 
   /**
    * Amend agent priority
@@ -70,7 +69,7 @@ class PeerToPeerAgent(agentAddress : String,
    */
   private def updateThisAgentPriority(partition : Int, value : Int) = {
     logger.debug(s"Start amend agent priority with value:{$value} with address:{$agentAddress}" +
-      s" on stream:{$streamName} with partitions: {$usedPartitions}\n")
+      s" on stream:{$streamName},partition:{$partition}\n")
     val agentsOpt = zkService.getAllSubPath(s"/producers/agents/$streamName/$partition")
     assert(agentsOpt.isDefined)
     val agents: List[String] = agentsOpt.get
@@ -82,8 +81,8 @@ class PeerToPeerAgent(agentAddress : String,
     val updatedAgentSettings = agentSettingsOpt.get
     updatedAgentSettings.priority += value
     zkService.setData(s"/producers/agents/$streamName/$partition/" + thisAgentPath, updatedAgentSettings)
-    logger.debug(s"Finished amend agent priority with value:{$value} with address:{$agentAddress}" +
-      s" on stream:{$streamName} with partitions: {$usedPartitions}\n")
+    logger.debug(s"Finish amend agent priority with value:{$value} with address:{$agentAddress}" +
+      s" on stream:{$streamName},partition:{$partition}\n")
   }
 
   /**
@@ -94,7 +93,7 @@ class PeerToPeerAgent(agentAddress : String,
    */
   private def startVotingInternal(partition : Int, retries : Int = zkRetriesAmount) : String = {
     logger.debug(s"Start voting new agent on address:{$agentAddress}" +
-      s" on stream:{$streamName} on partition:{$partition}\n")
+      s" on stream:{$streamName},partition:{$partition}\n")
     val masterID = getMaster(partition)
     val newMaster : String = {
       if (masterID.isDefined)
@@ -122,8 +121,8 @@ class PeerToPeerAgent(agentAddress : String,
         }
       }
     }
-    logger.debug(s"Finished voting new agent on address:{$agentAddress}" +
-      s" on stream:{$streamName} on partition:{$partition}, voted master:{$newMaster} \n")
+    logger.debug(s"Finish voting new agent on address:{$agentAddress}" +
+      s" on stream:{$streamName},partition:{$partition}, voted master:{$newMaster}\n")
     newMaster
   }
 
@@ -147,6 +146,8 @@ class PeerToPeerAgent(agentAddress : String,
    * @param retries Retries to try to interact with master
    */
   private def updateMaster(partition : Int, init : Boolean, retries : Int = zkRetriesAmount) : Unit = {
+    logger.debug(s"Updating master with init:{$init} on agent:{$agentAddress}" +
+      s" on stream:{$streamName},partition:{$partition} with retry=$retries\n")
     val masterOpt = getMaster(partition)
     if (masterOpt.isDefined) {
       val master = masterOpt.get
@@ -168,6 +169,8 @@ class PeerToPeerAgent(agentAddress : String,
           case DeleteMasterResponse(_, _, p) =>
             assert(p == partition)
             val newMaster = startVoting(partition)
+            logger.debug(s"Finish updating master with init:{$init} on agent:{$agentAddress}" +
+              s" on stream:{$streamName},partition:{$partition} with retry=$retries; revoted master:{$newMaster}\n")
             lockLocalMasters.lock()
             localMasters(partition) = newMaster
             lockLocalMasters.unlock()
@@ -189,6 +192,8 @@ class PeerToPeerAgent(agentAddress : String,
 
           case PingResponse(_,_,p) =>
             assert(p == partition)
+            logger.debug(s"Finish updating master with init:{$init} on agent:{$agentAddress}" +
+              s" on stream:{$streamName},partition:{$partition} with retry=$retries; old master:{$master} is alive now\n")
             lockLocalMasters.lock()
             localMasters(partition) = master
             lockLocalMasters.unlock()
@@ -228,6 +233,8 @@ class PeerToPeerAgent(agentAddress : String,
     zkService.create(s"/producers/master/$streamName/$partition", agentAddress, CreateMode.EPHEMERAL)
     lock.unlock()
     lockManagingMaster.unlock()
+    logger.debug(s"Agent:{$agentAddress} in master now on" +
+      s" stream:{$streamName},partition:{$partition}\n")
   }
 
   /**
@@ -241,6 +248,8 @@ class PeerToPeerAgent(agentAddress : String,
     zkService.delete(s"/producers/master/$streamName/$partition")
     lock.unlock()
     lockManagingMaster.unlock()
+    logger.debug(s"Agent:{$agentAddress} in NOT master now on" +
+      s" stream:{$streamName},partition:{$partition}\n")
   }
 
   /**
@@ -273,6 +282,8 @@ class PeerToPeerAgent(agentAddress : String,
    * @return Transaction UUID
    */
   def getNewTxn(partition : Int) : UUID = {
+    logger.debug(s"Start retrieve txn for agent with address:{$agentAddress}," +
+      s"stream:{$streamName},partition:{$partition}\n")
     lockLocalMasters.lock()
     val condition = localMasters.contains(partition)
     val localMaster = if (condition) localMasters(partition) else null
@@ -291,6 +302,8 @@ class PeerToPeerAgent(agentAddress : String,
 
         case TransactionResponse(snd, rcv, uuid, p) =>
           assert(p == partition)
+          logger.debug(s"Finish retrieve txn for agent with address:{$agentAddress}," +
+            s"stream:{$streamName},partition:{$partition}\n")
           uuid
       }
     } else {
@@ -325,6 +338,7 @@ class PeerToPeerAgent(agentAddress : String,
         }
         while (isRunning.get()) {
           val request: IMessage = transport.waitRequest()
+          logger.debug(s"Start handle msg:{$request} on agent:{$agentAddress}")
           val task : Runnable = createTask(request)
           assert(executors.contains(request.partition))
           executors(request.partition).execute(task)
