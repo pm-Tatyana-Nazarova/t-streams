@@ -12,6 +12,7 @@ import com.bwsw.tstreams.interaction.zkservice.{AgentSettings, ZkService}
 import org.apache.zookeeper.CreateMode
 import org.slf4j.LoggerFactory
 
+//TODO add verbose logging
 /**
  * Agent for providing peer to peer interaction between producers
  * @param agentAddress Concrete agent address
@@ -138,7 +139,7 @@ class PeerToPeerAgent(agentAddress : String,
     lock.unlock()
     newMaster
   }
-  //TODO add verbose logging
+
   /**
    * Updating master on concrete partition
    * @param partition Partition to update master
