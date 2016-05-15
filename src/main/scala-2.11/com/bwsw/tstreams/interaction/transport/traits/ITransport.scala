@@ -51,7 +51,7 @@ trait ITransport {
   def response(msg : IMessage) : Unit
 
   /**
-   * Send empty request (just for testing)
+   * Send empty request
    * @param msg EmptyRequest
    */
   def stopRequest(msg : EmptyRequest) : Unit
@@ -61,7 +61,9 @@ trait ITransport {
    */
   def bindLocalAddress(address : String) : Unit
 
-  //for testing purposes
+  /**
+   * Stop transport listen incoming messages
+   */
   def unbindLocalAddress() : Unit
 }
 

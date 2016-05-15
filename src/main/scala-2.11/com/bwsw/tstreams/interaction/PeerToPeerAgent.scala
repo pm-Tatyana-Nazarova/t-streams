@@ -2,6 +2,7 @@ package com.bwsw.tstreams.interaction
 
 import java.net.InetSocketAddress
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{ExecutorService, Executors, CountDownLatch}
 import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.agents.producer.BasicProducer
@@ -32,30 +33,27 @@ class PeerToPeerAgent(agentAddress : String,
                       transport: ITransport,
                       transportTimeout : Int) {
 
-  protected var zkRetriesAmount = 34
-  protected val zkService = new ZkService(zkRootPath, zkHosts, zkTimeout)
-  protected val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
-  protected val lockLocalMasters = new ReentrantLock(true)
-  protected val lockManagingMaster = new ReentrantLock(true)
-  protected val streamName = producer.stream.getName
-  init()
+  private val zkRetriesAmount = 34
+  private val zkService = new ZkService(zkRootPath, zkHosts, zkTimeout)
+  private val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
+  private val lockLocalMasters = new ReentrantLock(true)
+  private val lockManagingMaster = new ReentrantLock(true)
+  private val streamName = producer.stream.getName
+  private val isRunning = new AtomicBoolean(true)
+  private var zkConnectionValidator : Thread = null
+  private var messageHandler : Thread = null
 
-  /**
-   * Agent initialization
-   */
-  protected def init() = {
-    transport.bindLocalAddress(agentAddress)
-    startValidator()
-    startHandleMessages()
-    usedPartitions foreach {p =>
-      val penalty = if (isLowPriorityToBeMaster) 1000*1000 else 0
-      zkService.create[AgentSettings](s"/producers/agents/$streamName/$p/unique_agent_$agentAddress" + "_",
+  transport.bindLocalAddress(agentAddress)
+  startValidator()
+  startHandleMessages()
+  usedPartitions foreach {p =>
+    val penalty = if (isLowPriorityToBeMaster) 1000*1000 else 0
+    zkService.create[AgentSettings](s"/producers/agents/$streamName/$p/unique_agent_$agentAddress" + "_",
        AgentSettings(agentAddress, priority = 0, penalty),
        CreateMode.EPHEMERAL_SEQUENTIAL)
-    }
-    usedPartitions foreach { p =>
-      updateMaster(p, init = true)
-    }
+  }
+  usedPartitions foreach { p =>
+    updateMaster(p, init = true)
   }
 
   /**
@@ -63,7 +61,7 @@ class PeerToPeerAgent(agentAddress : String,
    * @param partition Partition to update priority
    * @param value Value which will be added to current priority
    */
-  protected def updateThisAgentPriority(partition : Int, value : Int) = {
+  private def updateThisAgentPriority(partition : Int, value : Int) = {
     val agentsOpt = zkService.getAllSubPath(s"/producers/agents/$streamName/$partition")
     assert(agentsOpt.isDefined)
     val agents: List[String] = agentsOpt.get
@@ -83,7 +81,7 @@ class PeerToPeerAgent(agentAddress : String,
    * @param retries Retries to try to set new master
    * @return Selected master address
    */
-  protected def startVotingInternal(partition : Int, retries : Int = zkRetriesAmount) : String = {
+  private def startVotingInternal(partition : Int, retries : Int = zkRetriesAmount) : String = {
     val masterID = getMaster(partition)
     val newMaster : String = {
       if (masterID.isDefined)
@@ -119,7 +117,7 @@ class PeerToPeerAgent(agentAddress : String,
    * @param partition Partition to vote new master
    * @return New master Address
    */
-  protected def startVoting(partition : Int) : String = {
+  private def startVoting(partition : Int) : String = {
     val lock = zkService.getLock(s"/producers/lock_voting/$streamName/$partition")
     lock.lock()
     val newMaster = startVotingInternal(partition)
@@ -133,7 +131,7 @@ class PeerToPeerAgent(agentAddress : String,
    * @param init If flag true master will be reselected anyway else old master can stay
    * @param retries Retries to try to interact with master
    */
-  protected def updateMaster(partition : Int, init : Boolean, retries : Int = zkRetriesAmount) : Unit = {
+  private def updateMaster(partition : Int, init : Boolean, retries : Int = zkRetriesAmount) : Unit = {
     val masterOpt = getMaster(partition)
     if (masterOpt.isDefined) {
       val master = masterOpt.get
@@ -192,7 +190,7 @@ class PeerToPeerAgent(agentAddress : String,
    * @param partition Partition to set
    * @return Master address
    */
-  protected def getMaster(partition : Int) : Option[String] = {
+  private def getMaster(partition : Int) : Option[String] = {
     lockManagingMaster.lock()
     val lock = zkService.getLock(s"/producers/lock_master/$streamName/$partition")
     lock.lock()
@@ -206,7 +204,7 @@ class PeerToPeerAgent(agentAddress : String,
    * Set this agent as new master on concrete partition
    * @param partition Partition to set
    */
-  protected def setThisAgentAsMaster(partition : Int) : Unit = {
+  private def setThisAgentAsMaster(partition : Int) : Unit = {
     lockManagingMaster.lock()
     val lock = zkService.getLock(s"/producers/lock_master/$streamName/$partition")
     lock.lock()
@@ -221,7 +219,7 @@ class PeerToPeerAgent(agentAddress : String,
    * Unset this agent as master on concrete partition
    * @param partition Partition to set
    */
-  protected def deleteThisAgentFromMasters(partition : Int) : Unit = {
+  private def deleteThisAgentFromMasters(partition : Int) : Unit = {
     lockManagingMaster.lock()
     val lock = zkService.getLock(s"/producers/lock_master/$streamName/$partition")
     lock.lock()
@@ -233,13 +231,13 @@ class PeerToPeerAgent(agentAddress : String,
   /**
    * Starting validate zk connection(if it will be down, exception will be thrown)
    */
-  protected def startValidator() = {
+  private def startValidator() = {
     val latch = new CountDownLatch(1)
-    val zkConnectionValidator = new Thread(new Runnable {
+    zkConnectionValidator = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
         var retries = 0
-        while (true) {
+        while (isRunning.get()) {
           if (!zkService.isZkConnected)
             retries += 1
           else
@@ -287,23 +285,36 @@ class PeerToPeerAgent(agentAddress : String,
   }
 
   /**
+   * Stop this agent
+   */
+  def stop() = {
+    isRunning.set(false)
+    zkConnectionValidator.join()
+    //to avoid infinite polling block
+    transport.stopRequest(EmptyRequest(agentAddress, agentAddress, usedPartitions.head))
+    messageHandler.join()
+    transport.unbindLocalAddress()
+  }
+
+  /**
    * Start handling incoming messages for this agent
    */
-  protected def startHandleMessages() = {
+  private def startHandleMessages() = {
     val latch = new CountDownLatch(1)
-    val messageHandler = new Thread(new Runnable {
+    messageHandler = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
         val executors = scala.collection.mutable.Map[Int/*used partition*/, ExecutorService]()
         usedPartitions foreach { p =>
           executors(p) = Executors.newSingleThreadExecutor()
         }
-        while (true) {
+        while (isRunning.get()) {
           val request: IMessage = transport.waitRequest()
           val task : Runnable = createTask(request)
           assert(executors.contains(request.partition))
           executors(request.partition).execute(task)
         }
+        executors.foreach(x=>x._2.shutdown()) //graceful shutdown all executors after finishing handling messages
       }
     })
     messageHandler.start()
@@ -315,7 +326,7 @@ class PeerToPeerAgent(agentAddress : String,
    * @param request Requested message
    * @return Task
    */
-  protected def createTask(request : IMessage): Runnable = {
+  private def createTask(request : IMessage): Runnable = {
     new Runnable {
       override def run(): Unit = {
         request match {
@@ -382,6 +393,8 @@ class PeerToPeerAgent(agentAddress : String,
             lockLocalMasters.unlock()
             response.msgID = request.msgID
             transport.response(response)
+
+          case EmptyRequest(_,_,_) =>
         }
       }
     }

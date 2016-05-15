@@ -13,7 +13,7 @@ import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
-import com.bwsw.tstreams.interaction.transport.impl.tcptransport.TcpTransport
+import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
 import com.bwsw.tstreams.interaction.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
@@ -89,7 +89,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     zkRootPath = "/unit",
     zkTimeout = 7000,
     isLowPriorityToBeMaster = false,
-    transport = new TcpTransport(200),
+    transport = new TcpTransport,
     transportTimeout = 5)
 
   //producer/consumer options

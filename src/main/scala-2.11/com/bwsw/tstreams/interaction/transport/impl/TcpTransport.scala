@@ -1,11 +1,12 @@
-package com.bwsw.tstreams.interaction.transport.impl.tcptransport
+package com.bwsw.tstreams.interaction.transport.impl
 
 import java.util.concurrent.LinkedBlockingQueue
-
 import com.bwsw.tstreams.interaction.messages._
+import com.bwsw.tstreams.interaction.transport.impl.client.TcpIMessageClient
+import com.bwsw.tstreams.interaction.transport.impl.server.TcpIMessageServer
 import com.bwsw.tstreams.interaction.transport.traits.ITransport
 
-class TcpTransport(msgHandleInterval : Int) extends ITransport{
+class TcpTransport extends ITransport{
   private var listener : TcpIMessageServer = null
   private val sender : TcpIMessageClient = new TcpIMessageClient
   private val msgQueue = new LinkedBlockingQueue[IMessage]()
@@ -86,12 +87,13 @@ class TcpTransport(msgHandleInterval : Int) extends ITransport{
     listener = new TcpIMessageServer(port = port,
     newMessageCallback = (msg: IMessage) => {
       msgQueue.add(msg)
-    },
-    msgHandleInterval = msgHandleInterval)
-    listener.startServer()
+    })
+    listener.start()
   }
 
-  //for testing purposes
+  /**
+   * Stop transport listen incoming messages
+   */
   override def unbindLocalAddress(): Unit = {
     listener.stop()
   }

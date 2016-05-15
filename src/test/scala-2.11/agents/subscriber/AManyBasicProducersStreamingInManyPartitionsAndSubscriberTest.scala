@@ -4,7 +4,7 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
-import agents.both.batch_insert.BatchSizeTestVal
+import agents.both.batch_insert.TestUtils
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
@@ -14,7 +14,7 @@ import com.bwsw.tstreams.agents.producer.{PeerToPeerAgentSettings, BasicProducer
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.interaction.transport.impl.tcptransport.TcpTransport
+import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
 import com.bwsw.tstreams.interaction.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
@@ -25,11 +25,10 @@ import testutils.{CassandraHelper, LocalGeneratorCreator, RandomStringCreator, R
 import scala.collection.mutable.ListBuffer
 
 
-class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
+class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   var port = 8000
 
   //creating keyspace, metadata
-  def randomString: String = RandomStringCreator.randomAlphaString(10)
   val path = randomString
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
@@ -139,7 +138,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
       zkRootPath = "/unit",
       zkTimeout = 7000,
       isLowPriorityToBeMaster = false,
-      transport = new TcpTransport(200),
+      transport = new TcpTransport,
       transportTimeout = 5)
 
     port += 1

@@ -6,7 +6,7 @@ import com.bwsw.tstreams.agents.producer._
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
-import com.bwsw.tstreams.interaction.transport.impl.tcptransport.TcpTransport
+import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
 import com.bwsw.tstreams.interaction.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.services.BasicStreamService
@@ -52,7 +52,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     zkRootPath = "/unit",
     zkTimeout = 7000,
     isLowPriorityToBeMaster = false,
-    transport = new TcpTransport(200),
+    transport = new TcpTransport,
     transportTimeout = 5)
 
   val producerOptions = new BasicProducerOptions[String, Array[Byte]](

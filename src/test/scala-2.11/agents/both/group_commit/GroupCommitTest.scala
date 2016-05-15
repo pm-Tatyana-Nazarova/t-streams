@@ -11,7 +11,7 @@ import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
-import com.bwsw.tstreams.interaction.transport.impl.tcptransport.TcpTransport
+import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
 import com.bwsw.tstreams.interaction.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
@@ -76,7 +76,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     zkRootPath = "/unit",
     zkTimeout = 7000,
     isLowPriorityToBeMaster = false,
-    transport = new TcpTransport(200),
+    transport = new TcpTransport,
     transportTimeout = 5)
 
   val producerOptions = new BasicProducerOptions[String, Array[Byte]](

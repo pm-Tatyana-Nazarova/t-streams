@@ -11,7 +11,7 @@ scalacOptions += "-deprecation"
 libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "1.7.21",
   "org.scalatest" % "scalatest_2.11" % "3.0.0-M15",
-  "io.netty" % "netty-all" % "4.0.34.Final",
+  "io.netty" % "netty-all" % "4.1.0.CR7",
   "com.aerospike" % "aerospike-client" % "3.2.1",
   "org.apache.commons" % "commons-collections4" % "4.1",
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.6.3",
