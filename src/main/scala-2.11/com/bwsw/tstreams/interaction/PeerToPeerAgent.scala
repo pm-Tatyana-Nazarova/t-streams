@@ -217,8 +217,8 @@ class PeerToPeerAgent(agentAddress : String,
     val masterOpt = zkService.get[String](s"/producers/master/$streamName/$partition")
     lock.unlock()
     lockManagingMaster.unlock()
-    logger.debug(s"Agent:{${masterOpt.getOrElse("None")}} is current master on" +
-      s" stream:{$streamName},partition:{$partition}\n")
+//    logger.debug(s"Agent:{${masterOpt.getOrElse("None")}} is current master on" +
+//      s" stream:{$streamName},partition:{$partition}\n")
     masterOpt
   }
 
@@ -305,7 +305,7 @@ class PeerToPeerAgent(agentAddress : String,
         case TransactionResponse(snd, rcv, uuid, p) =>
           assert(p == partition)
           logger.debug(s"Finish retrieve txn for agent with address:{$agentAddress}," +
-            s"stream:{$streamName},partition:{$partition}\n")
+            s"stream:{$streamName},partition:{$partition} with timeuuid:{${uuid.timestamp()}}\n")
           uuid
       }
     } else {
