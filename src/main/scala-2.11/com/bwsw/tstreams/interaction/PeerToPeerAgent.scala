@@ -10,6 +10,7 @@ import com.bwsw.tstreams.interaction.messages._
 import com.bwsw.tstreams.interaction.transport.traits.ITransport
 import com.bwsw.tstreams.interaction.zkservice.{AgentSettings, ZkService}
 import org.apache.zookeeper.CreateMode
+import org.slf4j.LoggerFactory
 
 /**
  * Agent for providing peer to peer interaction between producers
@@ -33,6 +34,7 @@ class PeerToPeerAgent(agentAddress : String,
                       transport: ITransport,
                       transportTimeout : Int) {
 
+  private val logger = LoggerFactory.getLogger(this.getClass)
   private val zkRetriesAmount = 34
   private val zkService = new ZkService(zkRootPath, zkHosts, zkTimeout)
   private val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
@@ -46,6 +48,8 @@ class PeerToPeerAgent(agentAddress : String,
   transport.bindLocalAddress(agentAddress)
   startValidator()
   startHandleMessages()
+  logger.debug(s"Start initialize agent with address:{$agentAddress}" +
+    s" on stream:{$streamName} with partitions: {$usedPartitions}\n")
   usedPartitions foreach {p =>
     val penalty = if (isLowPriorityToBeMaster) 1000*1000 else 0
     zkService.create[AgentSettings](s"/producers/agents/$streamName/$p/unique_agent_$agentAddress" + "_",
@@ -55,6 +59,8 @@ class PeerToPeerAgent(agentAddress : String,
   usedPartitions foreach { p =>
     updateMaster(p, init = true)
   }
+  logger.debug(s"Finished initialize agent with address:{$agentAddress}" +
+    s" on stream:{$streamName} with partitions: {$usedPartitions}\n")
 
   /**
    * Amend agent priority
@@ -62,6 +68,8 @@ class PeerToPeerAgent(agentAddress : String,
    * @param value Value which will be added to current priority
    */
   private def updateThisAgentPriority(partition : Int, value : Int) = {
+    logger.debug(s"Start amend agent priority with value:{$value} with address:{$agentAddress}" +
+      s" on stream:{$streamName} with partitions: {$usedPartitions}\n")
     val agentsOpt = zkService.getAllSubPath(s"/producers/agents/$streamName/$partition")
     assert(agentsOpt.isDefined)
     val agents: List[String] = agentsOpt.get
@@ -73,6 +81,8 @@ class PeerToPeerAgent(agentAddress : String,
     val updatedAgentSettings = agentSettingsOpt.get
     updatedAgentSettings.priority += value
     zkService.setData(s"/producers/agents/$streamName/$partition/" + thisAgentPath, updatedAgentSettings)
+    logger.debug(s"Finished amend agent priority with value:{$value} with address:{$agentAddress}" +
+      s" on stream:{$streamName} with partitions: {$usedPartitions}\n")
   }
 
   /**
@@ -82,6 +92,8 @@ class PeerToPeerAgent(agentAddress : String,
    * @return Selected master address
    */
   private def startVotingInternal(partition : Int, retries : Int = zkRetriesAmount) : String = {
+    logger.debug(s"Start voting new agent on address:{$agentAddress}" +
+      s" on stream:{$streamName} on partition:{$partition}\n")
     val masterID = getMaster(partition)
     val newMaster : String = {
       if (masterID.isDefined)
@@ -109,6 +121,8 @@ class PeerToPeerAgent(agentAddress : String,
         }
       }
     }
+    logger.debug(s"Finished voting new agent on address:{$agentAddress}" +
+      s" on stream:{$streamName} on partition:{$partition}, voted master:{$newMaster} \n")
     newMaster
   }
 
@@ -124,7 +138,7 @@ class PeerToPeerAgent(agentAddress : String,
     lock.unlock()
     newMaster
   }
-
+  //TODO add verbose logging
   /**
    * Updating master on concrete partition
    * @param partition Partition to update master

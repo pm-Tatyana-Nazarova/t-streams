@@ -1,6 +1,7 @@
 package agents.both.batch_insert.aerospike
 
 import java.net.InetSocketAddress
+import java.util.UUID
 import agents.both.batch_insert.TestUtils
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
@@ -17,7 +18,9 @@ import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.redisson.{Redisson, Config}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringCreator}
+import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper}
+
+import scala.collection.mutable.ListBuffer
 
 
 class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
@@ -88,8 +91,8 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
       useLastOffset = false)
 
     var checkVal = true
-
     val consumer = new BasicConsumer("test_consumer", streamInst, consumerOptions)
+    val uuids = new ListBuffer[UUID]()
 
     val consumerThread = new Thread(
       new Runnable {
@@ -99,6 +102,7 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
         while(i < totalTxn*producersAmount) {
           val txn = consumer.getTransaction
           if (txn.isDefined){
+            uuids += txn.get.getTxnUUID
             checkVal &= txn.get.getAll().sorted == dataToSend
             i+=1
           }
@@ -114,9 +118,9 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
 
     //assert that is nothing to read
     checkVal &= consumer.getTransaction.isEmpty
-
     checkVal &= !consumerThread.isAlive
     producersThreads.foreach(x=> checkVal &= !x.isAlive)
+    checkVal &= isSorted(uuids)
 
     checkVal shouldEqual true
   }

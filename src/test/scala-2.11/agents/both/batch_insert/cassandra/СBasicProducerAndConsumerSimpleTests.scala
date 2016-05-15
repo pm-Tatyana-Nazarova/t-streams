@@ -227,7 +227,6 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     consumerThread.start()
     producerThread.join(timeoutForWaiting*1000)
     consumerThread.join(timeoutForWaiting*1000)
-
     checkVal &= !producerThread.isAlive
     checkVal &= !consumerThread.isAlive
 
