@@ -22,22 +22,23 @@ object BasicProducerTest{
     if (args.length != 6){
       println(s"args size:{${args.length}}")
       args.foreach(println)
-      throw new IllegalArgumentException("usage: [cnt] [agentAddress] [zk{host:port}] [cassandra{host:port}] [aerospike{host:port}] [redis{host:port}]")
+      throw new IllegalArgumentException("usage: [cnt] [agentAddress] [zk{host:port}] [cassandra{host:port}] [aerospike{host:port}] [redis{host:port}] " +
+        " {host:port} separator: | ")
     }
     assert(args.length == 6)
     val cnt = args(0).toInt
     val agentAddress = args(1)
-    val zkHosts = args(2).split(";").map{x=>
+    val zkHosts = args(2).split("|").map{x=>
       val hp = x.split(":")
       val (host,port) = (hp(0),hp(1))
       new InetSocketAddress(host,port.toInt)
     }
-    val cassandraHosts = args(3).split(";").map{x=>
+    val cassandraHosts = args(3).split("|").map{x=>
       val hp = x.split(":")
       val (host,port) = (hp(0),hp(1))
       new InetSocketAddress(host,port.toInt)
     }
-    val aerospikeHosts = args(4).split(";").map{x=>
+    val aerospikeHosts = args(4).split("|").map{x=>
       val hp = x.split(":")
       val (host,port) = (hp(0),hp(1))
       new Host(host,port.toInt)
@@ -46,7 +47,7 @@ object BasicProducerTest{
 
     LogManager.getLogManager.reset()
     System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
-    System.setProperty("org.slf4j.simpleLogger.logFile","log/testlog.log")
+    System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")
     System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
     System.setProperty("org.slf4j.simpleLogger.log.com.bwsw","DEBUG")
 
