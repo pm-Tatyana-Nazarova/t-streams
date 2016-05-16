@@ -19,13 +19,12 @@ import org.redisson.{Config, Redisson}
 
 object BasicProducerTest{
   def main(args: Array[String]) {
-    if (args.length != 6){
+    if (args.length != 7){
       println(s"args size:{${args.length}}")
       args.foreach(println)
-      throw new IllegalArgumentException("usage: [cnt] [agentAddress] [zk{host:port}] [cassandra{host:port}] [aerospike{host:port}] [redis{host:port}] " +
-        " {host:port} separator: / ")
+      throw new IllegalArgumentException("usage: [cnt] [agentAddress] [zk{host:port}] [cassandra{host:port}] [aerospike{host:port}] [redis{host:port}] [delay]" +
+        " delay in seconds ; {host:port} separator: / ")
     }
-    assert(args.length == 6)
     val cnt = args(0).toInt
     val agentAddress = args(1)
     val zkHosts = args(2).split("/").map{x=>
@@ -44,6 +43,7 @@ object BasicProducerTest{
       new Host(host,port.toInt)
     }
     val redisHost = args(5)
+    val delay = args(6).toInt
 
     LogManager.getLogManager.reset()
     System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
@@ -111,7 +111,7 @@ object BasicProducerTest{
       val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
       txn.send("info")
       txn.checkpoint()
-      Thread.sleep(2000)
+      Thread.sleep(delay*1000L)
       println(s"txn with uuid:{${txn.getTxnUUID.timestamp()}} was sent")
     }
 
