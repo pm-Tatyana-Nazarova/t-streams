@@ -1,13 +1,25 @@
-package mastervoting
+package mastervoting_test
 
 import java.util.UUID
 
 import com.datastax.driver.core.Cluster
-import testutils.TestUtils
-
 import scala.collection.mutable.ListBuffer
 
-object Validator extends TestUtils{
+object Validator{
+  def isSorted(list : ListBuffer[UUID]) : Boolean = {
+    if (list.isEmpty)
+      return true
+    var checkVal = true
+    var curVal = list.head
+    list foreach { el =>
+      if (el.timestamp() < curVal.timestamp())
+        checkVal = false
+      if (el.timestamp() > curVal.timestamp())
+        curVal = el
+    }
+    checkVal
+  }
+
   def main(args: Array[String]) {
     if (args.isEmpty)
       throw new IllegalArgumentException("specify keyspace")

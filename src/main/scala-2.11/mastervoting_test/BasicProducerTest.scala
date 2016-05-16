@@ -1,4 +1,4 @@
-package mastervoting
+package mastervoting_test
 
 import java.net.InetSocketAddress
 import java.util.logging.LogManager
