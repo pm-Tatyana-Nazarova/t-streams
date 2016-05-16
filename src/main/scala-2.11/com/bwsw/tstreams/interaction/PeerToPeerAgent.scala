@@ -72,7 +72,8 @@ class PeerToPeerAgent(agentAddress : String,
    */
   private def agentCleaner(partition : Int) : Unit = {
     val agentsOpt = zkService.getAllSubPath(s"/producers/agents/$streamName/$partition")
-    assert(agentsOpt.isDefined)
+    if (agentsOpt.isEmpty)
+      return
     val agents: List[String] = agentsOpt.get
     val filtered = agents.filter(_ contains s"_${agentAddress}_")
     filtered foreach { path =>
