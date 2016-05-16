@@ -2,7 +2,6 @@ package agents.both.batch_insert.aerospike
 
 import java.net.InetSocketAddress
 import java.util.UUID
-import agents.both.batch_insert.TestUtils
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
@@ -18,7 +17,7 @@ import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import org.redisson.{Redisson, Config}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper}
+import testutils.{TestUtils, RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper}
 
 import scala.collection.mutable.ListBuffer
 

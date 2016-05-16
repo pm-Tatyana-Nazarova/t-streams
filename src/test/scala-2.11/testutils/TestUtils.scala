@@ -1,7 +1,6 @@
-package agents.both.batch_insert
+package testutils
 
 import java.util.UUID
-import testutils.RandomStringCreator
 
 import scala.collection.mutable.ListBuffer
 

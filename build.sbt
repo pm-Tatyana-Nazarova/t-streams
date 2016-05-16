@@ -15,7 +15,8 @@ libraryDependencies ++= Seq(
   "com.aerospike" % "aerospike-client" % "3.2.1",
   "org.apache.commons" % "commons-collections4" % "4.1",
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.6.3",
-  "net.openhft" % "chronicle-queue" % "4.2.6"
+  "net.openhft" % "chronicle-queue" % "4.2.6",
+  "org.slf4j" % "slf4j-simple" % "1.7.5"
 )
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
