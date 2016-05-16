@@ -12,6 +12,7 @@ import com.bwsw.tstreams.interaction.zkservice.{AgentSettings, ZkService}
 import org.apache.zookeeper.CreateMode
 import org.slf4j.LoggerFactory
 
+//TODO add existence check
 /**
  * Agent for providing peer to peer interaction between producers
  * @param agentAddress Concrete agent address
@@ -284,12 +285,12 @@ class PeerToPeerAgent(agentAddress : String,
    * @return Transaction UUID
    */
   def getNewTxn(partition : Int) : UUID = {
-    logger.debug(s"Start retrieve txn for agent with address:{$agentAddress}," +
-      s"stream:{$streamName},partition:{$partition}\n")
     lockLocalMasters.lock()
     val condition = localMasters.contains(partition)
     val localMaster = if (condition) localMasters(partition) else null
     lockLocalMasters.unlock()
+    logger.debug(s"Start retrieve txn for agent with address:{$agentAddress}," +
+      s"stream:{$streamName},partition:{$partition} from [MASTER:{$localMaster}]\n")
     if (condition){
       val txnResponse = transport.transactionRequest(new TransactionRequest(agentAddress, localMaster, partition), transportTimeout)
       txnResponse match {
@@ -305,7 +306,7 @@ class PeerToPeerAgent(agentAddress : String,
         case TransactionResponse(snd, rcv, uuid, p) =>
           assert(p == partition)
           logger.debug(s"Finish retrieve txn for agent with address:{$agentAddress}," +
-            s"stream:{$streamName},partition:{$partition} with timeuuid:{${uuid.timestamp()}}\n")
+            s"stream:{$streamName},partition:{$partition} with timeuuid:{${uuid.timestamp()}} from [MASTER:{$localMaster}]\n")
           uuid
       }
     } else {
