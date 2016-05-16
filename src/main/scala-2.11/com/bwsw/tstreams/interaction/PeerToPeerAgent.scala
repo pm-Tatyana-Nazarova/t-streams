@@ -36,7 +36,7 @@ class PeerToPeerAgent(agentAddress : String,
                       transportTimeout : Int) {
 
   private val logger = LoggerFactory.getLogger(this.getClass)
-  private val zkRetriesAmount = 34
+  private val zkRetriesAmount = 60
   private val zkService = new ZkService(zkRootPath, zkHosts, zkTimeout)
   private val localMasters = scala.collection.mutable.Map[Int/*partition*/, String/*master*/]()
   private val lockLocalMasters = new ReentrantLock(true)
