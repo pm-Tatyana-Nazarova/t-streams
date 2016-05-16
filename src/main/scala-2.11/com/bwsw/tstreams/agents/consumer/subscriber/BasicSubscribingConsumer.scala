@@ -16,10 +16,10 @@ import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
  */
 //TODO add logging
 class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
-                                                     stream : BasicStream[DATATYPE],
-                                                     options : BasicConsumerOptions[DATATYPE,USERTYPE],
-                                                     callBack : BasicSubscriberCallback[DATATYPE, USERTYPE],
-                                                     persistentQueuePath : String)
+                                                   stream : BasicStream[DATATYPE],
+                                                   options : BasicConsumerOptions[DATATYPE,USERTYPE],
+                                                   callBack : BasicSubscriberCallback[DATATYPE, USERTYPE],
+                                                   persistentQueuePath : String)
   extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options){
 
   /**
