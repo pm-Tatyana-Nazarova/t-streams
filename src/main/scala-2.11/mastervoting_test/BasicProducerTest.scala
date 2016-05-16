@@ -45,7 +45,7 @@ object BasicProducerTest{
     val redisHost = args(5)
 
     LogManager.getLogManager.reset()
-    System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG")
+    System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
     System.setProperty("org.slf4j.simpleLogger.logFile","log/testlog.log")
     System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
     System.setProperty("org.slf4j.simpleLogger.log.com.bwsw","DEBUG")
