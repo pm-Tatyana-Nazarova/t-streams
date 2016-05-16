@@ -112,7 +112,7 @@ object BasicProducerTest{
       txn.send("info")
       txn.checkpoint()
       Thread.sleep(2000)
-      println(s"txn with uuid:{${txn.getTxnUUID}} was sent")
+      println(s"txn with uuid:{${txn.getTxnUUID.timestamp()}} was sent")
     }
 
     producer.agent.stop()
