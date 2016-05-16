@@ -45,8 +45,8 @@ class PeerToPeerAgent(agentAddress : String,
   private var zkConnectionValidator : Thread = null
   private var messageHandler : Thread = null
 
-  logger.debug(s"Start initialize agent with address:{$agentAddress}" +
-    s",stream:{$streamName},partitions:{${usedPartitions.mkString(",")}}\n")
+  logger.debug(s"Start initialize agent with address:{$agentAddress}," +
+    s"stream:{$streamName},partitions:{${usedPartitions.mkString(",")}}\n")
   transport.bindLocalAddress(agentAddress)
   startValidator()
   startHandleMessages()
@@ -59,8 +59,8 @@ class PeerToPeerAgent(agentAddress : String,
   usedPartitions foreach { p =>
     updateMaster(p, init = true)
   }
-  logger.debug(s"Finish initialize agent with address:{$agentAddress}" +
-    s",stream:{$streamName},partitions:{${usedPartitions.mkString(",")}\n")
+  logger.debug(s"Finish initialize agent with address:{$agentAddress}," +
+    s"stream:{$streamName},partitions:{${usedPartitions.mkString(",")}\n")
 
   /**
    * Amend agent priority
@@ -82,7 +82,7 @@ class PeerToPeerAgent(agentAddress : String,
     updatedAgentSettings.priority += value
     zkService.setData(s"/producers/agents/$streamName/$partition/" + thisAgentPath, updatedAgentSettings)
     logger.debug(s"Finish amend agent priority with value:{$value} with address:{$agentAddress}" +
-      s" on stream:{$streamName},partition:{$partition}\n")
+      s" on stream:{$streamName},partition:{$partition} VALUENOW={${updatedAgentSettings.priority}}\n")
   }
 
   /**
@@ -217,8 +217,8 @@ class PeerToPeerAgent(agentAddress : String,
     val masterOpt = zkService.get[String](s"/producers/master/$streamName/$partition")
     lock.unlock()
     lockManagingMaster.unlock()
-//    logger.debug(s"Agent:{${masterOpt.getOrElse("None")}} is current master on" +
-//      s" stream:{$streamName},partition:{$partition}\n")
+    logger.debug(s"[GET MASTER]Agent:{${masterOpt.getOrElse("None")}} is current master on" +
+      s" stream:{$streamName},partition:{$partition}\n")
     masterOpt
   }
 
@@ -235,7 +235,7 @@ class PeerToPeerAgent(agentAddress : String,
     zkService.create(s"/producers/master/$streamName/$partition", agentAddress, CreateMode.EPHEMERAL)
     lock.unlock()
     lockManagingMaster.unlock()
-    logger.debug(s"Agent:{$agentAddress} in master now on" +
+    logger.debug(s"[SET MASTER]Agent:{$agentAddress} in master now on" +
       s" stream:{$streamName},partition:{$partition}\n")
   }
 
@@ -250,7 +250,7 @@ class PeerToPeerAgent(agentAddress : String,
     zkService.delete(s"/producers/master/$streamName/$partition")
     lock.unlock()
     lockManagingMaster.unlock()
-    logger.debug(s"Agent:{$agentAddress} in NOT master now on" +
+    logger.debug(s"[DELETE MASTER]Agent:{$agentAddress} in NOT master now on" +
       s" stream:{$streamName},partition:{$partition}\n")
   }
 
@@ -324,6 +324,7 @@ class PeerToPeerAgent(agentAddress : String,
     transport.stopRequest(EmptyRequest(agentAddress, agentAddress, usedPartitions.head))
     messageHandler.join()
     transport.unbindLocalAddress()
+    zkService.close()
   }
 
   /**
