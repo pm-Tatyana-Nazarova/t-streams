@@ -11,6 +11,8 @@ object MetadataCreator {
     val session = cluster.connect()
     CassandraHelper.createKeyspace(session, keyspace)
     CassandraHelper.createMetadataTables(session, keyspace)
+    cluster.close()
+    session.close()
   }
 }
 
