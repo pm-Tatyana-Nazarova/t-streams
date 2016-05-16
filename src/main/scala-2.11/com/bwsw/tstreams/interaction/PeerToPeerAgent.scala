@@ -77,7 +77,11 @@ class PeerToPeerAgent(agentAddress : String,
     val agents: List[String] = agentsOpt.get
     val filtered = agents.filter(_ contains s"_${agentAddress}_")
     filtered foreach { path =>
+      logger.debug(s"[INIT CLEAN] Delete agent on address:{$path} on" +
+        s"stream:{$streamName},partition:{$partition}\n")
       zkService.delete(s"/producers/agents/$streamName/$partition/" + path)
+      logger.debug(s"[INIT CLEAN FINISHED] Delete agent on address:{$path} on" +
+        s"stream:{$streamName},partition:{$partition}\n")
     }
   }
 

@@ -68,12 +68,12 @@ class IMessageDecoder extends MessageToMessageDecoder[String]{
 
   override def decode(ctx: ChannelHandlerContext, msg: String, out: util.List[AnyRef]): Unit = {
     try {
-      out.add(serializer.deserialize[IMessage](msg))
+      if (msg != null)
+        out.add(serializer.deserialize[IMessage](msg))
     }
     catch {
       case e : com.fasterxml.jackson.core.JsonParseException =>
       case e : com.fasterxml.jackson.databind.JsonMappingException =>
-      case e : java.lang.NullPointerException =>
     }
   }
 }

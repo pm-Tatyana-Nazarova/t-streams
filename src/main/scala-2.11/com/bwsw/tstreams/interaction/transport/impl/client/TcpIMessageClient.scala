@@ -68,6 +68,8 @@ class TcpIMessageClient {
       try {
         val reader = new BufferedReader(new InputStreamReader(socket.getInputStream))
         val string = reader.readLine()
+        if (string == null)
+          return null.asInstanceOf[IMessage]
         val response = serializer.deserialize[IMessage](string)
         response
       }
@@ -75,7 +77,6 @@ class TcpIMessageClient {
         case e : java.net.SocketTimeoutException => null.asInstanceOf[IMessage]
         case e : com.fasterxml.jackson.core.JsonParseException => null.asInstanceOf[IMessage]
         case e : SocketException => null.asInstanceOf[IMessage]
-        case e : java.lang.NullPointerException => null.asInstanceOf[IMessage]
       }
     }
     if (answer == null) {
