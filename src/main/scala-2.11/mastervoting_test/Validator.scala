@@ -21,8 +21,8 @@ object Validator{
   }
 
   def main(args: Array[String]) {
-    if (args.isEmpty)
-      throw new IllegalArgumentException("specify keyspace")
+    if (args.length != 1)
+      throw new IllegalArgumentException("specify [keyspace]")
     val keyspace = args(0)
 
     val cluster = Cluster.builder().addContactPoint("localhost").build()
@@ -30,13 +30,22 @@ object Validator{
 
     val set = session.execute(s"select * from $keyspace.commit_log").all()
     val it = set.iterator()
-    val buf = new ListBuffer[UUID]()
+    val buffers = scala.collection.mutable.Map[Int, ListBuffer[UUID]]()
+
     while(it.hasNext){
       val row = it.next()
-      buf += row.getUUID("transaction")
+      val partition = row.getInt("partition")
+      val uuid = row.getUUID("transaction")
+      if (!buffers.contains(partition)){
+        buffers(partition) = ListBuffer(uuid)
+      } else {
+        buffers(partition) += uuid
+      }
     }
 
-    if (isSorted(buf))
+    val checkVal = buffers.map(x=>isSorted(x._2)).reduceLeft((a,b)=>a&b)
+
+    if (checkVal)
       println("sorted")
     else
       println("not sorted")

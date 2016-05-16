@@ -19,10 +19,11 @@ import org.redisson.{Config, Redisson}
 
 object BasicProducerTest{
   def main(args: Array[String]) {
-    if (args.length != 7){
+    if (args.length != 8){
       println(s"args size:{${args.length}}")
       args.foreach(println)
-      throw new IllegalArgumentException("usage: [cnt] [agentAddress] [zk{host:port}] [cassandra{host:port}] [aerospike{host:port}] [redis{host:port}] [delay]" +
+      throw new IllegalArgumentException("usage: [cnt] [agentAddress] [zk{host:port}] [cassandra{host:port}]" +
+        " [aerospike{host:port}] [redis{host:port}] [delay] [keyspace]" +
         " delay in seconds ; {host:port} separator: / ")
     }
     val cnt = args(0).toInt
@@ -45,6 +46,7 @@ object BasicProducerTest{
     val redisHost = args(5)
     val delay = args(6).toInt
 
+
     LogManager.getLogManager.reset()
     System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
     System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")
@@ -60,7 +62,7 @@ object BasicProducerTest{
       transport = new TcpTransport,
       transportTimeout = 5)
 
-    val randomKeyspace = "test"
+    val keyspace = args(7)
 
     //metadata/data factories
     val metadataStorageFactory = new MetadataStorageFactory
@@ -76,7 +78,7 @@ object BasicProducerTest{
     //metadata storage instances
     val metadataStorageInstForProducer = metadataStorageFactory.getInstance(
       cassandraHosts = cassandraHosts.toList,
-      keyspace = randomKeyspace)
+      keyspace = keyspace)
 
     //coordinator for coordinating producer/consumer
     val config = new Config()
