@@ -2,10 +2,12 @@ package agents.producer
 
 import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
-import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducerTransaction, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer._
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
+import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
+import com.bwsw.tstreams.interaction.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.services.BasicStreamService
 import com.datastax.driver.core.Cluster
@@ -42,7 +44,16 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     description = "unit_testing",
     metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
     dataStorage = storageFactory.getInstance(cassandraOptions),
-    lockService = coordinator)
+    coordinator = coordinator)
+
+  val agentSettings = new PeerToPeerAgentSettings(
+    agentAddress = s"localhost:8000",
+    zkHosts = List(new InetSocketAddress("localhost", 2181)),
+    zkRootPath = "/unit",
+    zkTimeout = 7000,
+    isLowPriorityToBeMaster = false,
+    transport = new TcpTransport,
+    transportTimeout = 5)
 
   val producerOptions = new BasicProducerOptions[String, Array[Byte]](
     transactionTTL = 10,
@@ -51,6 +62,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     RoundRobinPolicyCreator.getRoundRobinPolicy(stream, List(0,1,2)),
     SingleElementInsert,
     LocalGeneratorCreator.getGen(),
+    agentSettings,
     stringToArrayByteConverter)
 
   val producer = new BasicProducer("test_producer", stream, producerOptions)
@@ -81,6 +93,9 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   }
 
   override def afterAll(): Unit = {
+    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
+    zkService.deleteRecursive("")
+    zkService.close()
     temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
     temporarySession.close()
     temporaryCluster.close()

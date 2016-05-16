@@ -1,9 +1,9 @@
 package com.bwsw.tstreams.data.aerospike
 
+import java.util.concurrent.locks.ReentrantLock
+
 import com.aerospike.client.policy.ClientPolicy
 import com.aerospike.client.{Host, AerospikeClient}
-import com.typesafe.scalalogging.Logger
-import org.slf4j.LoggerFactory
 
 
 /**
@@ -16,17 +16,18 @@ class AerospikeStorageFactory{
    */
   private val aerospikeClients = scala.collection.mutable.Map[(List[Host], ClientPolicy), AerospikeClient]()
 
+
   /**
-   * AerospikeStorage logger for logging
+   * Lock for providing getInstance thread safeness
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val lock = new ReentrantLock(true)
 
   /**
    * @param aerospikeOptions Options of aerospike client
    * @return Instance of CassandraStorage
    */
   def getInstance(aerospikeOptions: AerospikeStorageOptions) : AerospikeStorage = {
-    logger.info(s"start AerospikeStorage instance creation\n")
+    lock.lock()
 
     val client = {
       if (aerospikeClients.contains((aerospikeOptions.hosts, aerospikeOptions.clientPolicy))) {
@@ -39,17 +40,17 @@ class AerospikeStorageFactory{
       }
     }
 
-    logger.info(s"finished AerospikeStorage instance creation\n")
-    new AerospikeStorage(client, aerospikeOptions)
+    val inst = new AerospikeStorage(client, aerospikeOptions)
+    lock.unlock()
+
+    inst
   }
 
   /**
    * Close all factory storage instances
    */
   def closeFactory() : Unit = {
-    logger.info("start closing Aerospike Storage Factory")
     aerospikeClients.foreach(x=>x._2.close())
     aerospikeClients.clear()
-    logger.info("finished closing Aerospike Storage Factory")
   }
 }

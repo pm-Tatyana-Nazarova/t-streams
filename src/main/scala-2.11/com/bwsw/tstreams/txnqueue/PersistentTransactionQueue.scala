@@ -1,6 +1,5 @@
 package com.bwsw.tstreams.txnqueue
 
-import com.typesafe.scalalogging.Logger
 import net.openhft.chronicle.queue.{ExcerptAppender, ChronicleQueueBuilder, ExcerptTailer}
 import java.util.UUID
 import java.util.concurrent.locks._
@@ -17,10 +16,6 @@ class PersistentTransactionQueue (private val basePath : String,
 
     private var fromQ1 = !(separator == null)
 
-    /**
-     * Transaction queue logger for logging
-     */
-    private val logger = Logger(LoggerFactory.getLogger(this.getClass))
 
     private val q1: SingleChronicleQueue = ChronicleQueueBuilder.single(basePath + "/q1").build()
     private val q2: SingleChronicleQueue = ChronicleQueueBuilder.single(basePath + "/q2").build()
@@ -45,7 +40,6 @@ class PersistentTransactionQueue (private val basePath : String,
     * @param value uuid to put
     */
     def put(value : UUID) {
-        logger.debug(s"start put in queue uuid : $value\n")
         mutex.lock()
 
         if (separator == null)
@@ -57,14 +51,12 @@ class PersistentTransactionQueue (private val basePath : String,
 
         cond.signal()
         mutex.unlock()
-        logger.debug(s"finished put in queue uuid : $value\n")
     }
 
   /**
     * Get element from queue
     */
     def get() : UUID = {
-      logger.debug("start retrieving transaction from queue\n")
       mutex.lock()
 
       val t = {
@@ -84,7 +76,6 @@ class PersistentTransactionQueue (private val basePath : String,
 
       mutex.unlock()
 
-      logger.debug(s"finished retrieving transaction from queue : $retrieved\n")
       retrieved
     }
 

@@ -1,9 +1,12 @@
 package com.bwsw.tstreams.agents.producer
 
+import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.producer.InsertionType.InsertType
 import com.bwsw.tstreams.converter.IConverter
+import com.bwsw.tstreams.interaction.transport.traits.ITransport
 import com.bwsw.tstreams.policy.AbstractPolicy
 import com.bwsw.tstreams.generator.IUUIDGenerator
+import scala.language.existentials
 
 /**
  * Class for Basic Producer Options
@@ -23,6 +26,7 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
                                               val writePolicy : AbstractPolicy,
                                               val insertType: InsertType,
                                               val txnGenerator: IUUIDGenerator,
+                                              val peerToPeerAgentSettings : PeerToPeerAgentSettings,
                                               val converter : IConverter[USERTYPE,DATATYPE]) {
 
   /**
@@ -57,3 +61,12 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
         throw new IllegalArgumentException("Insert type can't be resolved")
     }
 }
+
+
+class PeerToPeerAgentSettings(val agentAddress : String,
+                              val zkHosts : List[InetSocketAddress],
+                              val zkRootPath : String,
+                              val zkTimeout : Int,
+                              val isLowPriorityToBeMaster : Boolean,
+                              val transport: ITransport,
+                              val transportTimeout : Int)

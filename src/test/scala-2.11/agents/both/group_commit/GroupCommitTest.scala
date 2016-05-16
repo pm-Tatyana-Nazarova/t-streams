@@ -6,11 +6,13 @@ import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.group.CheckpointGroup
-import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{PeerToPeerAgentSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
+import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
+import com.bwsw.tstreams.interaction.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -68,6 +70,15 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     ttl = 60 * 10,
     description = "some_description")
 
+  val agentSettings = new PeerToPeerAgentSettings(
+    agentAddress = s"localhost:8000",
+    zkHosts = List(new InetSocketAddress("localhost", 2181)),
+    zkRootPath = "/unit",
+    zkTimeout = 7000,
+    isLowPriorityToBeMaster = false,
+    transport = new TcpTransport,
+    transportTimeout = 5)
+
   val producerOptions = new BasicProducerOptions[String, Array[Byte]](
     transactionTTL = 6,
     transactionKeepAliveInterval = 2,
@@ -75,6 +86,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer, List(0,1,2)),
     SingleElementInsert,
     LocalGeneratorCreator.getGen(),
+    agentSettings,
     stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
@@ -110,5 +122,17 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
     //assert that the second transaction was closed and consumer offsets was moved
     consumer.getTransaction.get.getAll().head == "info2"
+  }
+
+  override def afterAll(): Unit = {
+    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
+    zkService.deleteRecursive("")
+    zkService.close()
+    session.execute(s"DROP KEYSPACE $randomKeyspace")
+    session.close()
+    cluster.close()
+    metadataStorageFactory.closeFactory()
+    storageFactory.closeFactory()
+    redissonClient.shutdown()
   }
 }

@@ -1,14 +1,16 @@
 package agents.both.batch_insert.cassandra
 
 import java.net.InetSocketAddress
-import agents.both.batch_insert.BatchSizeTestVal
+import agents.both.batch_insert.TestUtils
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.{PeerToPeerAgentSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
+import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
+import com.bwsw.tstreams.interaction.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
@@ -18,9 +20,8 @@ import testutils.{CassandraHelper, LocalGeneratorCreator, RandomStringCreator, R
 import scala.util.control.Breaks._
 
 
-class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with BeforeAndAfterAll with BatchSizeTestVal{
+class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   //creating keyspace, metadata
-  def randomString: String = RandomStringCreator.randomAlphaString(10)
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
   val session = cluster.connect()
@@ -87,6 +88,24 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     ttl = 60 * 10,
     description = "some_description")
 
+  val agentSettings1 = new PeerToPeerAgentSettings(
+    agentAddress = "localhost:8888",
+    zkHosts = List(new InetSocketAddress("localhost", 2181)),
+    zkRootPath = "/unit",
+    zkTimeout = 7000,
+    isLowPriorityToBeMaster = false,
+    transport = new TcpTransport,
+    transportTimeout = 5)
+
+  val agentSettings2 = new PeerToPeerAgentSettings(
+    agentAddress = "localhost:8889",
+    zkHosts = List(new InetSocketAddress("localhost", 2181)),
+    zkRootPath = "/unit",
+    zkTimeout = 7000,
+    isLowPriorityToBeMaster = false,
+    transport = new TcpTransport,
+    transportTimeout = 5)
+
   //options for producers/consumer
   val producerOptions1 = new BasicProducerOptions[String, Array[Byte]](
     transactionTTL = 6,
@@ -95,6 +114,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer1, List(0,1,2)),
     BatchInsert(batchSizeVal),
     LocalGeneratorCreator.getGen(),
+    agentSettings1,
     stringToArrayByteConverter)
 
   val producerOptions2 = new BasicProducerOptions[String, Array[Byte]](
@@ -104,6 +124,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForProducer2, List(0,1,2)),
     BatchInsert(batchSizeVal),
     LocalGeneratorCreator.getGen(),
+    agentSettings2,
     stringToArrayByteConverter)
 
   val consumerOptions = new BasicConsumerOptions[Array[Byte], String](
@@ -194,6 +215,9 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
   }
 
   override def afterAll(): Unit = {
+    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
+    zkService.deleteRecursive("")
+    zkService.close()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

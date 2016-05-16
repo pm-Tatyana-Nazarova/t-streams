@@ -6,7 +6,6 @@ import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.entities.TransactionSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
@@ -28,138 +27,138 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
   /**
    * BasicConsumer logger for logging
    */
-    private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
-    logger.info(s"Start new Basic consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+  logger.info(s"Start new Basic consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
   /**
    * Temporary checkpoints (will be cleared after every checkpoint() invokes)
    */
-    private val offsetsForCheckpoint = scala.collection.mutable.Map[Int, UUID]()
+  private val offsetsForCheckpoint = scala.collection.mutable.Map[Int, UUID]()
 
   /**
    * Local offsets
    */
-    protected val currentOffsets = scala.collection.mutable.Map[Int, UUID]()
+  protected val currentOffsets = scala.collection.mutable.Map[Int, UUID]()
 
   /**
    * Indicate set offsets or not
    */
-    private var isSet = false
+  private var isSet = false
 
     //set consumer offsets
-    if(!stream.metadataStorage.consumerEntity.exist(name) || !options.useLastOffset){
-      isSet = true
+  if(!stream.metadataStorage.consumerEntity.exist(name) || !options.useLastOffset){
+    isSet = true
 
-      options.offset match {
-        case Offsets.Oldest =>
-          for (i <- 0 until stream.getPartitions) {
-            currentOffsets(i) = options.txnGenerator.getTimeUUID(0)
-            offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(0)
-          }
+    options.offset match {
+      case Offsets.Oldest =>
+        for (i <- 0 until stream.getPartitions) {
+          currentOffsets(i) = options.txnGenerator.getTimeUUID(0)
+          offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(0)
+        }
 
-        case Offsets.Newest =>
-          val newestUuid = options.txnGenerator.getTimeUUID()
-          for (i <- 0 until stream.getPartitions) {
-            currentOffsets(i) = newestUuid
-            offsetsForCheckpoint(i) = newestUuid
-          }
+      case Offsets.Newest =>
+        val newestUuid = options.txnGenerator.getTimeUUID()
+        for (i <- 0 until stream.getPartitions) {
+          currentOffsets(i) = newestUuid
+          offsetsForCheckpoint(i) = newestUuid
+        }
 
-        case dateTime : Offsets.DateTime =>
-          for (i <- 0 until stream.getPartitions) {
-            currentOffsets(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
-            offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
-          }
+      case dateTime : Offsets.DateTime =>
+        for (i <- 0 until stream.getPartitions) {
+          currentOffsets(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
+          offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
+        }
 
-        case offset : Offsets.UUID =>
-          for (i <- 0 until stream.getPartitions) {
-            currentOffsets(i) = offset.startUUID
-            offsetsForCheckpoint(i) = offset.startUUID
-          }
+      case offset : Offsets.UUID =>
+        for (i <- 0 until stream.getPartitions) {
+          currentOffsets(i) = offset.startUUID
+          offsetsForCheckpoint(i) = offset.startUUID
+        }
 
-        case _ => throw new IllegalStateException("offset cannot be resolved")
-      }
-
+      case _ => throw new IllegalStateException("offset cannot be resolved")
     }
 
-    if (!isSet) {
-      for (i <- 0 until stream.getPartitions) {
-        val offset = stream.metadataStorage.consumerEntity.getOffset(name, stream.getName, i)
-        offsetsForCheckpoint(i) = offset
-        currentOffsets(i) = offset
-      }
+  }
+
+  if (!isSet) {
+    for (i <- 0 until stream.getPartitions) {
+      val offset = stream.metadataStorage.consumerEntity.getOffset(name, stream.getName, i)
+      offsetsForCheckpoint(i) = offset
+      currentOffsets(i) = offset
     }
+  }
 
   /**
    * Buffer for transactions preload
    */
-    private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[TransactionSettings]]()
-    //fill transaction buffer using current offsets
-    for (i <- 0 until stream.getPartitions)
-      transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
-        stream.getName,
-        i,
-        currentOffsets(i),
-        options.transactionsPreload)
+  private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[TransactionSettings]]()
+  //fill transaction buffer using current offsets
+  for (i <- 0 until stream.getPartitions)
+    transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
+      stream.getName,
+      i,
+      currentOffsets(i),
+      options.transactionsPreload)
 
   /**
    * Helper function for getTransaction() method
    * @return BasicConsumerTransaction or None
    */
-    private def getTxnOpt : Option[BasicConsumerTransaction[DATATYPE,USERTYPE]] = {
-      if (options.readPolicy.isRoundFinished())
-        return None
+  private def getTxnOpt : Option[BasicConsumerTransaction[DATATYPE,USERTYPE]] = {
+    if (options.readPolicy.isRoundFinished())
+      return None
 
-      val curPartition = options.readPolicy.getNextPartition
+    val curPartition = options.readPolicy.getNextPartition
 
-      if (transactionBuffer(curPartition).isEmpty) {
-        transactionBuffer(curPartition) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
-          stream.getName,
-          curPartition,
-          currentOffsets(curPartition),
-          options.transactionsPreload)
-      }
+    if (transactionBuffer(curPartition).isEmpty) {
+      transactionBuffer(curPartition) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
+        stream.getName,
+        curPartition,
+        currentOffsets(curPartition),
+        options.transactionsPreload)
+    }
 
-      if (transactionBuffer(curPartition).isEmpty)
-        return getTxnOpt
+    if (transactionBuffer(curPartition).isEmpty)
+      return getTxnOpt
 
-      val txn: TransactionSettings = transactionBuffer(curPartition).front
+    val txn: TransactionSettings = transactionBuffer(curPartition).front
 
-      if (txn.totalItems != -1) {
+    if (txn.totalItems != -1) {
+      offsetsForCheckpoint(curPartition) = txn.txnUuid
+      currentOffsets(curPartition) = txn.txnUuid
+      transactionBuffer(curPartition).dequeue()
+      return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, curPartition, txn))
+    }
+
+    val updatedTxnOpt: Option[TransactionSettings] = updateTransaction(txn.txnUuid, curPartition)
+
+    if (updatedTxnOpt.isDefined) {
+      val updatedTxn = updatedTxnOpt.get
+
+      if (updatedTxn.totalItems != -1) {
         offsetsForCheckpoint(curPartition) = txn.txnUuid
         currentOffsets(curPartition) = txn.txnUuid
         transactionBuffer(curPartition).dequeue()
-        return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, curPartition, txn))
+        return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, curPartition, updatedTxn))
       }
-
-      val updatedTxnOpt: Option[TransactionSettings] = updateTransaction(txn.txnUuid, curPartition)
-
-      if (updatedTxnOpt.isDefined) {
-        val updatedTxn = updatedTxnOpt.get
-
-        if (updatedTxn.totalItems != -1) {
-          offsetsForCheckpoint(curPartition) = txn.txnUuid
-          currentOffsets(curPartition) = txn.txnUuid
-          transactionBuffer(curPartition).dequeue()
-          return Some(new BasicConsumerTransaction[DATATYPE, USERTYPE](this, curPartition, updatedTxn))
-        }
-      }
-      else
-        transactionBuffer(curPartition).dequeue()
-
-      getTxnOpt
     }
+    else
+      transactionBuffer(curPartition).dequeue()
+
+    getTxnOpt
+  }
 
   /**
    * @return Consumed transaction of None if nothing to consume
    */
-    def getTransaction: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
-      logger.info(s"Start new transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+  def getTransaction: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
+    logger.info(s"Start new transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
-      options.readPolicy.startNewRound()
-      val txn: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = getTxnOpt
-      txn
-    }
+    options.readPolicy.startNewRound()
+    val txn: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = getTxnOpt
+    txn
+  }
 
   /**
    * Getting last transaction from concrete partition
@@ -196,7 +195,8 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * @return BasicConsumerTransaction
    */
     def getTransactionById(partition : Int, uuid : UUID): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
-      logger.info(s"Start new historic transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+      logger.info(s"Start retrieving new historic transaction for consumer with" +
+        s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
       val txnOpt = updateTransaction(uuid, partition)
       if (txnOpt.isDefined){
         val txn = txnOpt.get
@@ -246,7 +246,8 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * Save current offsets in metadata to read later from them (in case of system stop/failure)
    */
     def checkpoint() : Unit = {
-      logger.info(s"Start saving checkpoints for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+      logger.info(s"Start saving checkpoints for " +
+        s"consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
       stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, offsetsForCheckpoint)
       offsetsForCheckpoint.clear()

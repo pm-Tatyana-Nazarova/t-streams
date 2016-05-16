@@ -1,10 +1,10 @@
 package com.bwsw.tstreams.metadata
 
 import java.net.InetSocketAddress
+import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.entities._
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core._
-import com.typesafe.scalalogging._
 import org.slf4j.LoggerFactory
 
 
@@ -24,7 +24,7 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
   /**
    * MetadataStorage logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Stream entity instance
@@ -156,9 +156,14 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
  */
 class MetadataStorageFactory {
   /**
+   * Lock for providing getInstance thread safeness
+   */
+  private val lock = new ReentrantLock(true)
+
+  /**
    * MetadataStorageFactory logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Map for memorize clusters which are already created
@@ -177,6 +182,7 @@ class MetadataStorageFactory {
     * @return Instance of MetadataStorage
     */
   def getInstance(cassandraHosts : List[InetSocketAddress], keyspace : String): MetadataStorage = {
+    lock.lock()
     logger.info("start MetadataStorage instance creation\n")
 
     val sortedHosts = cassandraHosts.map(x=>(x,x.hashCode())).sortBy(_._2).map(x=>x._1)
@@ -204,7 +210,10 @@ class MetadataStorageFactory {
     }
 
     logger.info("finished MetadataStorage instance creation\n")
-    new MetadataStorage(cluster,session,keyspace)
+    val inst = new MetadataStorage(cluster,session,keyspace)
+    lock.unlock()
+
+    inst
   }
 
   /**

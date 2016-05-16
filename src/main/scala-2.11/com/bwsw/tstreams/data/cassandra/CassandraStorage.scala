@@ -3,10 +3,8 @@ package com.bwsw.tstreams.data.cassandra
 import java.nio.ByteBuffer
 import java.util
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 import com.bwsw.tstreams.data.IStorage
 import com.datastax.driver.core._
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 
@@ -18,7 +16,7 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
   /**
    * CassandraStorage logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Prepared C* statement for data insertion
@@ -52,10 +50,10 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
 
     val statementWithBindings = insertStatement.bind(values:_*)
 
-    logger.debug(s"start inserting data for stream:{$streamName}, partition:{$partition}, partNum:{$partNum}\n")
+//    logger.debug(s"start inserting data for stream:{$streamName}, partition:{$partition}, partNum:{$partNum}\n")
     val res: ResultSetFuture = session
       .executeAsync(statementWithBindings)
-    logger.debug(s"finished inserting data for stream:{$streamName}, partition:{$partition}, partNum:{$partNum}\n")
+//    logger.debug(s"finished inserting data for stream:{$streamName}, partition:{$partition}, partNum:{$partNum}\n")
 
     val job: () => Unit = () => res.getUninterruptibly()
     job
@@ -79,9 +77,9 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
 
     val statementWithBindings = selectStatement.bind(values:_*)
 
-    logger.debug(s"start retrieving data for stream:{$streamName}, partition:{$partition}, from:{$from}, to:{$to}\n")
+//    logger.debug(s"start retrieving data for stream:{$streamName}, partition:{$partition}, from:{$from}, to:{$to}\n")
     val selected: util.List[Row] = session.execute(statementWithBindings).all()
-    logger.debug(s"finished retrieving data for stream:{$streamName}, partition:{$partition}, from:{$from}, to:{$to}\n")
+//    logger.debug(s"finished retrieving data for stream:{$streamName}, partition:{$partition}, from:{$from}, to:{$to}\n")
 
     val it = selected.iterator()
     val data = scala.collection.mutable.Queue[Array[Byte]]()
@@ -157,9 +155,9 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
       batchStatement.add(statementWithBindings)
     }
 
-    logger.debug(s"Start putting batch of data with size:${getBufferSize()} in cassandra for streamName: {${buffer.head.streamName}}, partition: {${buffer.head.streamName}")
+//    logger.debug(s"Start putting batch of data with size:${getBufferSize()} in cassandra for streamName: {${buffer.head.streamName}}, partition: {${buffer.head.streamName}")
     session.execute(batchStatement)
-    logger.debug(s"Finished putting batch of data with size:${getBufferSize()} in cassandra for streamName: {${buffer.head.streamName}}, partition: {${buffer.head.streamName}")
+//    logger.debug(s"Finished putting batch of data with size:${getBufferSize()} in cassandra for streamName: {${buffer.head.streamName}}, partition: {${buffer.head.streamName}")
 
     null
   }

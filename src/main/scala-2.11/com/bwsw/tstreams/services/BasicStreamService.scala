@@ -5,7 +5,6 @@ import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.entities.StreamSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 
@@ -17,7 +16,7 @@ object BasicStreamService {
   /**
    * Basic Stream logger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Getting existing stream
@@ -30,7 +29,7 @@ object BasicStreamService {
   def loadStream[T](streamName : String,
                     metadataStorage: MetadataStorage,
                     dataStorage: IStorage[T],
-                    lockService: Coordinator) : BasicStream[T] = {
+                    coordinator: Coordinator) : BasicStream[T] = {
 
 
     logger.info(s"start load stream with name : {$streamName}\n")
@@ -44,7 +43,7 @@ object BasicStreamService {
       val (name: String, partitions: Int, ttl: Int, description: String) =
         (settings.name,settings.partitions,settings.ttl,settings.description)
 
-      val stream: BasicStream[T] = new BasicStream(name, partitions, metadataStorage, dataStorage, lockService, ttl, description)
+      val stream: BasicStream[T] = new BasicStream(name, partitions, metadataStorage, dataStorage, coordinator, ttl, description)
       stream
     }
   }
@@ -65,14 +64,14 @@ object BasicStreamService {
                    description : String,
                    metadataStorage: MetadataStorage,
                    dataStorage : IStorage[T],
-                   lockService: Coordinator) : BasicStream[T] = {
+                   coordinator: Coordinator) : BasicStream[T] = {
 
 
     logger.info(s"start stream creation with name : {$streamName}, {$partitions}, {$ttl}\n")
     metadataStorage.streamEntity.createStream(streamName,partitions,ttl,description)
 
     logger.info(s"finished stream creation with name : {$streamName}, {$partitions}, {$ttl}\n")
-    val stream: BasicStream[T] = new BasicStream[T](streamName,partitions,metadataStorage, dataStorage, lockService, ttl, description)
+    val stream: BasicStream[T] = new BasicStream[T](streamName,partitions,metadataStorage, dataStorage, coordinator, ttl, description)
 
     stream
   }

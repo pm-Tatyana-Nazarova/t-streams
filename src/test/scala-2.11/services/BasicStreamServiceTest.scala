@@ -51,7 +51,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       description = "some_description",
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst,
-      lockService = coordinator)
+      coordinator = coordinator)
 
     val checkVal = stream.isInstanceOf[BasicStream[_]]
 
@@ -69,7 +69,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       description = "some_description",
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst,
-      lockService = coordinator)
+      coordinator = coordinator)
 
       BasicStreamService.createStream(
         streamName = name,
@@ -78,7 +78,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
         description = "some_description",
         metadataStorage = metadataStorageInst,
         dataStorage = storageInst,
-        lockService = coordinator)
+        coordinator = coordinator)
     }
   }
 
@@ -92,7 +92,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       description = "some_description",
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst,
-      lockService = coordinator)
+      coordinator = coordinator)
 
     val stream: BasicStream[_] = BasicStreamService.loadStream(name, metadataStorageInst, storageInst, coordinator)
     val checkVal = stream.isInstanceOf[BasicStream[_]]
@@ -110,7 +110,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       description = "some_description",
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst,
-      lockService = coordinator)
+      coordinator = coordinator)
 
     val isExist = BasicStreamService.isExist(name, metadataStorageInst)
     val isNotExist = BasicStreamService.isExist(notExistName, metadataStorageInst)
@@ -137,7 +137,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       description = "some_description",
       metadataStorage = metadataStorageInst,
       dataStorage = storageInst,
-      lockService = coordinator)
+      coordinator = coordinator)
 
     BasicStreamService.deleteStream(name, metadataStorageInst)
 

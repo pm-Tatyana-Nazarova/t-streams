@@ -1,20 +1,15 @@
 package com.bwsw.tstreams.data.cassandra
 
 import java.net.InetSocketAddress
+import java.util.concurrent.locks.ReentrantLock
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core.{Cluster, Session}
-import com.typesafe.scalalogging.Logger
-import org.slf4j.LoggerFactory
 
 
 /**
  * Factory for creating cassandra storage instances
  */
 class CassandraStorageFactory {
-  /**
-   * CassandraStorageFactory logger for logging
-   */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
 
   /**
    * Map for memorize clusters which are already created
@@ -27,12 +22,17 @@ class CassandraStorageFactory {
   private val sessionMap = scala.collection.mutable.Map[(List[InetSocketAddress], String), Session]()
 
   /**
+   * Lock for providing getInstance thread safeness
+   */
+  private val lock = new ReentrantLock(true)
+
+  /**
    *
    * @param cassandraStorageOptions Cassandra client options
    * @return Instance of CassandraStorage
    */
   def getInstance(cassandraStorageOptions: CassandraStorageOptions) : CassandraStorage = {
-    logger.info(s"start CassandraStorage instance creation with keyspace : {${cassandraStorageOptions.keyspace}}\n")
+    lock.lock()
 
     val sortedHosts = cassandraStorageOptions.cassandraHosts.map(x=>(x,x.hashCode())).sortBy(_._2).map(x=>x._1)
 
@@ -58,8 +58,10 @@ class CassandraStorageFactory {
       }
     }
 
-    logger.info(s"finished CassandraStorage instance creation with keyspace : {${cassandraStorageOptions.keyspace}}\n")
-    new CassandraStorage(cluster, session, cassandraStorageOptions.keyspace)
+    val inst = new CassandraStorage(cluster, session, cassandraStorageOptions.keyspace)
+    lock.unlock()
+
+    inst
   }
 
   /**

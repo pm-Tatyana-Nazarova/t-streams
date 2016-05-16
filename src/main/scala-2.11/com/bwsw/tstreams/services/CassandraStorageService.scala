@@ -2,7 +2,6 @@ package com.bwsw.tstreams.services
 
 import com.datastax.driver.core.Cluster.Builder
 import com.datastax.driver.core.{Cluster, Session}
-import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
 
@@ -15,7 +14,7 @@ object CassandraStorageService {
   /**
    * MetadataStorageServiceLogger for logging
    */
-  private val logger = Logger(LoggerFactory.getLogger(this.getClass))
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
    * Creates keyspace for Metadata.

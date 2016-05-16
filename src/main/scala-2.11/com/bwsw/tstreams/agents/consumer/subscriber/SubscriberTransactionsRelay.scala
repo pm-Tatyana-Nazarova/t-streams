@@ -19,10 +19,8 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
                                                      queue : PersistentTransactionQueue,
                                                      isQueueConsumed : AtomicBoolean) {
 
-  /**
-   * Constant for Thread.sleep
-   */
-  private val SLEEPTIME = 5000 // 5 seconds
+
+  private val DELAY = 5000
 
   /**
    * Serializer to serialize/deserialize incoming messages
@@ -153,7 +151,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       }
     })
     //wait until listener start
-    Thread.sleep(SLEEPTIME)
+    Thread.sleep(DELAY)
 
     listener = Some(listenerId)
   }
