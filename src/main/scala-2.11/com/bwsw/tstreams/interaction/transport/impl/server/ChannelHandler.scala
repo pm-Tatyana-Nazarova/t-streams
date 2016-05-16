@@ -73,6 +73,7 @@ class IMessageDecoder extends MessageToMessageDecoder[String]{
     catch {
       case e : com.fasterxml.jackson.core.JsonParseException =>
       case e : com.fasterxml.jackson.databind.JsonMappingException =>
+      case e : java.lang.NullPointerException =>
     }
   }
 }
