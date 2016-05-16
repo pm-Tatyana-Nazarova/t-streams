@@ -1,7 +1,7 @@
 package com.bwsw.tstreams.interaction.transport.impl.client
 
-import java.io.{InputStreamReader, BufferedReader}
-import java.net.{ConnectException, Socket, SocketException}
+import java.io.{IOException, InputStreamReader, BufferedReader}
+import java.net.Socket
 import com.bwsw.tstreams.common.JsonSerializer
 import com.bwsw.tstreams.interaction.messages.IMessage
 
@@ -39,7 +39,7 @@ class TcpIMessageClient {
         addressToConnection(rcvAddress) = sock
         writeMsgAndWaitResponse(sock, msg)
       } catch {
-        case e: ConnectException => null.asInstanceOf[IMessage]
+        case e: IOException => null.asInstanceOf[IMessage]
       }
     }
   }
@@ -53,30 +53,38 @@ class TcpIMessageClient {
   private def writeMsgAndWaitResponse(socket : Socket, msg : IMessage) : IMessage = {
     //do request
     val string = serializer.serialize(msg) + "\n" // "\n" separator is used on server side to separate incoming messages
-    val outputStream =
-      try {
-        socket.getOutputStream
-      } catch {
-        case e : SocketException =>
+    try {
+      val outputStream = socket.getOutputStream
+      outputStream.write(string.getBytes)
+      outputStream.flush()
+    }
+    catch {
+      case e : IOException =>
+        try {
+          socket.close()
+        } catch {
+          case e : IOException =>
+        } finally {
+          addressToConnection.remove(msg.receiverID)
           return null.asInstanceOf[IMessage]
-      }
-    outputStream.write(string.getBytes)
-    outputStream.flush()
-
+        }
+    }
     //wait response with timeout
     val answer = {
       try {
         val reader = new BufferedReader(new InputStreamReader(socket.getInputStream))
         val string = reader.readLine()
         if (string == null)
-          return null.asInstanceOf[IMessage]
-        val response = serializer.deserialize[IMessage](string)
-        response
+          null.asInstanceOf[IMessage]
+        else {
+          val response = serializer.deserialize[IMessage](string)
+          response
+        }
       }
       catch {
         case e : java.net.SocketTimeoutException => null.asInstanceOf[IMessage]
         case e : com.fasterxml.jackson.core.JsonParseException => null.asInstanceOf[IMessage]
-        case e : SocketException => null.asInstanceOf[IMessage]
+        case e : IOException => null.asInstanceOf[IMessage]
       }
     }
     if (answer == null) {
