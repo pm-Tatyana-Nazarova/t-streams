@@ -20,7 +20,7 @@ import org.redisson.{Config, Redisson}
 object BasicProducerTest{
   def main(args: Array[String]) {
     if (args.length != 6){
-      println(s"args size:{${args.length}")
+      println(s"args size:{${args.length}}")
       args.foreach(println)
       throw new IllegalArgumentException("usage: [cnt] [agentAddress] [zk{host:port}] [cassandra{host:port}] [aerospike{host:port}] [redis{host:port}]")
     }
