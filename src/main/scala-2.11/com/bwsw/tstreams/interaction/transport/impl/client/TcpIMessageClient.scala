@@ -75,6 +75,7 @@ class TcpIMessageClient {
         case e : java.net.SocketTimeoutException => null.asInstanceOf[IMessage]
         case e : com.fasterxml.jackson.core.JsonParseException => null.asInstanceOf[IMessage]
         case e : SocketException => null.asInstanceOf[IMessage]
+        case e : NullPointerException => null.asInstanceOf[IMessage]
       }
     }
     if (answer == null) {
