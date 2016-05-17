@@ -12,6 +12,7 @@ import com.bwsw.tstreams.interaction.zkservice.{AgentSettings, ZkService}
 import org.apache.zookeeper.CreateMode
 import org.slf4j.LoggerFactory
 
+
 /**
  * Agent for providing peer to peer interaction between producers
  * @param agentAddress Concrete agent address
@@ -291,7 +292,8 @@ class PeerToPeerAgent(agentAddress : String,
           else
             retries = 0
           if (retries >= 3) {
-            println("\nZk connection Lost\n")
+            println("Zk connection Lost\n")
+            //TODO replace System.exit with exception
             System.exit(1)
           }
           Thread.sleep(1000)
