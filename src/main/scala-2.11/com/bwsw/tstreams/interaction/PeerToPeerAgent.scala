@@ -291,7 +291,7 @@ class PeerToPeerAgent(agentAddress : String,
           else
             retries = 0
           if (retries >= 3) {
-            throw new IllegalStateException("zookeeper connection lost")
+            println("\nZk connection Lost\n")
             System.exit(1)
           }
           Thread.sleep(1000)
