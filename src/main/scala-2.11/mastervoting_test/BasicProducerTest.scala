@@ -19,7 +19,7 @@ import org.redisson.{Config, Redisson}
 
 object BasicProducerTest{
   def main(args: Array[String]) {
-    if (args.length != 8){
+    if (args.length != 9){
       println(s"args size:{${args.length}}")
       args.foreach(println)
       throw new IllegalArgumentException("usage: [cnt] [agentAddress] [zk{host:port}] [cassandra{host:port}]" +
@@ -50,7 +50,7 @@ object BasicProducerTest{
     LogManager.getLogManager.reset()
     System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
     System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")
-//    System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
+    System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
     System.setProperty("org.slf4j.simpleLogger.log.com.bwsw","DEBUG")
 
     val agentSettings = new PeerToPeerAgentSettings(
@@ -89,7 +89,7 @@ object BasicProducerTest{
     //stream instances for producer/consumer
     val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
       name = "test_stream",
-      partitions = 1,
+      partitions = args(8).toInt,
       metadataStorage = metadataStorageInstForProducer,
       dataStorage = aerospikeInstForProducer,
       coordinator = coordinator,
