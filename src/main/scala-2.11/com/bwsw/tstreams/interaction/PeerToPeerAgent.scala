@@ -12,7 +12,6 @@ import com.bwsw.tstreams.interaction.zkservice.{AgentSettings, ZkService}
 import org.apache.zookeeper.CreateMode
 import org.slf4j.LoggerFactory
 
-//TODO add existence check
 /**
  * Agent for providing peer to peer interaction between producers
  * @param agentAddress Concrete agent address
@@ -291,8 +290,10 @@ class PeerToPeerAgent(agentAddress : String,
             retries += 1
           else
             retries = 0
-          if (retries >= 3)
+          if (retries >= 3) {
             throw new IllegalStateException("zookeeper connection lost")
+            System.exit(1)
+          }
           Thread.sleep(1000)
         }
       }
