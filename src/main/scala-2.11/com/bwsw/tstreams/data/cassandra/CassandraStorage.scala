@@ -141,24 +141,25 @@ class CassandraStorage(cluster: Cluster, session: Session, keyspace: String) ext
    * Save all info from buffer in IStorage
    * @return Lambda which indicate done or not putting request(if request was async) null else
    */
-  override def saveBuffer(): () => Unit = {
-    val batchStatement = new BatchStatement()
-    buffer foreach {x =>
-      val statementWithBindings = insertStatement.bind(
-        x.streamName,
-        new Integer(x.partition),
-        x.transaction,
-        new Integer(x.partNum),
-        ByteBuffer.wrap(x.data),
-        new Integer(x.ttl))
+  override def saveBuffer(txn : UUID): () => Unit = {
+    if (buffer.contains(txn)) {
+      val batchStatement = new BatchStatement()
+      buffer(txn) foreach { x =>
+        val statementWithBindings = insertStatement.bind(
+          x.streamName,
+          new Integer(x.partition),
+          x.transaction,
+          new Integer(x.partNum),
+          ByteBuffer.wrap(x.data),
+          new Integer(x.ttl))
 
-      batchStatement.add(statementWithBindings)
+        batchStatement.add(statementWithBindings)
+
+        logger.debug(s"Start putting batch of data with size:${getBufferSize(txn)} in cassandra for streamName: {${buffer(txn).head.streamName}}, partition: {${buffer(txn).head.streamName}")
+        session.execute(batchStatement)
+        logger.debug(s"Finished putting batch of data with size:${getBufferSize(txn)} in cassandra for streamName: {${buffer(txn).head.streamName}}, partition: {${buffer(txn).head.streamName}")
+      }
     }
-
-//    logger.debug(s"Start putting batch of data with size:${getBufferSize()} in cassandra for streamName: {${buffer.head.streamName}}, partition: {${buffer.head.streamName}")
-    session.execute(batchStatement)
-//    logger.debug(s"Finished putting batch of data with size:${getBufferSize()} in cassandra for streamName: {${buffer.head.streamName}}, partition: {${buffer.head.streamName}")
-
     null
   }
 }

@@ -24,6 +24,8 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
                                        val stream : BasicStream[DATATYPE],
                                        val producerOptions: BasicProducerOptions[USERTYPE,DATATYPE]) extends Agent with Interaction{
 
+  stream.dataStorage.bind()
+
   private val serializer = new JsonSerializer
 
   /**

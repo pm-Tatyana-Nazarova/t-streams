@@ -100,11 +100,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
           basicProducer.stream.getTTL,
           basicProducer.producerOptions.converter.convert(obj),
           part)
-        if (basicProducer.stream.dataStorage.getBufferSize() == size) {
-          val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer()
+        if (basicProducer.stream.dataStorage.getBufferSize(transactionUuid) == size) {
+          val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer(transactionUuid)
           if (job != null)
             jobs += job
-          basicProducer.stream.dataStorage.clearBuffer()
+          basicProducer.stream.dataStorage.clearBuffer(transactionUuid)
         }
 
       case InsertionType.SingleElementInsert =>
@@ -136,7 +136,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       case InsertionType.SingleElementInsert =>
 
       case InsertionType.BatchInsert(_) =>
-        basicProducer.stream.dataStorage.clearBuffer()
+        basicProducer.stream.dataStorage.clearBuffer(transactionUuid)
 
       case _ =>
         throw new IllegalStateException("Insert Type can't be resolved")
@@ -168,11 +168,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       case InsertionType.SingleElementInsert =>
 
       case InsertionType.BatchInsert(size) =>
-        if (basicProducer.stream.dataStorage.getBufferSize() > 0) {
-          val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer()
+        if (basicProducer.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
+          val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer(transactionUuid)
           if (job != null)
             jobs += job
-          basicProducer.stream.dataStorage.clearBuffer()
+          basicProducer.stream.dataStorage.clearBuffer(transactionUuid)
         }
 
       case _ =>

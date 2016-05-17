@@ -93,19 +93,22 @@ class AerospikeStorage(client : AerospikeClient, options : AerospikeStorageOptio
    * Save all info from buffer in IStorage
    * @return Lambda which indicate done or not putting request(if request was async) null else
    */
-  override def saveBuffer(): () => Unit = {
-    val elem = buffer.head
-    options.writePolicy.expiration = elem.ttl
-    val key: Key = new Key(options.namespace, s"${elem.streamName}/${elem.partition}", elem.transaction.toString)
+  override def saveBuffer(txn : UUID): () => Unit = {
+    if (buffer.contains(txn)) {
+      val elem = buffer(txn).head
+      options.writePolicy.expiration = elem.ttl
+      val key: Key = new Key(options.namespace, s"${elem.streamName}/${elem.partition}", elem.transaction.toString)
 
-    val mapped = buffer map {elem =>
-      new Bin(elem.partNum.toString, elem.data)
+      val mapped = buffer(txn) map { el =>
+        assert(el.streamName == el.streamName && el.partition == el.partition
+          && el.transaction.timestamp() == elem.transaction.timestamp())
+        new Bin(el.partNum.toString, el.data)
+      }
+
+      logger.debug(s"Start putting batch of data with size:${getBufferSize(txn)} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
+      client.put(options.writePolicy, key, mapped: _*)
+      logger.debug(s"Finished putting batch of data with size:${getBufferSize(txn)} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
     }
-
-//    logger.debug(s"Start putting batch of data with size:${getBufferSize()} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
-    client.put(options.writePolicy, key, mapped:_*)
-//    logger.debug(s"Finished putting batch of data with size:${getBufferSize()} in aerospike for streamName: {${elem.streamName}}, partition: {${elem.partition}")
-
     null
   }
 }

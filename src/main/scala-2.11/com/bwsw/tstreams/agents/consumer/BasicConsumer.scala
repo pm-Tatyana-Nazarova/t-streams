@@ -23,6 +23,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
                                         val stream : BasicStream[DATATYPE],
                                         val options : BasicConsumerOptions[DATATYPE, USERTYPE]) extends Agent{
 
+  stream.dataStorage.bind()
 
   /**
    * BasicConsumer logger for logging
