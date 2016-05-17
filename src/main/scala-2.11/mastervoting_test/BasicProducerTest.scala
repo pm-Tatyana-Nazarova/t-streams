@@ -101,7 +101,7 @@ object BasicProducerTest{
       transactionTTL = 6,
       transactionKeepAliveInterval = 2,
       producerKeepAliveInterval = 1,
-      new RoundRobinPolicy(streamForProducer, List(0)),
+      new RoundRobinPolicy(streamForProducer, (0 until args(8).toInt).toList),
       BatchInsert(10),
       new LocalTimeUUIDGenerator,
       agentSettings,
