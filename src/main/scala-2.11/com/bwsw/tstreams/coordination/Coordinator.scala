@@ -13,11 +13,6 @@ class Coordinator(prefix : String,
                   client : RedissonClient){
 
   /**
-   * Unique id for concrete coordinator
-   */
-  val id = java.util.UUID.randomUUID().toString
-
-  /**
    * Creating topic on concrete prefix+name
    * @param name Topic name
    * @tparam T Message type

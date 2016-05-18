@@ -271,8 +271,4 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    */
   override def getMetadataRef(): MetadataStorage = stream.metadataStorage
 
-  /**
-   * @return Coordinator link
-   */
-  override def getCoordinationRef(): Coordinator = stream.coordinator
 }

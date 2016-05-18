@@ -127,11 +127,6 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   override def getMetadataRef(): MetadataStorage = stream.metadataStorage
 
   /**
-   * @return Coordinator link
-   */
-  override def getCoordinationRef(): Coordinator = stream.coordinator
-
-  /**
    * Method to implement for concrete producer
    * Need only if this producer is master
    * @return UUID

@@ -45,7 +45,7 @@ class CheckpointGroup() {
    * Commit all agents state
    */
   def commit() : Unit = {
-    val totalCommit: List[CommitInfo] = agents.map(x=>x._2.getCommitInfo()).reduceRight((l1,l2)=>l1 ++ l2)
-    agents.head._2.getMetadataRef().groupCommitEntity.groupCommit(totalCommit)
+    val totalCommitInfo: List[CommitInfo] = agents.map(x=>x._2.getCommitInfo()).reduceRight((l1,l2)=>l1 ++ l2)
+    agents.head._2.getMetadataRef().groupCommitEntity.groupCommit(totalCommitInfo)
   }
 }
