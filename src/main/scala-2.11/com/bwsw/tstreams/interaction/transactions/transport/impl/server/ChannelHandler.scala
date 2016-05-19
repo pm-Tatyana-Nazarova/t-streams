@@ -6,6 +6,7 @@ import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.interaction.transactions.messages.IMessage
 import io.netty.channel._
 import io.netty.handler.codec.{MessageToMessageDecoder, MessageToMessageEncoder}
+import io.netty.util.ReferenceCountUtil
 
 @ChannelHandler.Sharable
 class ChannelHandler(callback : (IMessage) => Unit) extends SimpleChannelInboundHandler[IMessage] {
@@ -27,6 +28,7 @@ class ChannelHandler(callback : (IMessage) => Unit) extends SimpleChannelInbound
       idToAddress(id) = address
     }
     callback(msg)
+    ReferenceCountUtil.release(msg)
     lock.unlock()
   }
 

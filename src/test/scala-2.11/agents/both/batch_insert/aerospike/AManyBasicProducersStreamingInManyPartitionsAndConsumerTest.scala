@@ -178,9 +178,9 @@ class AManyBasicProducersStreamingInManyPartitionsAndConsumerTest extends FlatSp
   }
 
   override def afterAll(): Unit = {
-    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
-    zkService.deleteRecursive("")
-    zkService.close()
+//    val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
+//    zkService.deleteRecursive("")
+//    zkService.close()
     session.execute(s"DROP KEYSPACE $randomKeyspace")
     session.close()
     cluster.close()

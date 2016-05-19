@@ -6,7 +6,7 @@ import com.twitter.common.quantity.Amount
 import com.twitter.common.zookeeper.{ZooKeeperClient, DistributedLockImpl}
 import org.apache.zookeeper.ZooDefs.Ids
 import org.apache.zookeeper.ZooKeeper.States
-import org.apache.zookeeper.CreateMode
+import org.apache.zookeeper.{Watcher, CreateMode}
 import collection.JavaConverters._
 
 /**
@@ -50,6 +50,17 @@ class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTim
     else {
       throw new IllegalStateException("path already exist")
     }
+  }
+
+  def setWatcher(path : String, watcher : Watcher) : Unit = {
+    if (zkClient.exists(prefix+path, null) == null) {
+      val lock = getLock("/producers/watcher_path_lock")
+      lock.lock()
+      if (zkClient.exists(prefix+path, null) == null)
+        createPathRecursive(prefix+path, CreateMode.PERSISTENT)
+      lock.unlock()
+    }
+    zkClient.getData(prefix + path, watcher, null)
   }
 
   def setData(path : String, data : Any) : Unit = {

@@ -2,7 +2,6 @@ package com.bwsw.tstreams.agents.consumer
 
 import java.util.UUID
 import com.bwsw.tstreams.agents.group.{ConsumerCommitInfo, CommitInfo, Agent}
-import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.entities.TransactionSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
@@ -247,7 +246,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * Save current offsets in metadata to read later from them (in case of system stop/failure)
    */
     def checkpoint() : Unit = {
-      logger.debug(s"Start saving checkpoints for " +
+      logger.info(s"Start saving checkpoints for " +
         s"consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
       stream.metadataStorage.consumerEntity.saveBatchOffset(name, stream.getName, offsetsForCheckpoint)

@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.producer
 import java.util.UUID
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage}
+import com.bwsw.tstreams.interaction.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
 import org.redisson.core.RTopic
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
@@ -227,7 +227,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         if (value)
           break()
 
-        //-1 here indicate that transaction is started but not finished yet
+        //-1 here indicate that transaction is started but is not finished yet
         basicProducer.stream.metadataStorage.producerCommitEntity.commit(
           streamName = basicProducer.stream.getName,
           partition = partition,

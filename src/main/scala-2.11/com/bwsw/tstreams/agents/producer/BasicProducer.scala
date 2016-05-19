@@ -4,7 +4,7 @@ import java.util.UUID
 import com.bwsw.tstreams.agents.group.{CommitInfo, Agent}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
 import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage, Coordinator}
+import com.bwsw.tstreams.interaction.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
 import com.bwsw.tstreams.interaction.transactions.PeerToPeerAgent
 import com.bwsw.tstreams.interaction.transactions.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
@@ -127,7 +127,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   override def getMetadataRef(): MetadataStorage = stream.metadataStorage
 
   /**
-   * Method to implement for concrete producer
+   * Method to implement for concrete producer [[PeerToPeerAgent]] method
    * Need only if this producer is master
    * @return UUID
    */
