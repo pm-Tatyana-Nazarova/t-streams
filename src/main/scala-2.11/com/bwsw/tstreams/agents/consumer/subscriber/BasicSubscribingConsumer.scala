@@ -69,7 +69,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       //consume all messages greater than last
       if (lastTransactionOpt.isDefined)
         transactionsRelay.consumeTransactionsMoreThan(lastTransactionOpt.get.getTxnUUID)
-      else{
+      else {
         val oldestUuid = options.txnGenerator.getTimeUUID(0)
         transactionsRelay.consumeTransactionsMoreThan(oldestUuid)
       }

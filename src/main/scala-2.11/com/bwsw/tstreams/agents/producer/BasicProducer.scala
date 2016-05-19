@@ -56,7 +56,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     if (!(partition >= 0 && partition < stream.getPartitions))
       throw new IllegalArgumentException("invalid partition")
 
-    logger.info(s"Start new BasicProducerTransaction for BasicProducer " +
+    logger.debug(s"Start new BasicProducerTransaction for BasicProducer " +
       s"with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions} on partition $partition\n")
 
     val transaction = {

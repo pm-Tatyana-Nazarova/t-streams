@@ -30,7 +30,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
    * BasicProducerTransaction logger for logging
    */
   private val logger = LoggerFactory.getLogger(this.getClass)
-  logger.info(s"Open transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
+  logger.debug(s"Open transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
 
   /**
    * Return transaction partition
@@ -154,7 +154,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     topicRef.publish(serializer.serialize(msg))
 
     closed = true
-    logger.info(s"Cancel transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
+    logger.debug(s"Cancel transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
   }
 
   /**
@@ -205,7 +205,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     }
 
     closed = true
-    logger.info(s"Close transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
+    logger.debug(s"Close transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
   }
 
   /**
