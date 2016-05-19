@@ -1,11 +1,10 @@
-package com.bwsw.tstreams.newcoordination.subscribe
+package com.bwsw.tstreams.coordination.subscribe
 
 import java.net.InetSocketAddress
 
 import com.bwsw.tstreams.common.zkservice.ZkService
-import com.bwsw.tstreams.newcoordination.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
-import com.bwsw.tstreams.newcoordination.subscribe.listener.ProducerTopicMessageListener
-import com.datastax.driver.core.utils.UUIDs
+import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.subscribe.listener.ProducerTopicMessageListener
 import org.apache.zookeeper.CreateMode
 
 
@@ -14,7 +13,7 @@ class SubscriberCoordinator(agentAddress : String,
                             zkHosts : List[InetSocketAddress],
                             zkSessionTimeout : Int,
                             onMessageCallback : (ProducerTopicMessage) => Unit) {
-  private val SYNCHRONIZE_TIME = 60
+  private val SYNCHRONIZE_LIMIT = 60
 
   private val zkService = new ZkService(prefix, zkHosts, zkSessionTimeout)
   private val (_,port) = getHostPort(agentAddress)
@@ -26,6 +25,10 @@ class SubscriberCoordinator(agentAddress : String,
     val host = splits(0)
     val port = splits(1).toInt
     (host, port)
+  }
+
+  def stop() = {
+    listener.stop()
   }
 
   def startListen() =
@@ -44,7 +47,7 @@ class SubscriberCoordinator(agentAddress : String,
     val agentsOpt = zkService.getAllSubPath(s"/producers/agents/$streamName/$partition")
     val totalAmount = if (agentsOpt.isEmpty) 0 else agentsOpt.get.size
     var timer = 0
-    while (listener.getConnectionsAmount < totalAmount && timer < SYNCHRONIZE_TIME){
+    while (listener.getConnectionsAmount < totalAmount && timer < SYNCHRONIZE_LIMIT){
       timer += 1
       Thread.sleep(1000)
     }

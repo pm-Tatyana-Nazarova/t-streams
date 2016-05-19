@@ -1,11 +1,11 @@
-package com.bwsw.tstreams.newcoordination.subscribe
+package com.bwsw.tstreams.coordination.subscribe
 
 import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.common.zkservice.ZkService
-import com.bwsw.tstreams.newcoordination.subscribe.publisher.Broadcaster
-import com.bwsw.tstreams.newcoordination.subscribe.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.subscribe.publisher.Broadcaster
+import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
 import org.apache.zookeeper.{WatchedEvent, Watcher}
 
 

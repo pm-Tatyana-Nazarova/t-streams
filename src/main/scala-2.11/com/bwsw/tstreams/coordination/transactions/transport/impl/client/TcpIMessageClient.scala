@@ -1,9 +1,9 @@
-package com.bwsw.tstreams.newcoordination.transactions.transport.impl.client
+package com.bwsw.tstreams.coordination.transactions.transport.impl.client
 
 import java.io.{IOException, InputStreamReader, BufferedReader}
 import java.net.Socket
 import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.newcoordination.transactions.messages.IMessage
+import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 
 /**
  * Client for sending IMessage messages

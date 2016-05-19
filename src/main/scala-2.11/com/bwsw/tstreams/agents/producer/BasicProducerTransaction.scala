@@ -2,9 +2,7 @@ package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
-import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.newcoordination.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
-import org.redisson.core.RTopic
+import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{Await, Future}
@@ -12,7 +10,6 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.control.Breaks._
 import scala.concurrent.ExecutionContext.Implicits.global
-
 
 /**
  * Transaction retrieved by BasicProducer.newTransaction method
@@ -53,11 +50,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   private var part = 0
 
   /**
-   * Serializer to serialize ProducerTopicMessages
-   */
-  private val serializer = new JsonSerializer
-
-  /**
    * Max awaiting time on Await.ready() method for futures
    */
   private val TIMEOUT = 2 seconds
@@ -71,12 +63,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
    * Queue to figure out moment when transaction is going to close
    */
   private val updateQueue = new LinkedBlockingQueue[Boolean](10)
-
-  /**
-   * Topic reference for concrete producer on concrete stream/partition to publish events(cancel,close,update)
-   */
-  private val topicRef: RTopic[String] =
-    basicProducer.stream.coordinator.getTopic[String](s"${basicProducer.stream.getName}/$partition/events")
 
   /**
    * Future to keep this transaction alive
@@ -151,7 +137,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
     val msg = ProducerTopicMessage(txnUuid = transactionUuid, ttl = -1, status = ProducerTransactionStatus.cancelled)
 
-    topicRef.publish(serializer.serialize(msg))
+    basicProducer.coordinator.publish(msg)
 
     closed = true
     logger.debug(s"Cancel transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
@@ -201,7 +187,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         status = ProducerTransactionStatus.closed)
 
       //publish that current txn is closed
-      topicRef.publish(serializer.serialize(msg))
+      basicProducer.coordinator.publish(msg)
     }
 
     closed = true
@@ -241,7 +227,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
           status = ProducerTransactionStatus.opened)
 
         //publish that current txn is being updating
-        topicRef.publish(serializer.serialize(msg))
+        basicProducer.coordinator.publish(msg)
       }}
     }
   }

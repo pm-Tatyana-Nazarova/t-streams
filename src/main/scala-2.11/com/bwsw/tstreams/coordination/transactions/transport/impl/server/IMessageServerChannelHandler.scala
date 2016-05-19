@@ -1,9 +1,9 @@
-package com.bwsw.tstreams.newcoordination.transactions.transport.impl.server
+package com.bwsw.tstreams.coordination.transactions.transport.impl.server
 
 import java.util
 import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.newcoordination.transactions.messages.IMessage
+import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 import io.netty.channel._
 import io.netty.handler.codec.{MessageToMessageDecoder, MessageToMessageEncoder}
 import io.netty.util.ReferenceCountUtil

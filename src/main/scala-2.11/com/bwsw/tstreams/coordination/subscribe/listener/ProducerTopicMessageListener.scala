@@ -1,7 +1,7 @@
-package com.bwsw.tstreams.newcoordination.subscribe.listener
+package com.bwsw.tstreams.coordination.subscribe.listener
 
 import java.util.concurrent.CountDownLatch
-import com.bwsw.tstreams.newcoordination.subscribe.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup

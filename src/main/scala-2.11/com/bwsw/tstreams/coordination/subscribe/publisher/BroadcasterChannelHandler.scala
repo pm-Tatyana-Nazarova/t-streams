@@ -1,10 +1,10 @@
-package com.bwsw.tstreams.newcoordination.subscribe.publisher
+package com.bwsw.tstreams.coordination.subscribe.publisher
 
 import java.util
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.newcoordination.subscribe.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
 import io.netty.channel._
 import io.netty.channel.group.DefaultChannelGroup
 import io.netty.handler.codec.MessageToMessageEncoder

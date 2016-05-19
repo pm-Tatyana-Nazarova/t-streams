@@ -7,14 +7,12 @@ import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, B
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.newcoordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Redisson, Config}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 import scala.collection.mutable.ListBuffer
@@ -55,19 +53,12 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
     keyspace = randomKeyspace)
 
-  //coordinator for coordinating producer/consumer
-  val config = new Config()
-  config.useSingleServer().setAddress("localhost:6379")
-  val redissonClient = Redisson.create(config)
-  val coordinator = new Coordinator("some_path", redissonClient)
-
   //stream instances for producer/consumer
   val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
     name = "test_stream",
     partitions = 3,
     metadataStorage = metadataStorageInstForProducer,
     dataStorage = aerospikeInstForProducer,
-    coordinator = coordinator,
     ttl = 60 * 10,
     description = "some_description")
 
@@ -76,7 +67,6 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
     partitions = 3,
     metadataStorage = metadataStorageInstForConsumer,
     dataStorage = aerospikeInstForConsumer,
-    coordinator = coordinator,
     ttl = 60 * 10,
     description = "some_description")
 
@@ -251,7 +241,6 @@ class ABasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with B
     cluster.close()
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
-    redissonClient.shutdown()
   }
 }
 

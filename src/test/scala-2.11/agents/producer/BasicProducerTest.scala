@@ -4,14 +4,12 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.agents.producer._
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
-import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
-import com.bwsw.tstreams.newcoordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.services.BasicStreamService
 import com.datastax.driver.core.Cluster
-import org.redisson.{Redisson, Config}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper, RandomStringCreator}
 
@@ -28,11 +26,6 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
   val metadataStorageFactory = new MetadataStorageFactory
   val storageFactory = new CassandraStorageFactory
 
-  val config = new Config()
-  config.useSingleServer().setAddress("localhost:6379")
-  val redisson = Redisson.create(config)
-  val coordinator = new Coordinator("some_path", redisson)
-
   val stringToArrayByteConverter = new StringToArrayByteConverter
 
   val cassandraOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
@@ -43,8 +36,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     ttl = 60 * 10,
     description = "unit_testing",
     metadataStorage = metadataStorageFactory.getInstance(List(new InetSocketAddress("localhost", 9042)), randomKeyspace),
-    dataStorage = storageFactory.getInstance(cassandraOptions),
-    coordinator = coordinator)
+    dataStorage = storageFactory.getInstance(cassandraOptions))
 
   val agentSettings = new ProducerCoordinationSettings(
     agentAddress = s"localhost:8000",
@@ -99,7 +91,6 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     temporarySession.execute(s"DROP KEYSPACE $randomKeyspace")
     temporarySession.close()
     temporaryCluster.close()
-    redisson.shutdown()
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
   }

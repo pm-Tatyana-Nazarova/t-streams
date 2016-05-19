@@ -8,16 +8,14 @@ import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
-import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
 import com.bwsw.tstreams.entities.CommitEntity
-import com.bwsw.tstreams.newcoordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
 import com.datastax.driver.core.utils.UUIDs
-import org.redisson.{Redisson, Config}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, CassandraHelper, RandomStringCreator}
 
@@ -52,17 +50,11 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
     keyspace = randomKeyspace)
 
-  val config = new Config()
-  config.useSingleServer().setAddress("localhost:6379")
-  val redissonClient = Redisson.create(config)
-  val coordinator = new Coordinator("some_path", redissonClient)
-
   val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
     name = "test_stream",
     partitions = 3,
     metadataStorage = metadataStorageInstForProducer,
     dataStorage = aerospikeInstForProducer,
-    coordinator = coordinator,
     ttl = 60 * 10,
     description = "some_description")
 
@@ -71,7 +63,6 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     partitions = 3,
     metadataStorage = metadataStorageInstForConsumer,
     dataStorage = aerospikeInstForConsumer,
-    coordinator = coordinator,
     ttl = 60 * 10,
     description = "some_description")
 
@@ -163,6 +154,5 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     connectedSession.close()
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
-    redissonClient.shutdown()
   }
 }

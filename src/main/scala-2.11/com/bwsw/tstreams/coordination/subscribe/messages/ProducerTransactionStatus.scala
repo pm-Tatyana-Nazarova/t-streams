@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.newcoordination.subscribe.messages
+package com.bwsw.tstreams.coordination.subscribe.messages
 
 /**
  * Status for producer topic messages

@@ -6,14 +6,12 @@ import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, B
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
-import com.bwsw.tstreams.newcoordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Config, Redisson}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 
@@ -48,19 +46,12 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
     keyspace = randomKeyspace)
 
-  //coordinator for coordinating producer/consumer
-  val config = new Config()
-  config.useSingleServer().setAddress("localhost:6379")
-  val redissonClient = Redisson.create(config)
-  val coordinator = new Coordinator("some_path", redissonClient)
-
   //stream instances for producer/consumer
   val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
     name = "test_stream",
     partitions = 3,
     metadataStorage = metadataStorageInstForProducer,
     dataStorage = cassandraInstForProducer,
-    coordinator = coordinator,
     ttl = 60 * 10,
     description = "some_description")
 
@@ -69,7 +60,6 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     partitions = 3,
     metadataStorage = metadataStorageInstForConsumer,
     dataStorage = cassandraInstForConsumer,
-    coordinator = coordinator,
     ttl = 60 * 10,
     description = "some_description")
 
@@ -157,6 +147,5 @@ class CBasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     cluster.close()
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
-    redissonClient.shutdown()
   }
 }

@@ -6,19 +6,17 @@ import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.subscriber.{SubscriberCoordinationOptions, BasicSubscriberCallback, BasicSubscribingConsumer}
 import com.bwsw.tstreams.agents.consumer.BasicConsumerOptions
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.newcoordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Config, Redisson}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import testutils._
 import scala.collection.mutable.ListBuffer
@@ -42,12 +40,6 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
   //converters to convert usertype->storagetype; storagetype->usertype
   val arrayByteToStringConverter = new ArrayByteToStringConverter
   val stringToArrayByteConverter = new StringToArrayByteConverter
-
-  //coordinator for coordinating producer/consumer
-  val config = new Config()
-  config.useSingleServer().setAddress("localhost:6379")
-  val redissonClient = Redisson.create(config)
-  val coordinator = new Coordinator("some_path", redissonClient)
 
   //aerospike storage options
   val hosts = List(
@@ -115,7 +107,12 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
       }
       override val frequency: Int = 1
     }
-    val subscriber = new BasicSubscribingConsumer("test_consumer", streamInst, consumerOptions, callback, path)
+    val subscriber = new BasicSubscribingConsumer("test_consumer",
+      streamInst,
+      consumerOptions,
+      SubscriberCoordinationOptions("localhost:8101", "/unit", List(new InetSocketAddress("localhost", 2181)), 7000),
+      callback,
+      path)
     subscriber.start()
 
     producersThreads.foreach(x=>x.start())
@@ -168,7 +165,6 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
       partitions = partitions,
       metadataStorage = metadataStorageInst,
       dataStorage = dataStorageInst,
-      coordinator = coordinator,
       ttl = 60 * 10,
       description = "some_description")
   }
@@ -182,7 +178,6 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     cluster.close()
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
-    redissonClient.shutdown()
     val file = new File(path)
     remove(file)
   }

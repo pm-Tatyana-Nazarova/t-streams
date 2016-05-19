@@ -28,13 +28,6 @@ libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.
 
 
 //COORDINATION
-libraryDependencies += ("org.redisson" % "redisson" % "2.2.11")
-  .exclude("io.netty", "netty-common")
-  .exclude("io.netty", "netty-codec")
-  .exclude("io.netty", "netty-transport")
-  .exclude("io.netty", "netty-buffer")
-  .exclude("io.netty", "netty-handler")
-
 resolvers += "twitter resolver" at "http://maven.twttr.com"
 libraryDependencies += "com.twitter.common.zookeeper" % "lock" % "0.0.7"
 

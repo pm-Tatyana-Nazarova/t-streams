@@ -7,14 +7,12 @@ import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerPolicies, BasicProducer, BasicProducerOptions, ProducerCoordinationSettings}
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
-import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
-import com.bwsw.tstreams.newcoordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.RoundRobinPolicy
 import com.bwsw.tstreams.streams.BasicStream
-import org.redisson.{Config, Redisson}
 
 
 object BasicProducerTest{
@@ -80,11 +78,6 @@ object BasicProducerTest{
       cassandraHosts = cassandraHosts.toList,
       keyspace = keyspace)
 
-    //coordinator for coordinating producer/consumer
-    val config = new Config()
-    config.useSingleServer().setAddress(redisHost)
-    val redissonClient = Redisson.create(config)
-    val coordinator = new Coordinator("some_path", redissonClient)
 
     //stream instances for producer/consumer
     val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
@@ -92,7 +85,6 @@ object BasicProducerTest{
       partitions = args(8).toInt,
       metadataStorage = metadataStorageInstForProducer,
       dataStorage = aerospikeInstForProducer,
-      coordinator = coordinator,
       ttl = 60 * 10,
       description = "some_description")
 
@@ -119,6 +111,5 @@ object BasicProducerTest{
 
     producer.agent.stop()
     metadataStorageFactory.closeFactory()
-    redissonClient.shutdown()
   }
 }

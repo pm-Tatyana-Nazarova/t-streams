@@ -24,9 +24,6 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
 
   stream.dataStorage.bind()
 
-  /**
-   * BasicConsumer logger for logging
-   */
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   logger.info(s"Start new Basic consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
