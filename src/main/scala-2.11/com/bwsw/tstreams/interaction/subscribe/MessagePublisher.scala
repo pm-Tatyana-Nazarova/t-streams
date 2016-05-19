@@ -11,21 +11,21 @@ import org.apache.zookeeper.{WatchedEvent, Watcher}
 
 class MessagePublisher(prefix : String,
                        streamName : String,
-                       partitions : List[Int],
+                       usedPartitions : List[Int],
                        zkHosts : List[InetSocketAddress],
                        zkSessionTimeout : Int) {
   private val zkService = new ZkService(prefix, zkHosts, zkSessionTimeout)
   private val broadcaster = new Broadcaster
   private val lock = new ReentrantLock(true)
 
-  partitions foreach { p =>
+  usedPartitions foreach { p =>
     val watcher = new Watcher {
       override def process(event: WatchedEvent): Unit = {
-        updateSubscribers()
-        zkService.setWatcher(s"/subscribers/$streamName/event", this)
+        updateSubscribers(p)
+        zkService.setWatcher(s"/subscribers/$streamName/$p/event", this)
       }
     }
-    zkService.setWatcher(s"/subscribers/$streamName/event", watcher)
+    zkService.setWatcher(s"/subscribers/$streamName/$p/event", watcher)
   }
 
   def broadcast(msg : ProducerTopicMessage) = {
@@ -34,9 +34,12 @@ class MessagePublisher(prefix : String,
     lock.unlock()
   }
 
-  private def updateSubscribers() = {
+  private def updateSubscribers(partition : Int) = {
     lock.lock()
-//    val agentsOpt = zkService.getAllSubNodesData[AgentSettings](s"/consumers/agents/$streamName/$partition")
+    val subscribersOpt = zkService.getAllSubNodesData[String](s"/subscribers/$streamName/$partition/agents")
+    if (subscribersOpt.isDefined){
+      broadcaster.updateSubscribers(subscribersOpt.get)
+    }
     lock.unlock()
   }
 }

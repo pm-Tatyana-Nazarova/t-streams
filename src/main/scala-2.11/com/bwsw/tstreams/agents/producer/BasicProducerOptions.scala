@@ -26,7 +26,7 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
                                               val writePolicy : AbstractPolicy,
                                               val insertType: InsertType,
                                               val txnGenerator: IUUIDGenerator,
-                                              val peerToPeerAgentSettings : PeerToPeerAgentSettings,
+                                              val peerToPeerAgentSettings : ProducerCoordinationSettings,
                                               val converter : IConverter[USERTYPE,DATATYPE]) {
 
   /**
@@ -63,10 +63,10 @@ class BasicProducerOptions[USERTYPE,DATATYPE](val transactionTTL : Int,
 }
 
 
-class PeerToPeerAgentSettings(val agentAddress : String,
-                              val zkHosts : List[InetSocketAddress],
-                              val zkRootPath : String,
-                              val zkTimeout : Int,
-                              val isLowPriorityToBeMaster : Boolean,
-                              val transport: ITransport,
-                              val transportTimeout : Int)
+class ProducerCoordinationSettings(val agentAddress : String,
+                                   val zkHosts : List[InetSocketAddress],
+                                   val zkRootPath : String,
+                                   val zkTimeout : Int,
+                                   val isLowPriorityToBeMaster : Boolean,
+                                   val transport: ITransport,
+                                   val transportTimeout : Int)

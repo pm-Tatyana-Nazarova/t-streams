@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{PeerToPeerAgentSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
@@ -87,7 +87,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     ttl = 60 * 10,
     description = "some_description")
 
-  val agentSettings1 = new PeerToPeerAgentSettings(
+  val agentSettings1 = new ProducerCoordinationSettings(
     agentAddress = "localhost:8888",
     zkHosts = List(new InetSocketAddress("localhost", 2181)),
     zkRootPath = "/unit",
@@ -96,7 +96,7 @@ class СBasicProducerAndConsumerLazyTest extends FlatSpec with Matchers with Bef
     transport = new TcpTransport,
     transportTimeout = 5)
 
-  val agentSettings2 = new PeerToPeerAgentSettings(
+  val agentSettings2 = new ProducerCoordinationSettings(
     agentAddress = "localhost:8889",
     zkHosts = List(new InetSocketAddress("localhost", 2181)),
     zkRootPath = "/unit",

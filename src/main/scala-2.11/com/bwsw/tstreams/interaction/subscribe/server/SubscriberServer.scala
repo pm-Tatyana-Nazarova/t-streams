@@ -1,21 +1,17 @@
-package com.bwsw.tstreams.interaction.transactions.transport.impl.server
+package com.bwsw.tstreams.interaction.subscribe.server
 
 import java.util.concurrent.CountDownLatch
-import com.bwsw.tstreams.interaction.transactions.messages.IMessage
+import com.bwsw.tstreams.interaction.subscribe.messages.ProducerTopicMessage
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
-import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
-import io.netty.handler.codec.{DelimiterBasedFrameDecoder, Delimiters}
+import io.netty.handler.codec.string.StringDecoder
+import io.netty.handler.codec.{Delimiters, DelimiterBasedFrameDecoder}
 
-/**
- * IMessage listener
- * @param port Listener port
- * @param newMessageCallback Callback on every received message
- */
-class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit){
+//TODO make common trait for server creation and unite with TcpIMessageServer
+class SubscriberServer(port : Int, callback : (ProducerTopicMessage) => Unit) {
   /**
    * Socket accept worker
    */
@@ -31,7 +27,7 @@ class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit){
    */
   private val MAX_FRAME_LENGTH = 8192
 
-  private val channelHandler = new IMessageServerChannelHandler(newMessageCallback)
+  private val channelHandler = new SubscriberChannelHandler(callback)
 
   private var listenerThread : Thread = null
 
@@ -39,10 +35,6 @@ class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit){
   def stop() = {
     workerGroup.shutdownGracefully()
     bossGroup.shutdownGracefully()
-  }
-
-  def response(msg : IMessage) = {
-    channelHandler.response(msg)
   }
 
   def start() = {
@@ -59,9 +51,7 @@ class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit){
                 val p = ch.pipeline()
                 p.addLast("framer", new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, Delimiters.lineDelimiter():_*))
                 p.addLast("decoder", new StringDecoder())
-                p.addLast("deserializer", new IMessageDecoder())
-                p.addLast("encoder", new StringEncoder())
-                p.addLast("serializer", new IMessageEncoder())
+                p.addLast("deserializer", new ProducerTopicMessageDecoder())
                 p.addLast("handler", channelHandler)
               }
             })

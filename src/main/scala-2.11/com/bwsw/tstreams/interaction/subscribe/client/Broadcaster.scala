@@ -14,7 +14,7 @@ import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
 class Broadcaster {
   private val group = new NioEventLoopGroup()
   private var bootstrap : Bootstrap = null
-  private val channelHandler = new BroadcasterChannelHandler
+  private val channelHandler = new BroadcasterChannelHandler(this)
 
   bootstrap = new Bootstrap()
   bootstrap
@@ -30,8 +30,14 @@ class Broadcaster {
       }
     })
 
-  def connect(address : InetSocketAddress) = {
-    bootstrap.connect(address).await()
+  def connect(address : String) = {
+    val splits = address.split(",")
+    val host = splits(0)
+    val port = splits(1).toInt
+    val channelFuture = bootstrap.connect(new InetSocketAddress(host,port)).await()
+    if (channelFuture.isSuccess){
+      channelHandler.updateMap(channelFuture.channel().id(), address)
+    }
   }
 
   def broadcast(msg : ProducerTopicMessage) = {

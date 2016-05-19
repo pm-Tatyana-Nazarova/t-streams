@@ -57,7 +57,7 @@ class PeerToPeerAgent(agentAddress : String,
   startHandleMessages()
   usedPartitions foreach {p =>
     val penalty = if (isLowPriorityToBeMaster) 1000*1000 else 0
-    zkService.create[AgentSettings](s"/producers/agents/$streamName/$p/unique_agent_$agentAddress" + "_",
+    zkService.create[AgentSettings](s"/producers/agents/$streamName/$p/agent_${agentAddress}_",
        AgentSettings(agentAddress, priority = 0, penalty),
        CreateMode.EPHEMERAL_SEQUENTIAL)
   }

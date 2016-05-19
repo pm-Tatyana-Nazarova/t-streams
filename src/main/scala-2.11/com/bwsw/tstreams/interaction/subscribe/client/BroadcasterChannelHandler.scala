@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.interaction.subscribe.client
 
 import java.util
+import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.interaction.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
@@ -9,11 +10,15 @@ import io.netty.channel._
 import io.netty.channel.group.DefaultChannelGroup
 import io.netty.handler.codec.MessageToMessageEncoder
 import io.netty.util.concurrent.GlobalEventExecutor
+import org.slf4j.LoggerFactory
 
 @ChannelHandler.Sharable
-class BroadcasterChannelHandler extends SimpleChannelInboundHandler[ProducerTopicMessage] {
-
+class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannelInboundHandler[ProducerTopicMessage] {
+  private val logger = LoggerFactory.getLogger(this.getClass)
   private val group = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
+  private val idToAddress = scala.collection.mutable.Map[ChannelId, String]()
+  private val addressToId = scala.collection.mutable.Map[String, ChannelId]()
+  private val lock = new ReentrantLock(true)
 
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
     throw new IllegalStateException("Broadcaster must only broadcast messages without any response")
@@ -28,7 +33,14 @@ class BroadcasterChannelHandler extends SimpleChannelInboundHandler[ProducerTopi
 
   //triggered on disconnect
   override def channelInactive(ctx: ChannelHandlerContext) : Unit = {
-
+    lock.lock()
+    val id = ctx.channel().id()
+    assert(idToAddress.contains(id))
+    val address = idToAddress(id)
+    assert(addressToId.contains(address))
+    idToAddress.remove(id)
+    addressToId.remove(address)
+    lock.unlock()
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
@@ -41,7 +53,20 @@ class BroadcasterChannelHandler extends SimpleChannelInboundHandler[ProducerTopi
   }
 
   def updateSubscribers(newSubscribers : List[String]) = {
-    ???
+    lock.lock()
+    logger.debug(s"[BROADCASTER] start updating subscribers:{${addressToId.keys.mkString(",")}}" +
+      s" using newSubscribers:{${newSubscribers.mkString(",")}}")
+    newSubscribers.diff(addressToId.keys.toList) foreach { subscriber =>
+      broadcaster.connect(subscriber)
+    }
+    logger.debug(s"[BROADCASTER] updated subscribers:{${addressToId.keys.mkString(",")}}, current group size: {${group.size()}}")
+    assert(group.size() <= addressToId.keys.size)
+    lock.unlock()
+  }
+
+  def updateMap(channelId: ChannelId, address : String) = {
+    idToAddress(channelId) = address
+    addressToId(address) = channelId
   }
   
   def closeChannels() = {

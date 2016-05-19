@@ -5,7 +5,7 @@ import java.util.UUID
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumerTransaction, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.producer.{PeerToPeerAgentSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.SingleElementInsert
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
 import com.bwsw.tstreams.coordination.Coordinator
@@ -75,7 +75,7 @@ class BasicConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     ttl = 60 * 10,
     description = "some_description")
 
-  val agentSettings = new PeerToPeerAgentSettings(
+  val agentSettings = new ProducerCoordinationSettings(
     agentAddress = s"localhost:8000",
     zkHosts = List(new InetSocketAddress("localhost", 2181)),
     zkRootPath = "/unit",

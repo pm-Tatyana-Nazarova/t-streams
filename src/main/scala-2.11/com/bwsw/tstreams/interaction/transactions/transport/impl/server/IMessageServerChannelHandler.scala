@@ -9,7 +9,7 @@ import io.netty.handler.codec.{MessageToMessageDecoder, MessageToMessageEncoder}
 import io.netty.util.ReferenceCountUtil
 
 @ChannelHandler.Sharable
-class ChannelHandler(callback : (IMessage) => Unit) extends SimpleChannelInboundHandler[IMessage] {
+class IMessageServerChannelHandler(callback : (IMessage) => Unit) extends SimpleChannelInboundHandler[IMessage] {
   private val lock = new ReentrantLock(true)
   private val idToChannel = scala.collection.mutable.Map[ChannelId, Channel]()
   private val addressToId = scala.collection.mutable.Map[String, ChannelId]()

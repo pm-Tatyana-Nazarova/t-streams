@@ -46,7 +46,7 @@ class BasicProducerTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     dataStorage = storageFactory.getInstance(cassandraOptions),
     coordinator = coordinator)
 
-  val agentSettings = new PeerToPeerAgentSettings(
+  val agentSettings = new ProducerCoordinationSettings(
     agentAddress = s"localhost:8000",
     zkHosts = List(new InetSocketAddress("localhost", 2181)),
     zkRootPath = "/unit",
