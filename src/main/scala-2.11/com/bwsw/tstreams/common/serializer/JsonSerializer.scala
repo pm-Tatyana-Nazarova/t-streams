@@ -1,6 +1,7 @@
-package com.bwsw.tstreams.common
+package com.bwsw.tstreams.common.serializer
 
 import java.lang.reflect.{ParameterizedType, Type}
+
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule

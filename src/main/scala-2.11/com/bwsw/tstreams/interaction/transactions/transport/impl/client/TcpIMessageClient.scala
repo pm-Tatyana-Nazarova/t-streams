@@ -1,9 +1,9 @@
-package com.bwsw.tstreams.interaction.transport.impl.client
+package com.bwsw.tstreams.interaction.transactions.transport.impl.client
 
 import java.io.{IOException, InputStreamReader, BufferedReader}
 import java.net.Socket
-import com.bwsw.tstreams.common.JsonSerializer
-import com.bwsw.tstreams.interaction.messages.IMessage
+import com.bwsw.tstreams.common.serializer.JsonSerializer
+import com.bwsw.tstreams.interaction.transactions.messages.IMessage
 
 /**
  * Client for sending IMessage messages

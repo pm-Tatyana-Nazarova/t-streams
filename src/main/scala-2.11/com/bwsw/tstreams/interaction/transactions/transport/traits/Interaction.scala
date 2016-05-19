@@ -1,8 +1,8 @@
-package com.bwsw.tstreams.interaction.transport.traits
+package com.bwsw.tstreams.interaction.transactions.transport.traits
 
 import java.util.UUID
 
-import com.bwsw.tstreams.interaction.PeerToPeerAgent
+import com.bwsw.tstreams.interaction.transactions.PeerToPeerAgent
 
 /**
  * Trait for producers

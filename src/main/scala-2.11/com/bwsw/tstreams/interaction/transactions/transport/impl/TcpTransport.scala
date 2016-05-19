@@ -1,10 +1,10 @@
-package com.bwsw.tstreams.interaction.transport.impl
+package com.bwsw.tstreams.interaction.transactions.transport.impl
 
 import java.util.concurrent.LinkedBlockingQueue
-import com.bwsw.tstreams.interaction.messages._
-import com.bwsw.tstreams.interaction.transport.impl.client.TcpIMessageClient
-import com.bwsw.tstreams.interaction.transport.impl.server.TcpIMessageServer
-import com.bwsw.tstreams.interaction.transport.traits.ITransport
+import com.bwsw.tstreams.interaction.transactions.messages._
+import com.bwsw.tstreams.interaction.transactions.transport.impl.client.TcpIMessageClient
+import com.bwsw.tstreams.interaction.transactions.transport.impl.server.TcpIMessageServer
+import com.bwsw.tstreams.interaction.transactions.transport.traits.ITransport
 
 class TcpTransport extends ITransport{
   private var listener : TcpIMessageServer = null

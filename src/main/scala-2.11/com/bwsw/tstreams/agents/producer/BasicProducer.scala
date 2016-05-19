@@ -3,10 +3,10 @@ package com.bwsw.tstreams.agents.producer
 import java.util.UUID
 import com.bwsw.tstreams.agents.group.{CommitInfo, Agent}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
-import com.bwsw.tstreams.common.JsonSerializer
+import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage, Coordinator}
-import com.bwsw.tstreams.interaction.PeerToPeerAgent
-import com.bwsw.tstreams.interaction.transport.traits.Interaction
+import com.bwsw.tstreams.interaction.transactions.PeerToPeerAgent
+import com.bwsw.tstreams.interaction.transactions.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
 import org.redisson.core.RTopic

@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.producer
 import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.producer.InsertionType.InsertType
 import com.bwsw.tstreams.converter.IConverter
-import com.bwsw.tstreams.interaction.transport.traits.ITransport
+import com.bwsw.tstreams.interaction.transactions.transport.traits.ITransport
 import com.bwsw.tstreams.policy.AbstractPolicy
 import com.bwsw.tstreams.generator.IUUIDGenerator
 import scala.language.existentials

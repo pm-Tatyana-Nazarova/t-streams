@@ -10,7 +10,7 @@ import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
-import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
+import com.bwsw.tstreams.interaction.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.RoundRobinPolicy
 import com.bwsw.tstreams.streams.BasicStream

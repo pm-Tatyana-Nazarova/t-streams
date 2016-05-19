@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
-import com.bwsw.tstreams.common.JsonSerializer
+import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.ProducerTransactionStatus._
 import com.bwsw.tstreams.coordination.{ProducerTopicMessage, ProducerTransactionStatus}
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue

@@ -9,8 +9,8 @@ import com.bwsw.tstreams.agents.producer._
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
-import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
-import com.bwsw.tstreams.interaction.zkservice.ZkService
+import com.bwsw.tstreams.interaction.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.services.BasicStreamService
 import com.datastax.driver.core.Cluster

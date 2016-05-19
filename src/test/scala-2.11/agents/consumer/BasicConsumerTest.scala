@@ -11,8 +11,8 @@ import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStrin
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
 import com.bwsw.tstreams.entities.CommitEntity
-import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
-import com.bwsw.tstreams.interaction.zkservice.ZkService
+import com.bwsw.tstreams.interaction.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster

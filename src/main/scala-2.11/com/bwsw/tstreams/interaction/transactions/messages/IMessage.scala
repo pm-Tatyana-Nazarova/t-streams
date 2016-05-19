@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.interaction.messages
+package com.bwsw.tstreams.interaction.transactions.messages
 
 import java.util.UUID
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type

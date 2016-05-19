@@ -1,13 +1,13 @@
-package com.bwsw.tstreams.interaction.zkservice
+package com.bwsw.tstreams.common.zkservice
 
 import java.net.InetSocketAddress
+import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.twitter.common.quantity.Amount
 import com.twitter.common.zookeeper.{ZooKeeperClient, DistributedLockImpl}
 import org.apache.zookeeper.ZooDefs.Ids
 import org.apache.zookeeper.ZooKeeper.States
 import org.apache.zookeeper.CreateMode
 import collection.JavaConverters._
-import com.bwsw.tstreams.common.JsonSerializer
 
 /**
  * Zk interaction util

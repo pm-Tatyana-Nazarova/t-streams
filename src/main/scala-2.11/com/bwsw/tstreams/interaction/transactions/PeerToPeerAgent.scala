@@ -1,14 +1,15 @@
-package com.bwsw.tstreams.interaction
+package com.bwsw.tstreams.interaction.transactions
 
 import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{ExecutorService, Executors, CountDownLatch}
 import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.{CountDownLatch, ExecutorService, Executors}
+
 import com.bwsw.tstreams.agents.producer.BasicProducer
-import com.bwsw.tstreams.interaction.messages._
-import com.bwsw.tstreams.interaction.transport.traits.ITransport
-import com.bwsw.tstreams.interaction.zkservice.{AgentSettings, ZkService}
+import com.bwsw.tstreams.interaction.transactions.messages._
+import com.bwsw.tstreams.interaction.transactions.transport.traits.ITransport
+import com.bwsw.tstreams.common.zkservice.ZkService
 import org.apache.zookeeper.CreateMode
 import org.slf4j.LoggerFactory
 

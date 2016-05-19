@@ -1,9 +1,9 @@
-package com.bwsw.tstreams.interaction.transport.impl.server
+package com.bwsw.tstreams.interaction.transactions.transport.impl.server
 
 import java.util
 import java.util.concurrent.locks.ReentrantLock
-import com.bwsw.tstreams.common.JsonSerializer
-import com.bwsw.tstreams.interaction.messages.IMessage
+import com.bwsw.tstreams.common.serializer.JsonSerializer
+import com.bwsw.tstreams.interaction.transactions.messages.IMessage
 import io.netty.channel._
 import io.netty.handler.codec.{MessageToMessageDecoder, MessageToMessageEncoder}
 

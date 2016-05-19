@@ -1,7 +1,7 @@
-package com.bwsw.tstreams.interaction.transport.impl.server
+package com.bwsw.tstreams.interaction.transactions.transport.impl.server
 
 import java.util.concurrent.CountDownLatch
-import com.bwsw.tstreams.interaction.messages.IMessage
+import com.bwsw.tstreams.interaction.transactions.messages.IMessage
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup

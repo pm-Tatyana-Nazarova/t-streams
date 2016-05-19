@@ -1,5 +1,4 @@
-package com.bwsw.tstreams.common
-
+package com.bwsw.tstreams.common.serializer
 
 trait Serializer {
   def serialize(value: Any): String
