@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.interaction.transactions
+package com.bwsw.tstreams.newcoordination.transactions
 
 /**
  * Agent representation of every agent in [/producers/agents/{agent}]

@@ -1,8 +1,8 @@
-package com.bwsw.tstreams.interaction.subscribe.client
+package com.bwsw.tstreams.newcoordination.subscribe.publisher
 
 import java.net.InetSocketAddress
 
-import com.bwsw.tstreams.interaction.subscribe.messages.ProducerTopicMessage
+import com.bwsw.tstreams.newcoordination.subscribe.messages.ProducerTopicMessage
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -31,7 +31,8 @@ class Broadcaster {
     })
 
   def connect(address : String) = {
-    val splits = address.split(",")
+    val splits = address.split(":")
+    assert(splits.size == 2)
     val host = splits(0)
     val port = splits(1).toInt
     val channelFuture = bootstrap.connect(new InetSocketAddress(host,port)).await()
@@ -44,8 +45,8 @@ class Broadcaster {
     channelHandler.broadcast(msg)
   }
 
+  //TODO mb unsafe
   def close() = {
-    channelHandler.closeChannels()
     group.shutdownGracefully().sync()
   }
 

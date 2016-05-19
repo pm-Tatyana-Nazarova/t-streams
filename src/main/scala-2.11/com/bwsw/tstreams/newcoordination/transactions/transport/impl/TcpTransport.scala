@@ -1,13 +1,13 @@
-package com.bwsw.tstreams.interaction.transactions.transport.impl
+package com.bwsw.tstreams.newcoordination.transactions.transport.impl
 
 import java.util.concurrent.LinkedBlockingQueue
-import com.bwsw.tstreams.interaction.transactions.messages._
-import com.bwsw.tstreams.interaction.transactions.transport.impl.client.TcpIMessageClient
-import com.bwsw.tstreams.interaction.transactions.transport.impl.server.TcpIMessageServer
-import com.bwsw.tstreams.interaction.transactions.transport.traits.ITransport
+import com.bwsw.tstreams.newcoordination.transactions.messages._
+import com.bwsw.tstreams.newcoordination.transactions.transport.impl.client.TcpIMessageClient
+import com.bwsw.tstreams.newcoordination.transactions.transport.impl.server.TcpIMessageListener
+import com.bwsw.tstreams.newcoordination.transactions.transport.traits.ITransport
 
 class TcpTransport extends ITransport{
-  private var listener : TcpIMessageServer = null
+  private var listener : TcpIMessageListener = null
   private val sender : TcpIMessageClient = new TcpIMessageClient
   private val msgQueue = new LinkedBlockingQueue[IMessage]()
 
@@ -84,7 +84,7 @@ class TcpTransport extends ITransport{
     val splits = address.split(":")
     assert(splits.size == 2)
     val port = splits(1).toInt
-    listener = new TcpIMessageServer(port = port,
+    listener = new TcpIMessageListener(port = port,
     newMessageCallback = (msg: IMessage) => {
       msgQueue.add(msg)
     })

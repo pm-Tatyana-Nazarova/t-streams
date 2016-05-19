@@ -1,4 +1,4 @@
-package com.bwsw.tstreams.interaction.subscribe.messages
+package com.bwsw.tstreams.newcoordination.subscribe.messages
 
 /**
  * Status for producer topic messages
@@ -21,9 +21,5 @@ object ProducerTransactionStatus extends Enumeration {
    */
   val cancelled = Value
 
-  /**
-   * For init messages
-   */
-  val init = Value
 }
 

@@ -1,9 +1,9 @@
-package com.bwsw.tstreams.interaction.transactions.transport.impl.server
+package com.bwsw.tstreams.newcoordination.transactions.transport.impl.server
 
 import java.util
 import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.interaction.transactions.messages.IMessage
+import com.bwsw.tstreams.newcoordination.transactions.messages.IMessage
 import io.netty.channel._
 import io.netty.handler.codec.{MessageToMessageDecoder, MessageToMessageEncoder}
 import io.netty.util.ReferenceCountUtil
@@ -21,8 +21,6 @@ class IMessageServerChannelHandler(callback : (IMessage) => Unit) extends Simple
     val id = ctx.channel().id()
     val channel = ctx.channel()
     if (!idToChannel.contains(id)){
-      assert(!addressToId.contains(address))
-      assert(!idToAddress.contains(id))
       idToChannel(id) = channel
       addressToId(address) = id
       idToAddress(id) = address
@@ -38,7 +36,6 @@ class IMessageServerChannelHandler(callback : (IMessage) => Unit) extends Simple
     val id = ctx.channel().id()
     if (idToChannel.contains(id)) {
       idToChannel.remove(id)
-      assert(idToAddress.contains(id))
       val address = idToAddress(id)
       idToAddress.remove(id)
       addressToId.remove(address)
@@ -56,7 +53,6 @@ class IMessageServerChannelHandler(callback : (IMessage) => Unit) extends Simple
     val responseAddress = msg.receiverID
     if (addressToId.contains(responseAddress)){
       val id = addressToId(responseAddress)
-      assert(idToChannel.contains(id))
       val channel = idToChannel(id)
       channel.writeAndFlush(msg)
     }

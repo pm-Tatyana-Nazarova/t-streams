@@ -1,7 +1,7 @@
-package com.bwsw.tstreams.interaction.subscribe.server
+package com.bwsw.tstreams.newcoordination.subscribe.listener
 
 import java.util.concurrent.CountDownLatch
-import com.bwsw.tstreams.interaction.subscribe.messages.ProducerTopicMessage
+import com.bwsw.tstreams.newcoordination.subscribe.messages.ProducerTopicMessage
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -10,8 +10,8 @@ import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.string.StringDecoder
 import io.netty.handler.codec.{Delimiters, DelimiterBasedFrameDecoder}
 
-//TODO make common trait for server creation and unite with TcpIMessageServer
-class SubscriberServer(port : Int, callback : (ProducerTopicMessage) => Unit) {
+
+class ProducerTopicMessageListener(port : Int, callback : (ProducerTopicMessage) => Unit) {
   /**
    * Socket accept worker
    */
@@ -37,6 +37,13 @@ class SubscriberServer(port : Int, callback : (ProducerTopicMessage) => Unit) {
     bossGroup.shutdownGracefully()
   }
 
+  def getConnectionsAmount =
+    channelHandler.getCount()
+
+  def resetConnectionsAmount =
+    channelHandler.resetCount()
+
+  //TODO fix sync in all netty listeners
   def start() = {
     assert(listenerThread == null || !listenerThread.isAlive)
     val syncPoint = new CountDownLatch(1)

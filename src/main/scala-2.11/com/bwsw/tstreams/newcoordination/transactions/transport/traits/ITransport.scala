@@ -1,6 +1,6 @@
-package com.bwsw.tstreams.interaction.transactions.transport.traits
+package com.bwsw.tstreams.newcoordination.transactions.transport.traits
 
-import com.bwsw.tstreams.interaction.transactions.messages._
+import com.bwsw.tstreams.newcoordination.transactions.messages._
 
 /**
  * Basic trait for transport

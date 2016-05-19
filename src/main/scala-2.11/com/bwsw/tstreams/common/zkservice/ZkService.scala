@@ -63,6 +63,12 @@ class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTim
     zkClient.getData(prefix + path, watcher, null)
   }
 
+  def notify(path : String) : Unit = {
+    if (zkClient.exists(prefix+path, null) != null) {
+      zkClient.setData(prefix+path, null, -1)
+    }
+  }
+
   def setData(path : String, data : Any) : Unit = {
     val string = serializer.serialize(data)
     zkClient.setData(prefix + path, string.getBytes, -1)

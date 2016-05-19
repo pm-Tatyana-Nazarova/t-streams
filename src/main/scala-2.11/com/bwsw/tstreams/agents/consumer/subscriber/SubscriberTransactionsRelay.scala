@@ -5,9 +5,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.interaction.subscribe.messages.ProducerTransactionStatus
+import com.bwsw.tstreams.newcoordination.subscribe.messages.ProducerTransactionStatus
 import ProducerTransactionStatus._
-import com.bwsw.tstreams.interaction.subscribe.messages.ProducerTopicMessage
+import com.bwsw.tstreams.newcoordination.subscribe.messages.ProducerTopicMessage
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import org.redisson.core.{MessageListener, RTopic}
 import scala.util.control.Breaks._

@@ -3,7 +3,7 @@ package com.bwsw.tstreams.agents.producer
 import java.util.UUID
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.interaction.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
+import com.bwsw.tstreams.newcoordination.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
 import org.redisson.core.RTopic
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer

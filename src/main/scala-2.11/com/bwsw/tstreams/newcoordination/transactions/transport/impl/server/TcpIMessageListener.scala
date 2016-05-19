@@ -1,7 +1,7 @@
-package com.bwsw.tstreams.interaction.transactions.transport.impl.server
+package com.bwsw.tstreams.newcoordination.transactions.transport.impl.server
 
 import java.util.concurrent.CountDownLatch
-import com.bwsw.tstreams.interaction.transactions.messages.IMessage
+import com.bwsw.tstreams.newcoordination.transactions.messages.IMessage
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -15,7 +15,7 @@ import io.netty.handler.codec.{DelimiterBasedFrameDecoder, Delimiters}
  * @param port Listener port
  * @param newMessageCallback Callback on every received message
  */
-class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit){
+class TcpIMessageListener(port : Int, newMessageCallback : IMessage => Unit){
   /**
    * Socket accept worker
    */
@@ -45,6 +45,7 @@ class TcpIMessageServer(port : Int, newMessageCallback : IMessage => Unit){
     channelHandler.response(msg)
   }
 
+  //TODO fix synchronization
   def start() = {
     assert(listenerThread == null || !listenerThread.isAlive)
     val syncPoint = new CountDownLatch(1)

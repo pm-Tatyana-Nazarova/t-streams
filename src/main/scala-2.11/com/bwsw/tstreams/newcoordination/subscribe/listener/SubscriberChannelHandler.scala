@@ -1,15 +1,28 @@
-package com.bwsw.tstreams.interaction.subscribe.server
+package com.bwsw.tstreams.newcoordination.subscribe.listener
 
 import java.util
 
 import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.interaction.subscribe.messages.ProducerTopicMessage
+import com.bwsw.tstreams.newcoordination.subscribe.messages.ProducerTopicMessage
+import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.MessageToMessageDecoder
 import io.netty.util.ReferenceCountUtil
 
-
+@Sharable
 class SubscriberChannelHandler(callback : (ProducerTopicMessage)=>Unit) extends SimpleChannelInboundHandler[ProducerTopicMessage] {
+  private var count = 0
+
+  def resetCount() =
+    count = 0
+
+  def getCount() =
+    count
+
+  override def channelActive(ctx: ChannelHandlerContext) : Unit = {
+    count += 1
+  }
+
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
     callback(msg)
     ReferenceCountUtil.release(msg)

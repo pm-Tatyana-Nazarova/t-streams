@@ -1,11 +1,10 @@
-package com.bwsw.tstreams.interaction.subscribe.client
+package com.bwsw.tstreams.newcoordination.subscribe.publisher
 
 import java.util
 import java.util.concurrent.locks.ReentrantLock
 
 import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.interaction.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
-import com.datastax.driver.core.utils.UUIDs
+import com.bwsw.tstreams.newcoordination.subscribe.messages.ProducerTopicMessage
 import io.netty.channel._
 import io.netty.channel.group.DefaultChannelGroup
 import io.netty.handler.codec.MessageToMessageEncoder
@@ -27,17 +26,13 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
   //triggered on connect
   override def channelActive(ctx: ChannelHandlerContext) : Unit = {
     group.add(ctx.channel())
-    //send init msg to indicate that channel is active
-    ctx.channel().writeAndFlush(ProducerTopicMessage(UUIDs.random(),0,ProducerTransactionStatus.init))
   }
 
   //triggered on disconnect
   override def channelInactive(ctx: ChannelHandlerContext) : Unit = {
     lock.lock()
     val id = ctx.channel().id()
-    assert(idToAddress.contains(id))
     val address = idToAddress(id)
-    assert(addressToId.contains(address))
     idToAddress.remove(id)
     addressToId.remove(address)
     lock.unlock()
@@ -52,7 +47,7 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
     group.writeAndFlush(msg)
   }
 
-  def updateSubscribers(newSubscribers : List[String]) = {
+  def updateSubscribers(newSubscribers : List[String]): Unit = {
     lock.lock()
     logger.debug(s"[BROADCASTER] start updating subscribers:{${addressToId.keys.mkString(",")}}" +
       s" using newSubscribers:{${newSubscribers.mkString(",")}}")
@@ -60,17 +55,12 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
       broadcaster.connect(subscriber)
     }
     logger.debug(s"[BROADCASTER] updated subscribers:{${addressToId.keys.mkString(",")}}, current group size: {${group.size()}}")
-    assert(group.size() <= addressToId.keys.size)
     lock.unlock()
   }
 
   def updateMap(channelId: ChannelId, address : String) = {
     idToAddress(channelId) = address
     addressToId(address) = channelId
-  }
-  
-  def closeChannels() = {
-    group.close().await()
   }
 }
 

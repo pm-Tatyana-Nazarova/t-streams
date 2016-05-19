@@ -10,7 +10,7 @@ import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, Producer
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.interaction.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.newcoordination.transactions.transport.impl.TcpTransport
 import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
