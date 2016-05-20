@@ -13,9 +13,9 @@ class ConsumerCoordinator(agentAddress : String,
                           zkHosts : List[InetSocketAddress],
                           zkSessionTimeout : Int) {
   private val SYNCHRONIZE_LIMIT = 60
-  private var listener: ProducerTopicMessageListener = null
   private val zkService = new ZkService(prefix, zkHosts, zkSessionTimeout)
   private val (_,port) = getHostPort(agentAddress)
+  private val listener: ProducerTopicMessageListener = new ProducerTopicMessageListener(port)
 
   private def getHostPort(address : String): (String, Int) = {
     val splits = address.split(":")
@@ -25,9 +25,8 @@ class ConsumerCoordinator(agentAddress : String,
     (host, port)
   }
 
-  def setCallback(callback : (ProducerTopicMessage) => Unit) = {
-    listener = new ProducerTopicMessageListener(port)
-    listener.setChannelHandler(callback)
+  def addCallback(callback : (ProducerTopicMessage) => Unit) = {
+    listener.addCallbackToChannelHandler(callback)
   }
 
   def stop() = {

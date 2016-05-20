@@ -22,7 +22,7 @@ class ProducerTopicMessageListener(port : Int) {
    */
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
-  private var channelHandler: SubscriberChannelHandler = null
+  private val channelHandler: SubscriberChannelHandler = new SubscriberChannelHandler
   private var listenerThread : Thread = null
 
   def stop() = {
@@ -30,9 +30,10 @@ class ProducerTopicMessageListener(port : Int) {
     bossGroup.shutdownGracefully()
   }
 
-  def setChannelHandler(callback : (ProducerTopicMessage) => Unit) = {
-    channelHandler = new SubscriberChannelHandler(callback)
+  def addCallbackToChannelHandler(callback : (ProducerTopicMessage) => Unit) = {
+    channelHandler.addCallback(callback)
   }
+  
   def getConnectionsAmount() =
     channelHandler.getCount()
 

@@ -8,12 +8,21 @@ import io.netty.channel._
 import io.netty.handler.codec.{MessageToMessageDecoder, MessageToMessageEncoder}
 import io.netty.util.ReferenceCountUtil
 
+import scala.collection.mutable.ListBuffer
+
 @ChannelHandler.Sharable
-class IMessageServerChannelHandler(callback : (IMessage) => Unit) extends SimpleChannelInboundHandler[IMessage] {
+class IMessageServerChannelHandler extends SimpleChannelInboundHandler[IMessage] {
   private val lock = new ReentrantLock(true)
   private val idToChannel = scala.collection.mutable.Map[ChannelId, Channel]()
   private val addressToId = scala.collection.mutable.Map[String, ChannelId]()
   private val idToAddress = scala.collection.mutable.Map[ChannelId, String]()
+  private val callbacks = ListBuffer[(IMessage) => Unit]()
+
+  def addCallback(callback : (IMessage) => Unit) = {
+    lock.lock()
+    callbacks += callback
+    lock.unlock()
+  }
 
   override def channelRead0(ctx: ChannelHandlerContext, msg: IMessage): Unit = {
     lock.lock()
@@ -25,7 +34,7 @@ class IMessageServerChannelHandler(callback : (IMessage) => Unit) extends Simple
       addressToId(address) = id
       idToAddress(id) = address
     }
-    callback(msg)
+    callbacks.foreach(x=>x(msg))
     ReferenceCountUtil.release(msg)
     lock.unlock()
   }

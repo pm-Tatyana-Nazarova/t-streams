@@ -89,7 +89,7 @@ class TcpTransport extends ITransport{
       msgQueue.add(msg)
       return
     }
-    listener.setChannelHandler(callback)
+    listener.addCallback(callback)
     listener.start()
   }
 

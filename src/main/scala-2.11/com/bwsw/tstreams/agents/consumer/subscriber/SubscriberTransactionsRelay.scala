@@ -33,7 +33,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
     lock.unlock()
   }
-  coordinator.setCallback(updateCallback)
+  coordinator.addCallback(updateCallback)
 
   /**
    * Start consume transaction queue async

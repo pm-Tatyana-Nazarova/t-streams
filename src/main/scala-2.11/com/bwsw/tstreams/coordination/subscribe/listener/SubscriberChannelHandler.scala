@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.coordination.subscribe.listener
 
 import java.util
+import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
 import io.netty.channel.ChannelHandler.Sharable
@@ -8,9 +9,19 @@ import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.MessageToMessageDecoder
 import io.netty.util.ReferenceCountUtil
 
+import scala.collection.mutable.ListBuffer
+
 @Sharable
-class SubscriberChannelHandler(callback : (ProducerTopicMessage)=>Unit) extends SimpleChannelInboundHandler[ProducerTopicMessage] {
+class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopicMessage] {
   private var count = 0
+  private val callbacks = new ListBuffer[(ProducerTopicMessage)=>Unit]()
+  private val lock = new ReentrantLock(true)
+
+  def addCallback(callback : (ProducerTopicMessage)=>Unit) = {
+    lock.lock()
+    callbacks += callback
+    lock.unlock()
+  }
 
   def resetCount() =
     count = 0
@@ -23,7 +34,9 @@ class SubscriberChannelHandler(callback : (ProducerTopicMessage)=>Unit) extends 
   }
 
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
-    callback(msg)
+    lock.lock()
+    callbacks.foreach(c=>c(msg))
+    lock.unlock()
     ReferenceCountUtil.release(msg)
   }
 

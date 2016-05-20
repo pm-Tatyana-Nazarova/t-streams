@@ -25,7 +25,7 @@ class TcpIMessageListener(port : Int){
    */
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
-  private var channelHandler : IMessageServerChannelHandler = null
+  private val channelHandler : IMessageServerChannelHandler = new IMessageServerChannelHandler
   private var listenerThread : Thread = null
 
   def stop() = {
@@ -33,8 +33,8 @@ class TcpIMessageListener(port : Int){
     bossGroup.shutdownGracefully()
   }
 
-  def setChannelHandler(callback : (IMessage) => Unit) = {
-    channelHandler = new IMessageServerChannelHandler(callback)
+  def addCallback(callback : (IMessage) => Unit) = {
+    channelHandler.addCallback(callback)
   }
 
   def response(msg : IMessage) = {
