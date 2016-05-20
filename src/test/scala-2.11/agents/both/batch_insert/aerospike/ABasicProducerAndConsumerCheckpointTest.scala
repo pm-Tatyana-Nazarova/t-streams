@@ -3,7 +3,7 @@ package agents.both.batch_insert.aerospike
 import java.net.InetSocketAddress
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinatorSettings, BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -94,6 +94,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    ConsumerCoordinatorSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)

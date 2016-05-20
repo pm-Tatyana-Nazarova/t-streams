@@ -2,7 +2,6 @@ package com.bwsw.tstreams.agents.consumer.subscriber
 
 import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
-import com.bwsw.tstreams.coordination.subscribe.SubscriberCoordinator
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 
@@ -12,7 +11,6 @@ import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
  * @param stream Stream from which to consume transactions
  * @param options Basic consumer options
  * @param persistentQueuePath Local Path to queue which maintain transactions that already exist and new incoming transactions
- * @param coordinationSettings Settings for subscriber coordinator service
  * @tparam DATATYPE Storage data type
  * @tparam USERTYPE User data type
  */
@@ -20,7 +18,6 @@ import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
                                                    stream : BasicStream[DATATYPE],
                                                    options : BasicConsumerOptions[DATATYPE,USERTYPE],
-                                                   coordinationSettings : SubscriberCoordinationOptions,
                                                    callBack : BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                    persistentQueuePath : String)
   extends BasicConsumer[DATATYPE, USERTYPE](name, stream, options){
@@ -35,13 +32,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
    */
   private val isQueueConsumed = new AtomicBoolean(false)
 
-  private val coordinator = new SubscriberCoordinator(
-    coordinationSettings.agentAddress,
-    coordinationSettings.prefix,
-    coordinationSettings.zkHosts,
-    coordinationSettings.zkSessionTimeout)
-  coordinator.startListen()
-
   /**
    * Start to consume messages
    */
@@ -50,6 +40,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       throw new IllegalStateException("subscriber already started")
 
     isStarted = true
+
+    coordinator.startListen()
 
     (0 until stream.getPartitions) foreach { partition =>
       //getting last txn for concrete partition

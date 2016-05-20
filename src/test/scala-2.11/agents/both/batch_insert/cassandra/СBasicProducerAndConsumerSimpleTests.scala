@@ -2,7 +2,7 @@ package agents.both.batch_insert.cassandra
 
 import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinatorSettings, BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -92,6 +92,7 @@ class СBasicProducerAndConsumerSimpleTests extends FlatSpec with Matchers with 
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    ConsumerCoordinatorSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)

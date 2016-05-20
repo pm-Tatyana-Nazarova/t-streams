@@ -29,6 +29,7 @@ class ProducerTopicMessageListener(port : Int) {
     workerGroup.shutdownGracefully()
     bossGroup.shutdownGracefully()
   }
+
   def setChannelHandler(callback : (ProducerTopicMessage) => Unit) = {
     channelHandler = new SubscriberChannelHandler(callback)
   }

@@ -3,7 +3,7 @@ package agents.both.batch_insert.aerospike
 import java.net.InetSocketAddress
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinatorSettings, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -85,6 +85,7 @@ with Matchers with BeforeAndAfterAll with TestUtils{
       RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = (0 until totalPartitions).toList,
         stream = streamInst),
+      ConsumerCoordinatorSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
       Oldest,
       LocalGeneratorCreator.getGen(),
       useLastOffset = true)

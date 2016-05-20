@@ -2,12 +2,11 @@ package com.bwsw.tstreams.agents.consumer
 
 import java.util.UUID
 import com.bwsw.tstreams.agents.group.{ConsumerCommitInfo, CommitInfo, Agent}
-import com.bwsw.tstreams.common.zkservice.ZkService
+import com.bwsw.tstreams.coordination.subscribe.ConsumerCoordinator
 import com.bwsw.tstreams.entities.TransactionSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
 import org.slf4j.LoggerFactory
-
 import scala.collection.mutable.ListBuffer
 
 
@@ -27,6 +26,14 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
   stream.dataStorage.bind()
 
   private val logger = LoggerFactory.getLogger(this.getClass)
+
+  protected val coordinator = new ConsumerCoordinator(
+    options.consumerCoordinatorSettings.agentAddress,
+    options.consumerCoordinatorSettings.prefix,
+    options.consumerCoordinatorSettings.zkHosts,
+    options.consumerCoordinatorSettings.zkSessionTimeout)
+  //TODO add global lock
+
 
   logger.info(s"Start new Basic consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 

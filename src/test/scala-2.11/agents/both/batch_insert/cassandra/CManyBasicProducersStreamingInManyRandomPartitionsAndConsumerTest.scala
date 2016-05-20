@@ -2,7 +2,7 @@ package agents.both.batch_insert.cassandra
 
 import java.net.InetSocketAddress
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinatorSettings, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -78,6 +78,7 @@ with Matchers with BeforeAndAfterAll with TestUtils{
       RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = (0 until totalPartitions).toList,
         stream = streamInst),
+      ConsumerCoordinatorSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
       Oldest,
       LocalGeneratorCreator.getGen(),
       useLastOffset = false)

@@ -28,16 +28,13 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   private val logger = LoggerFactory.getLogger(this.getClass)
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
-  /**
-   * Using for publish transaction events
-   */
   val coordinator = new ProducerCoordinator(
     producerOptions.producerCoordinationSettings.zkRootPath,
     stream.getName,
     producerOptions.writePolicy.getUsedPartition(),
     producerOptions.producerCoordinationSettings.zkHosts,
     producerOptions.producerCoordinationSettings.zkTimeout)
-
+  //TODO add global lock
 
   /**
    * Map for memorize opened transaction on partitions

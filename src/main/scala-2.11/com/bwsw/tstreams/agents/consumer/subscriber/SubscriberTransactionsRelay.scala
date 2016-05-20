@@ -4,7 +4,7 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
-import com.bwsw.tstreams.coordination.subscribe.SubscriberCoordinator
+import com.bwsw.tstreams.coordination.subscribe.ConsumerCoordinator
 import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import ProducerTransactionStatus._
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
@@ -14,7 +14,7 @@ import scala.util.control.Breaks._
 class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribingConsumer[DATATYPE,USERTYPE],
                                                      offset: UUID,
                                                      partition : Int,
-                                                     coordinator: SubscriberCoordinator,
+                                                     coordinator: ConsumerCoordinator,
                                                      callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                      queue : PersistentTransactionQueue,
                                                      isQueueConsumed : AtomicBoolean) {

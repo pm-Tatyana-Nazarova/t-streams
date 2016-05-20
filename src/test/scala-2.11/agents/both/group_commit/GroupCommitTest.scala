@@ -3,7 +3,7 @@ package agents.both.group_commit
 import java.net.InetSocketAddress
 
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinatorSettings, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.group.CheckpointGroup
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
@@ -87,6 +87,7 @@ class GroupCommitTest extends FlatSpec with Matchers with BeforeAndAfterAll{
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    ConsumerCoordinatorSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)

@@ -1,5 +1,7 @@
 package com.bwsw.tstreams.agents.consumer
 
+import java.net.InetSocketAddress
+
 import com.bwsw.tstreams.agents.consumer.Offsets.IOffset
 import com.bwsw.tstreams.converter.IConverter
 import com.bwsw.tstreams.policy.AbstractPolicy
@@ -24,6 +26,7 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
                                               val consumerKeepAliveInterval : Int,
                                               val converter : IConverter[DATATYPE,USERTYPE],
                                               val readPolicy : AbstractPolicy,
+                                              val consumerCoordinatorSettings: ConsumerCoordinatorSettings,
                                               val offset : IOffset,
                                               val txnGenerator: IUUIDGenerator,
                                               val useLastOffset : Boolean = true) {
@@ -36,3 +39,9 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
   if (consumerKeepAliveInterval < 1)
     throw new IllegalArgumentException("incorrect consumerKeepAliveInterval value, should be greater or equal one")
 }
+
+
+case class ConsumerCoordinatorSettings(agentAddress : String,
+                                      prefix : String,
+                                      zkHosts : List[InetSocketAddress],
+                                      zkSessionTimeout : Int)

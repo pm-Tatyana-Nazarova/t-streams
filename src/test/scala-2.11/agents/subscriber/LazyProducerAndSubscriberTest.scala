@@ -7,8 +7,8 @@ import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.subscriber.{SubscriberCoordinationOptions, BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.BasicConsumerOptions
+import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinatorSettings, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -90,6 +90,7 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
       RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = (0 until totalPartitions).toList,
         stream = streamInst),
+      ConsumerCoordinatorSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
       Oldest,
       LocalGeneratorCreator.getGen(),
       useLastOffset = false)
@@ -108,11 +109,7 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
       }
       override val frequency: Int = 1
     }
-    val subscriber = new BasicSubscribingConsumer("test_consumer", streamInst, consumerOptions,SubscriberCoordinationOptions("localhost:8101",
-      "/unit",
-      List(new InetSocketAddress("localhost", 2181)), 7000),
-      callback,
-      path)
+    val subscriber = new BasicSubscribingConsumer("test_consumer", streamInst, consumerOptions, callback, path)
 
     producersThreads.foreach(x=>x.start())
     Thread.sleep(2000)

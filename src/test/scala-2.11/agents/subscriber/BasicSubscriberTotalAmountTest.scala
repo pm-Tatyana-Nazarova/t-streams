@@ -5,8 +5,8 @@ import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 import java.util.UUID
 import com.aerospike.client.Host
-import com.bwsw.tstreams.agents.consumer.subscriber.{SubscriberCoordinationOptions, BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.BasicConsumerOptions
+import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinatorSettings, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
@@ -99,6 +99,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    ConsumerCoordinatorSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -121,7 +122,6 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     "test_consumer",
     streamForConsumer,
     consumerOptions,
-    SubscriberCoordinationOptions("localhost:8201", "/unit", List(new InetSocketAddress("localhost", 2181)), 7000),
     callback,
     path)
 
