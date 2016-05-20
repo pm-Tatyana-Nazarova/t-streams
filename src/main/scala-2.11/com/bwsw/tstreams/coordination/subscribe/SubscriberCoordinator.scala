@@ -14,7 +14,6 @@ class SubscriberCoordinator(agentAddress : String,
                             zkSessionTimeout : Int) {
   private val SYNCHRONIZE_LIMIT = 60
   private var listener: ProducerTopicMessageListener = null
-
   private val zkService = new ZkService(prefix, zkHosts, zkSessionTimeout)
   private val (_,port) = getHostPort(agentAddress)
 
@@ -44,11 +43,11 @@ class SubscriberCoordinator(agentAddress : String,
   }
 
   def notifyProducers(streamName : String, partition : Int) = {
+    listener.resetConnectionsAmount()
     zkService.notify(s"/subscribers/event/$streamName/$partition")
   }
 
   def synchronize(streamName : String, partition : Int) = {
-    listener.resetConnectionsAmount
     val agentsOpt = zkService.getAllSubPath(s"/producers/agents/$streamName/$partition")
     val totalAmount = if (agentsOpt.isEmpty) 0 else agentsOpt.get.size
     var timer = 0

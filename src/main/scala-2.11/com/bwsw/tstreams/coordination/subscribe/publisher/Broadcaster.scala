@@ -45,9 +45,8 @@ class Broadcaster {
     channelHandler.broadcast(msg)
   }
 
-  //TODO mb unsafe
   def close() = {
-    group.shutdownGracefully().sync()
+    group.shutdownGracefully()
   }
 
   def updateSubscribers(newSubscribers : List[String]) = {

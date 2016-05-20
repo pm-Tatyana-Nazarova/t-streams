@@ -1,8 +1,6 @@
 package com.bwsw.tstreams.coordination.transactions.transport.impl.server
 
 import java.util.concurrent.CountDownLatch
-import com.bwsw.tstreams.coordination.subscribe.listener.SubscriberChannelHandler
-import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
@@ -11,6 +9,7 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
 import io.netty.handler.codec.{DelimiterBasedFrameDecoder, Delimiters}
+import io.netty.handler.logging.{LogLevel, LoggingHandler}
 
 /**
  * IMessage listener
@@ -21,22 +20,14 @@ class TcpIMessageListener(port : Int){
    * Socket accept worker
    */
   private val bossGroup = new NioEventLoopGroup(1)
-
   /**
    * Channel workers
    */
   private val workerGroup = new NioEventLoopGroup()
-
-  /**
-   * Message max length
-   */
   private val MAX_FRAME_LENGTH = 8192
-
   private var channelHandler : IMessageServerChannelHandler = null
-
   private var listenerThread : Thread = null
 
-  //TODO mb unsafe
   def stop() = {
     workerGroup.shutdownGracefully()
     bossGroup.shutdownGracefully()
@@ -50,7 +41,6 @@ class TcpIMessageListener(port : Int){
     channelHandler.response(msg)
   }
 
-  //TODO fix synchronization
   def start() = {
     assert(listenerThread == null || !listenerThread.isAlive)
     val syncPoint = new CountDownLatch(1)
@@ -59,7 +49,7 @@ class TcpIMessageListener(port : Int){
         try {
           val b = new ServerBootstrap()
           b.group(bossGroup, workerGroup).channel(classOf[NioServerSocketChannel])
-//            .handler(new LoggingHandler(LogLevel.INFO))
+            .handler(new LoggingHandler(LogLevel.DEBUG))
             .childHandler(new ChannelInitializer[SocketChannel]() {
               override def initChannel(ch: SocketChannel) {
                 val p = ch.pipeline()
@@ -71,8 +61,8 @@ class TcpIMessageListener(port : Int){
                 p.addLast("handler", channelHandler)
               }
             })
-          syncPoint.countDown()
           val f = b.bind(port).sync()
+          syncPoint.countDown()
           f.channel().closeFuture().sync()
         } finally {
           workerGroup.shutdownGracefully()

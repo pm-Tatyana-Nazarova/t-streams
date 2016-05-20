@@ -1,7 +1,6 @@
 package com.bwsw.tstreams.coordination.subscribe.listener
 
 import java.util
-
 import com.bwsw.tstreams.common.serializer.JsonSerializer
 import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
 import io.netty.channel.ChannelHandler.Sharable

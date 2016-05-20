@@ -17,35 +17,27 @@ class ProducerTopicMessageListener(port : Int) {
    * Socket accept worker
    */
   private val bossGroup = new NioEventLoopGroup(1)
-
   /**
    * Channel workers
    */
   private val workerGroup = new NioEventLoopGroup()
-
   private val MAX_FRAME_LENGTH = 8192
-  
   private var channelHandler: SubscriberChannelHandler = null
-
   private var listenerThread : Thread = null
 
-  //TODO mb unsafe
   def stop() = {
     workerGroup.shutdownGracefully()
     bossGroup.shutdownGracefully()
   }
-
   def setChannelHandler(callback : (ProducerTopicMessage) => Unit) = {
     channelHandler = new SubscriberChannelHandler(callback)
   }
-
   def getConnectionsAmount() =
     channelHandler.getCount()
 
   def resetConnectionsAmount() =
     channelHandler.resetCount()
 
-  //TODO fix sync in all netty listeners
   def start() = {
     assert(listenerThread == null || !listenerThread.isAlive)
     val syncPoint = new CountDownLatch(1)
@@ -64,8 +56,8 @@ class ProducerTopicMessageListener(port : Int) {
                 p.addLast("handler", channelHandler)
               }
             })
-          syncPoint.countDown()
           val f = b.bind(port).sync()
+          syncPoint.countDown()
           f.channel().closeFuture().sync()
         } finally {
           workerGroup.shutdownGracefully()
