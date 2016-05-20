@@ -21,7 +21,6 @@ class ProducerCoordinator(prefix : String,
   usedPartitions foreach { p =>
     val watcher = new Watcher {
       override def process(event: WatchedEvent): Unit = {
-        println("event")
         updateSubscribers(p)
         zkService.setWatcher(s"/subscribers/event/$streamName/$p", this)
       }

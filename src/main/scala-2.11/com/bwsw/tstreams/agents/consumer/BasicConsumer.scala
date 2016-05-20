@@ -2,6 +2,7 @@ package com.bwsw.tstreams.agents.consumer
 
 import java.util.UUID
 import com.bwsw.tstreams.agents.group.{ConsumerCommitInfo, CommitInfo, Agent}
+import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.entities.TransactionSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
@@ -21,6 +22,7 @@ import scala.collection.mutable.ListBuffer
 class BasicConsumer[DATATYPE, USERTYPE](val name : String,
                                         val stream : BasicStream[DATATYPE],
                                         val options : BasicConsumerOptions[DATATYPE, USERTYPE]) extends Agent{
+
 
   stream.dataStorage.bind()
 

@@ -50,7 +50,7 @@ class PeerToPeerAgent(agentAddress : String,
   logger.debug(s"[INIT] Start initialize agent with address:{$agentAddress}," +
     s"stream:{$streamName},partitions:{${usedPartitions.mkString(",")}}\n")
   usedPartitions foreach {p =>
-    agentCleaner(p)
+    tryCleanAgent(p)
   }
   transport.bindLocalAddress(agentAddress)
   startValidator()
@@ -71,7 +71,7 @@ class PeerToPeerAgent(agentAddress : String,
    * Validate that agent with [[agentAddress]]] not exist and delete in opposite
    * @param partition Partition to check
    */
-  private def agentCleaner(partition : Int) : Unit = {
+  private def tryCleanAgent(partition : Int) : Unit = {
     val agentsOpt = zkService.getAllSubPath(s"/producers/agents/$streamName/$partition")
     if (agentsOpt.isEmpty)
       return

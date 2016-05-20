@@ -22,4 +22,3 @@ object ProducerTransactionStatus extends Enumeration {
   val cancelled = Value
 
 }
-

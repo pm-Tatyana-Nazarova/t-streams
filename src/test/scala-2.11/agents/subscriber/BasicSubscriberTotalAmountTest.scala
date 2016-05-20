@@ -110,6 +110,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
   val callback = new BasicSubscriberCallback[Array[Byte], String] {
     override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
       lock.lock()
+      println(acc)
       acc += 1
       lock.unlock()
     }
@@ -120,7 +121,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     "test_consumer",
     streamForConsumer,
     consumerOptions,
-    SubscriberCoordinationOptions("localhost:8101", "/unit", List(new InetSocketAddress("localhost", 2181)), 7000),
+    SubscriberCoordinationOptions("localhost:8201", "/unit", List(new InetSocketAddress("localhost", 2181)), 7000),
     callback,
     path)
 
@@ -130,7 +131,6 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     val data = randomString
 
     subscribeConsumer.start()
-
     (0 until totalMsg) foreach { x=>
       val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
       (0 until dataInTxn) foreach { _ =>

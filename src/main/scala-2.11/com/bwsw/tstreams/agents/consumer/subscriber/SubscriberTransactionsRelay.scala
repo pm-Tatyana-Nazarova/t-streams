@@ -14,7 +14,7 @@ import scala.util.control.Breaks._
 class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribingConsumer[DATATYPE,USERTYPE],
                                                      offset: UUID,
                                                      partition : Int,
-                                                     coordinationSettings : SubscriberCoordinationOptions,
+                                                     coordinator: SubscriberCoordinator,
                                                      callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                      queue : PersistentTransactionQueue,
                                                      isQueueConsumed : AtomicBoolean) {
@@ -33,16 +33,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
       transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
     lock.unlock()
   }
-
-  /**
-   * Coordinator for providing subscriber updates
-   */
-  val coordinator = new SubscriberCoordinator(
-    coordinationSettings.agentAddress,
-    coordinationSettings.prefix,
-    coordinationSettings.zkHosts,
-    coordinationSettings.zkSessionTimeout,
-    updateCallback)
+  coordinator.setCallback(updateCallback)
 
   /**
    * Start consume transaction queue async
@@ -118,11 +109,10 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   }
 
   /**
-   * Starting listen updates from producers about incoming transactions
+   * update producers subscribers info
    * @return Listener ID
    */
-  def startListen() : Unit = {
-    coordinator.startListen()
+  def updateProducers() : Unit = {
     coordinator.registerSubscriber(subscriber.stream.getName, partition)
     coordinator.notifyProducers(subscriber.stream.getName, partition)
     coordinator.synchronize(subscriber.stream.getName, partition)

@@ -35,6 +35,13 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
    */
   private val isQueueConsumed = new AtomicBoolean(false)
 
+  private val coordinator = new SubscriberCoordinator(
+    coordinationSettings.agentAddress,
+    coordinationSettings.prefix,
+    coordinationSettings.zkHosts,
+    coordinationSettings.zkSessionTimeout)
+  coordinator.startListen()
+
   /**
    * Start to consume messages
    */
@@ -61,7 +68,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       val transactionsRelay = new SubscriberTransactionsRelay(subscriber = this,
         offset = currentOffsets(partition),
         partition = partition,
-        coordinationSettings = coordinationSettings,
+        coordinator = coordinator,
         callback = callBack,
         queue = queue,
         isQueueConsumed = isQueueConsumed)
@@ -73,7 +80,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       if (lastTransactionOpt.isDefined)
         transactionsRelay.consumeTransactionsLessOrEqualThanAsync(lastTransactionOpt.get.getTxnUUID)
 
-      transactionsRelay.startListen()
+      transactionsRelay.updateProducers()
 
       //consume all messages greater than last
       if (lastTransactionOpt.isDefined)

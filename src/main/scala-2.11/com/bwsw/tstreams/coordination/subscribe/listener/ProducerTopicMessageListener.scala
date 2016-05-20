@@ -9,9 +9,10 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.string.StringDecoder
 import io.netty.handler.codec.{Delimiters, DelimiterBasedFrameDecoder}
+import io.netty.handler.logging.{LogLevel, LoggingHandler}
 
 
-class ProducerTopicMessageListener(port : Int, callback : (ProducerTopicMessage) => Unit) {
+class ProducerTopicMessageListener(port : Int) {
   /**
    * Socket accept worker
    */
@@ -22,12 +23,9 @@ class ProducerTopicMessageListener(port : Int, callback : (ProducerTopicMessage)
    */
   private val workerGroup = new NioEventLoopGroup()
 
-  /**
-   * Message max length
-   */
   private val MAX_FRAME_LENGTH = 8192
-
-  private val channelHandler = new SubscriberChannelHandler(callback)
+  
+  private var channelHandler: SubscriberChannelHandler = null
 
   private var listenerThread : Thread = null
 
@@ -37,10 +35,14 @@ class ProducerTopicMessageListener(port : Int, callback : (ProducerTopicMessage)
     bossGroup.shutdownGracefully()
   }
 
-  def getConnectionsAmount =
+  def setChannelHandler(callback : (ProducerTopicMessage) => Unit) = {
+    channelHandler = new SubscriberChannelHandler(callback)
+  }
+
+  def getConnectionsAmount() =
     channelHandler.getCount()
 
-  def resetConnectionsAmount =
+  def resetConnectionsAmount() =
     channelHandler.resetCount()
 
   //TODO fix sync in all netty listeners
@@ -52,7 +54,7 @@ class ProducerTopicMessageListener(port : Int, callback : (ProducerTopicMessage)
         try {
           val b = new ServerBootstrap()
           b.group(bossGroup, workerGroup).channel(classOf[NioServerSocketChannel])
-//            .handler(new LoggingHandler(LogLevel.INFO))
+            .handler(new LoggingHandler(LogLevel.DEBUG))
             .childHandler(new ChannelInitializer[SocketChannel]() {
               override def initChannel(ch: SocketChannel) {
                 val p = ch.pipeline()

@@ -11,13 +11,12 @@ import org.apache.zookeeper.CreateMode
 class SubscriberCoordinator(agentAddress : String,
                             prefix : String,
                             zkHosts : List[InetSocketAddress],
-                            zkSessionTimeout : Int,
-                            onMessageCallback : (ProducerTopicMessage) => Unit) {
+                            zkSessionTimeout : Int) {
   private val SYNCHRONIZE_LIMIT = 60
+  private var listener: ProducerTopicMessageListener = null
 
   private val zkService = new ZkService(prefix, zkHosts, zkSessionTimeout)
   private val (_,port) = getHostPort(agentAddress)
-  private val listener = new ProducerTopicMessageListener(port, onMessageCallback)
 
   private def getHostPort(address : String): (String, Int) = {
     val splits = address.split(":")
@@ -27,12 +26,18 @@ class SubscriberCoordinator(agentAddress : String,
     (host, port)
   }
 
+  def setCallback(callback : (ProducerTopicMessage) => Unit) = {
+    listener = new ProducerTopicMessageListener(port)
+    listener.setChannelHandler(callback)
+  }
+
   def stop() = {
     listener.stop()
   }
 
-  def startListen() =
+  def startListen() = {
     listener.start()
+  }
 
   def registerSubscriber(streamName : String, partition : Int) = {
     zkService.create(s"/subscribers/agents/$streamName/$partition/subscriber_", agentAddress, CreateMode.EPHEMERAL_SEQUENTIAL)
