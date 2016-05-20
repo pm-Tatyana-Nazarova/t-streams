@@ -1,6 +1,8 @@
 package com.bwsw.tstreams.coordination.transactions.transport.impl.server
 
 import java.util.concurrent.CountDownLatch
+import com.bwsw.tstreams.coordination.subscribe.listener.SubscriberChannelHandler
+import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
 import com.bwsw.tstreams.coordination.transactions.messages.IMessage
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
@@ -13,9 +15,8 @@ import io.netty.handler.codec.{DelimiterBasedFrameDecoder, Delimiters}
 /**
  * IMessage listener
  * @param port Listener port
- * @param newMessageCallback Callback on every received message
  */
-class TcpIMessageListener(port : Int, newMessageCallback : IMessage => Unit){
+class TcpIMessageListener(port : Int){
   /**
    * Socket accept worker
    */
@@ -31,7 +32,7 @@ class TcpIMessageListener(port : Int, newMessageCallback : IMessage => Unit){
    */
   private val MAX_FRAME_LENGTH = 8192
 
-  private val channelHandler = new IMessageServerChannelHandler(newMessageCallback)
+  private var channelHandler : IMessageServerChannelHandler = null
 
   private var listenerThread : Thread = null
 
@@ -39,6 +40,10 @@ class TcpIMessageListener(port : Int, newMessageCallback : IMessage => Unit){
   def stop() = {
     workerGroup.shutdownGracefully()
     bossGroup.shutdownGracefully()
+  }
+
+  def setChannelHandler(callback : (IMessage) => Unit) = {
+    channelHandler = new IMessageServerChannelHandler(callback)
   }
 
   def response(msg : IMessage) = {

@@ -84,10 +84,12 @@ class TcpTransport extends ITransport{
     val splits = address.split(":")
     assert(splits.size == 2)
     val port = splits(1).toInt
-    listener = new TcpIMessageListener(port = port,
-    newMessageCallback = (msg: IMessage) => {
+    listener = new TcpIMessageListener(port)
+    val callback = (msg: IMessage) => {
       msgQueue.add(msg)
-    })
+      return
+    }
+    listener.setChannelHandler(callback)
     listener.start()
   }
 
