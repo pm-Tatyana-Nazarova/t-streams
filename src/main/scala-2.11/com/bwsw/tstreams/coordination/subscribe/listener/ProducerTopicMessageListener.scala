@@ -35,10 +35,6 @@ class ProducerTopicMessageListener(port : Int) {
     channelHandler.getCount()
   }
 
-  def resetConnectionsAmount() = {
-    channelHandler.resetCount()
-  }
-
   def start() = {
     assert(listenerThread == null || !listenerThread.isAlive)
     val syncPoint = new CountDownLatch(1)
