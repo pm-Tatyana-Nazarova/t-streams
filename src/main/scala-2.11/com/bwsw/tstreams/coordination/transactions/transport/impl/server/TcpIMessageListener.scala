@@ -29,8 +29,8 @@ class TcpIMessageListener(port : Int){
   private var listenerThread : Thread = null
 
   def stop() = {
-    workerGroup.shutdownGracefully()
-    bossGroup.shutdownGracefully()
+    workerGroup.shutdownGracefully().await()
+    bossGroup.shutdownGracefully().await()
   }
 
   def addCallback(callback : (IMessage) => Unit) = {

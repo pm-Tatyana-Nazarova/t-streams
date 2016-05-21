@@ -36,10 +36,12 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   private val streamName = subscriber.stream.getName
   private val isRunning = new AtomicBoolean(true)
   private val updateCallback = (msg : ProducerTopicMessage) => {
-    lock.lock()
-    if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp())
-      transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
-    lock.unlock()
+    if (msg.partition == partition) {
+      lock.lock()
+      if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp())
+        transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
+      lock.unlock()
+    }
   }
 
   private var queueConsumer : Thread = null
@@ -119,14 +121,13 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   }
 
   /**
-   * update producers subscribers info
+   * Update producers subscribers info
    * @return Listener ID
    */
-  def updateProducers() : Unit = {
+  def notifyProducers() : Unit = {
     coordinator.addCallback(updateCallback)
     coordinator.registerSubscriber(subscriber.stream.getName, partition)
     coordinator.notifyProducers(subscriber.stream.getName, partition)
-    coordinator.synchronize(subscriber.stream.getName, partition)
   }
 
   /**

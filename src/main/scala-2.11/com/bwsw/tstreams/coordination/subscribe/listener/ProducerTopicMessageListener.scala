@@ -23,8 +23,8 @@ class ProducerTopicMessageListener(port : Int) {
   private var listenerThread : Thread = null
 
   def stop() = {
-    workerGroup.shutdownGracefully()
-    bossGroup.shutdownGracefully()
+    workerGroup.shutdownGracefully().await()
+    bossGroup.shutdownGracefully().await()
   }
 
   def addCallbackToChannelHandler(callback : (ProducerTopicMessage) => Unit) = {

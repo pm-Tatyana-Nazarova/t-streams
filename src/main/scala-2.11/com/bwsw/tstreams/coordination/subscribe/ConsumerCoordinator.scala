@@ -7,6 +7,8 @@ import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
 import com.bwsw.tstreams.coordination.subscribe.listener.ProducerTopicMessageListener
 import org.apache.zookeeper.CreateMode
 
+import scala.collection.mutable.ListBuffer
+
 /**
  * Consumer coordinator
  * @param agentAddress Consumer address
@@ -48,13 +50,15 @@ class ConsumerCoordinator(agentAddress : String,
   }
 
   def notifyProducers(streamName : String, partition : Int) = {
-    listener.resetConnectionsAmount()
     zkService.notify(s"/subscribers/event/$streamName/$partition")
   }
 
-  def synchronize(streamName : String, partition : Int) = {
-    val agentsOpt = zkService.getAllSubPath(s"/producers/agents/$streamName/$partition")
-    val totalAmount = if (agentsOpt.isEmpty) 0 else agentsOpt.get.size
+  def synchronize(streamName : String, partitions : List[Int]) = {
+    val buf = ListBuffer[String]()
+    partitions foreach { p =>
+      buf.append(zkService.getAllSubPath(s"/producers/agents/$streamName/$p").getOrElse(List()):_*)
+    }
+    val totalAmount = buf.distinct.size
     var timer = 0
     while (listener.getConnectionsAmount < totalAmount && timer < SYNCHRONIZE_LIMIT){
       timer += 1

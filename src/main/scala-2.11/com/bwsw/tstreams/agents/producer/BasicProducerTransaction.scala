@@ -135,7 +135,8 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     //await till update future will close
     Await.ready(updateFuture, TIMEOUT)
 
-    val msg = ProducerTopicMessage(txnUuid = transactionUuid, ttl = -1, status = ProducerTransactionStatus.cancelled)
+    val msg = ProducerTopicMessage(txnUuid = transactionUuid,
+      ttl = -1, status = ProducerTransactionStatus.cancelled, partition = partition)
 
     basicProducer.coordinator.publish(msg)
 
@@ -184,7 +185,8 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       val msg = ProducerTopicMessage(
         txnUuid = transactionUuid,
         ttl = -1,
-        status = ProducerTransactionStatus.closed)
+        status = ProducerTransactionStatus.closed,
+        partition = partition)
 
       //publish that current txn is closed
       basicProducer.coordinator.publish(msg)
@@ -224,7 +226,8 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         val msg = ProducerTopicMessage(
           txnUuid = transactionUuid,
           ttl = basicProducer.producerOptions.transactionTTL,
-          status = ProducerTransactionStatus.opened)
+          status = ProducerTransactionStatus.opened,
+          partition = partition)
 
         //publish that current txn is being updating
         basicProducer.coordinator.publish(msg)

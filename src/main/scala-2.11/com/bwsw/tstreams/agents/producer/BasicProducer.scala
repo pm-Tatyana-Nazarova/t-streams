@@ -150,7 +150,8 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     val msg = ProducerTopicMessage(
       txnUuid = transactionUuid,
       ttl = producerOptions.transactionTTL,
-      status = ProducerTransactionStatus.opened)
+      status = ProducerTransactionStatus.opened,
+      partition = partition)
 
     coordinator.publish(msg)
     transactionUuid
@@ -169,4 +170,9 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     isLowPriorityToBeMaster = producerOptions.producerCoordinationSettings.isLowPriorityToBeMaster,
     transport = producerOptions.producerCoordinationSettings.transport,
     transportTimeout = producerOptions.producerCoordinationSettings.transportTimeout)
+
+  def stop() = {
+    agent.stop()
+    coordinator.stop()
+  }
 }

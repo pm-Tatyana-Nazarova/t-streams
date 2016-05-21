@@ -9,6 +9,7 @@ import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTransactionStat
  * @param txnUuid Transaction uuid
  * @param ttl Time of transaction expiration in seconds
  * @param status Transaction status
+ * @param partition Transaction partition
  */
-case class ProducerTopicMessage(txnUuid : UUID, ttl : Int, status : ProducerTransactionStatus)
+case class ProducerTopicMessage(txnUuid : UUID, ttl : Int, status : ProducerTransactionStatus, partition : Int)
 

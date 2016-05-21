@@ -279,4 +279,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    */
   override def getMetadataRef(): MetadataStorage = stream.metadataStorage
 
+  def stop() = {
+    coordinator.stop()
+  }
 }

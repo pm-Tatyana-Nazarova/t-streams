@@ -70,7 +70,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       if (lastTransactionOpt.isDefined)
         transactionsRelay.consumeTransactionsLessOrEqualThanAsync(lastTransactionOpt.get.getTxnUUID)
 
-      transactionsRelay.updateProducers()
+      transactionsRelay.notifyProducers()
 
       //consume all messages greater than last
       if (lastTransactionOpt.isDefined)
@@ -82,12 +82,14 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
 
       transactionsRelay.startUpdate()
     }
+
+    coordinator.synchronize(stream.getName, (0 until stream.getPartitions).toList)
   }
 
   /**
    * Stop consumer handle incoming messages
    */
-  def stop() = {
+  override def stop() = {
     if (!isStarted)
       throw new IllegalStateException("subscriber is not started")
     relays.foreach(_.stop())

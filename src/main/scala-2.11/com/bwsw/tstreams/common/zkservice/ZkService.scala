@@ -115,6 +115,10 @@ class ZkService(prefix : String, zkHosts : List[InetSocketAddress], zkSessionTim
     if (children.nonEmpty){
       children.foreach{x=>deleteRecursive(path+"/"+x)}
     }
+
+//    val childrenafter = zkClient.getChildren(prefix+path, null, null).asScala
+//    println(childrenafter)
+
     zkClient.delete(prefix+path,-1)
   }
 

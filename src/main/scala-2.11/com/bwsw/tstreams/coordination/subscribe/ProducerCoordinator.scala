@@ -55,4 +55,8 @@ class ProducerCoordinator(prefix : String,
     val lock = zkService.getLock(s"/global/stream/$streamName")
     lock
   }
+
+  def stop() = {
+    zkService.close()
+  }
 }
