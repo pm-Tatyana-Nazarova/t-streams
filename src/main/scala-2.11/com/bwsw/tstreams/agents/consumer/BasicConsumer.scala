@@ -22,20 +22,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
                                         val stream : BasicStream[DATATYPE],
                                         val options : BasicConsumerOptions[DATATYPE, USERTYPE]) extends Agent{
 
-
-  stream.dataStorage.bind()
-
   private val logger = LoggerFactory.getLogger(this.getClass)
-
-  protected val coordinator = new ConsumerCoordinator(
-    options.consumerCoordinatorSettings.agentAddress,
-    options.consumerCoordinatorSettings.prefix,
-    options.consumerCoordinatorSettings.zkHosts,
-    options.consumerCoordinatorSettings.zkSessionTimeout)
-  //TODO add global lock
-
-
-  logger.info(s"Start new Basic consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
   /**
    * Temporary checkpoints (will be cleared after every checkpoint() invokes)
@@ -48,9 +35,27 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
   protected val currentOffsets = scala.collection.mutable.Map[Int, UUID]()
 
   /**
+   * Buffer for transactions preload
+   */
+  private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[TransactionSettings]]()
+
+  /**
    * Indicate set offsets or not
    */
   private var isSet = false
+
+  protected val coordinator = new ConsumerCoordinator(
+    options.consumerCoordinatorSettings.agentAddress,
+    options.consumerCoordinatorSettings.prefix,
+    options.consumerCoordinatorSettings.zkHosts,
+    options.consumerCoordinatorSettings.zkSessionTimeout)
+  private val streamLock = coordinator.getStreamLock(stream.getName)
+
+  stream.dataStorage.bind()
+
+  streamLock.lock()
+
+  logger.info(s"Start new Basic consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
     //set consumer offsets
   if(!stream.metadataStorage.consumerEntity.exist(name) || !options.useLastOffset){
@@ -76,7 +81,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
           offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
         }
 
-      case offset : Offsets.UUID =>
+      case offset : Offsets.CustomUUID =>
         for (i <- 0 until stream.getPartitions) {
           currentOffsets(i) = offset.startUUID
           offsetsForCheckpoint(i) = offset.startUUID
@@ -95,10 +100,6 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     }
   }
 
-  /**
-   * Buffer for transactions preload
-   */
-  private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[TransactionSettings]]()
   //fill transaction buffer using current offsets
   for (i <- 0 until stream.getPartitions)
     transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
@@ -106,6 +107,8 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       i,
       currentOffsets(i),
       options.transactionsPreload)
+
+  streamLock.unlock()
 
   /**
    * Helper function for getTransaction() method

@@ -34,7 +34,11 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     producerOptions.writePolicy.getUsedPartition(),
     producerOptions.producerCoordinationSettings.zkHosts,
     producerOptions.producerCoordinationSettings.zkTimeout)
-  //TODO add global lock
+
+  private val streamLock = coordinator.getStreamLock(stream.getName)
+
+  streamLock.lock()
+  streamLock.unlock()
 
   /**
    * Map for memorize opened transaction on partitions

@@ -10,13 +10,14 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
 
-
+/**
+ * Broadcaster for producer to broadcast messages to all consumers
+ */
 class Broadcaster {
   private val group = new NioEventLoopGroup()
-  private var bootstrap : Bootstrap = null
   private val channelHandler = new BroadcasterChannelHandler(this)
+  private val bootstrap = new Bootstrap()
 
-  bootstrap = new Bootstrap()
   bootstrap
     .group(group)
     .channel(classOf[NioSocketChannel])

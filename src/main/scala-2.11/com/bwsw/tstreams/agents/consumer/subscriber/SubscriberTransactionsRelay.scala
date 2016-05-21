@@ -11,40 +11,50 @@ import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
 import scala.util.control.Breaks._
 
 
+/**
+ * Class for consuming transactions on concrete partition from concrete offset
+ * @param subscriber Subscriber instance which instantiate this relay
+ * @param offset Offset from which to start
+ * @param partition Partition from which to consume
+ * @param coordinator Coordinator instance for maintaining new transactions updates
+ * @param callback Callback on consumed transactions
+ * @param queue Queue for maintain consumed transactions
+ * @tparam DATATYPE
+ * @tparam USERTYPE
+ */
 class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribingConsumer[DATATYPE,USERTYPE],
                                                      offset: UUID,
                                                      partition : Int,
                                                      coordinator: ConsumerCoordinator,
                                                      callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
-                                                     queue : PersistentTransactionQueue,
-                                                     isQueueConsumed : AtomicBoolean) {
+                                                     queue : PersistentTransactionQueue) {
 
 
-  /**
-   * Buffer to maintain all available transactions
-   */
   private val transactionBuffer  = new TransactionsBuffer
   private val lock = new ReentrantLock(true)
   private var lastConsumedTransaction : UUID = subscriber.options.txnGenerator.getTimeUUID(0)
   private val streamName = subscriber.stream.getName
+  private val isRunning = new AtomicBoolean(true)
   private val updateCallback = (msg : ProducerTopicMessage) => {
     lock.lock()
     if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp())
       transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
     lock.unlock()
   }
-  coordinator.addCallback(updateCallback)
+
+  private var queueConsumer : Thread = null
+  private var transactionsConsumerBeforeLast : Thread = null
+  private var updateThread : Thread = null
 
   /**
    * Start consume transaction queue async
    */
   def startConsumeAndCallbackQueueAsync() = {
-    isQueueConsumed.set(true)
     val latch = new CountDownLatch(1)
-    val queueConsumer = new Thread(new Runnable {
+    queueConsumer = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
-        while (isQueueConsumed.get()) {
+        while (isRunning.get()) {
           val txn = queue.get()
           callback.onEvent(subscriber, partition, txn)
         }
@@ -65,7 +75,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
     //TODO DEBUG ONLY
     var lasttxn : UUID = null
 
-    val transactionsConsumerBeforeLast = new Thread(new Runnable {
+    transactionsConsumerBeforeLast = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
 
@@ -75,7 +85,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
           leftBorder = offset,
           rightBorder = transactionUUID)
 
-        while (transactions.nonEmpty) {
+        while (transactions.nonEmpty && isRunning.get()) {
           val uuid = transactions.dequeue().txnUuid
           queue.put(uuid)
           lasttxn = uuid
@@ -113,6 +123,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
    * @return Listener ID
    */
   def updateProducers() : Unit = {
+    coordinator.addCallback(updateCallback)
     coordinator.registerSubscriber(subscriber.stream.getName, partition)
     coordinator.notifyProducers(subscriber.stream.getName, partition)
     coordinator.synchronize(subscriber.stream.getName, partition)
@@ -124,13 +135,13 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   def startUpdate() : Unit = {
     val latch = new CountDownLatch(1)
 
-    val updateThread =
+    updateThread =
     new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
 
         //start handling map
-        while (isQueueConsumed.get()) {
+        while (isRunning.get()) {
           lock.lock()
 
           val it = transactionBuffer.getIterator()
@@ -159,10 +170,16 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
           Thread.sleep(callback.frequency * 1000L)
         }
 
-        coordinator.stop()
       }
     })
     updateThread.start()
     latch.await()
+  }
+
+  def stop() = {
+    isRunning.set(false)
+    updateThread.join()
+    transactionsConsumerBeforeLast.join()
+    queueConsumer.join()
   }
 }

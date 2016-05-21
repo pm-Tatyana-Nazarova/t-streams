@@ -59,8 +59,10 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
   }
 
   def updateMap(channelId: ChannelId, address : String) = {
+    lock.lock()
     idToAddress(channelId) = address
     addressToId(address) = channelId
+    lock.unlock()
   }
 }
 

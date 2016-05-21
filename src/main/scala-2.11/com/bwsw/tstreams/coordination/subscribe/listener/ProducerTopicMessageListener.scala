@@ -11,18 +11,15 @@ import io.netty.handler.codec.string.StringDecoder
 import io.netty.handler.codec.{Delimiters, DelimiterBasedFrameDecoder}
 import io.netty.handler.logging.{LogLevel, LoggingHandler}
 
-
+/**
+ * [[ProducerTopicMessage]] listener
+ * @param port Listener port
+ */
 class ProducerTopicMessageListener(port : Int) {
-  /**
-   * Socket accept worker
-   */
   private val bossGroup = new NioEventLoopGroup(1)
-  /**
-   * Channel workers
-   */
   private val workerGroup = new NioEventLoopGroup()
   private val MAX_FRAME_LENGTH = 8192
-  private val channelHandler: SubscriberChannelHandler = new SubscriberChannelHandler
+  private val channelHandler : SubscriberChannelHandler = new SubscriberChannelHandler
   private var listenerThread : Thread = null
 
   def stop() = {
@@ -34,11 +31,13 @@ class ProducerTopicMessageListener(port : Int) {
     channelHandler.addCallback(callback)
   }
   
-  def getConnectionsAmount() =
+  def getConnectionsAmount() = {
     channelHandler.getCount()
+  }
 
-  def resetConnectionsAmount() =
+  def resetConnectionsAmount() = {
     channelHandler.resetCount()
+  }
 
   def start() = {
     assert(listenerThread == null || !listenerThread.isAlive)

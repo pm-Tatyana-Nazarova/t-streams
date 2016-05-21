@@ -1,9 +1,10 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
+
+import scala.collection.mutable.ListBuffer
 
 /**
  * Basic consumer with subscribe option
@@ -14,7 +15,6 @@ import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
  * @tparam DATATYPE Storage data type
  * @tparam USERTYPE User data type
  */
-//TODO add logging
 class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
                                                    stream : BasicStream[DATATYPE],
                                                    options : BasicConsumerOptions[DATATYPE,USERTYPE],
@@ -27,10 +27,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
    */
   private var isStarted = false
 
-  /**
-   * Indicate active subscriber or not
-   */
-  private val isQueueConsumed = new AtomicBoolean(false)
+
+  private var relays = ListBuffer[SubscriberTransactionsRelay[_,_]]()
 
   /**
    * Start to consume messages
@@ -38,7 +36,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   def start() = {
     if (isStarted)
       throw new IllegalStateException("subscriber already started")
-
     isStarted = true
 
     coordinator.startListen()
@@ -62,8 +59,9 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
         partition = partition,
         coordinator = coordinator,
         callback = callBack,
-        queue = queue,
-        isQueueConsumed = isQueueConsumed)
+        queue = queue)
+
+      relays += transactionsRelay
 
       //start tread to consume queue and doing callback's on it
       transactionsRelay.startConsumeAndCallbackQueueAsync()
@@ -89,12 +87,12 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   /**
    * Stop consumer handle incoming messages
    */
-  //TODO add in txnsrelay threads join
   def stop() = {
     if (!isStarted)
-      throw new IllegalStateException("subscriber not started")
-
-    isQueueConsumed.set(false)
+      throw new IllegalStateException("subscriber is not started")
+    relays.foreach(_.stop())
+    relays.clear()
     isStarted = false
+    coordinator.stop()
   }
 }

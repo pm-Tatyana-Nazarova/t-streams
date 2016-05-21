@@ -15,28 +15,38 @@ import scala.collection.mutable.ListBuffer
 class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopicMessage] {
   private var count = 0
   private val callbacks = new ListBuffer[(ProducerTopicMessage)=>Unit]()
-  private val lock = new ReentrantLock(true)
+  private val lockCallbacks = new ReentrantLock(true)
+  private val lockCount = new ReentrantLock(true)
 
   def addCallback(callback : (ProducerTopicMessage)=>Unit) = {
-    lock.lock()
+    lockCallbacks.lock()
     callbacks += callback
-    lock.unlock()
+    lockCallbacks.unlock()
   }
 
-  def resetCount() =
+  def resetCount() : Unit = {
+    lockCount.lock()
     count = 0
+    lockCount.unlock()
+  }
 
-  def getCount() =
-    count
+  def getCount(): Int = {
+    lockCount.lock()
+    val cnt = count
+    lockCount.unlock()
+    cnt
+  }
 
   override def channelActive(ctx: ChannelHandlerContext) : Unit = {
+    lockCount.lock()
     count += 1
+    lockCount.unlock()
   }
 
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
-    lock.lock()
+    lockCallbacks.lock()
     callbacks.foreach(c=>c(msg))
-    lock.unlock()
+    lockCallbacks.unlock()
     ReferenceCountUtil.release(msg)
   }
 

@@ -9,6 +9,14 @@ import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
 import org.apache.zookeeper.{WatchedEvent, Watcher}
 
 
+/**
+ * Producer coordinator
+ * @param prefix Zookeeper root prefix for all metadata
+ * @param streamName Producer stream
+ * @param usedPartitions Producer used partition
+ * @param zkHosts Zookeeper hosts to connect
+ * @param zkSessionTimeout Zookeeper connect timeout
+ */
 class ProducerCoordinator(prefix : String,
                           streamName : String,
                           usedPartitions : List[Int],
@@ -41,5 +49,10 @@ class ProducerCoordinator(prefix : String,
     if (subscribersPathOpt.isDefined)
       broadcaster.updateSubscribers(subscribersPathOpt.get)
     lock.unlock()
+  }
+
+  def getStreamLock(streamName : String)  = {
+    val lock = zkService.getLock(s"/global/stream/$streamName")
+    lock
   }
 }
