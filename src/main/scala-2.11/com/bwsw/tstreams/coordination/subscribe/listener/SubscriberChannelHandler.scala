@@ -24,12 +24,6 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
     lockCallbacks.unlock()
   }
 
-  def resetCount() : Unit = {
-    lockCount.lock()
-    count = 0
-    lockCount.unlock()
-  }
-
   def getCount(): Int = {
     lockCount.lock()
     val cnt = count
