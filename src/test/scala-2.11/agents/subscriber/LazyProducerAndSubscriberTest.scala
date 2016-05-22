@@ -27,6 +27,12 @@ import scala.collection.mutable.ListBuffer
 class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   var port = 8000
 
+  LogManager.getLogManager.reset()
+  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
+  System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")
+  System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
+  System.setProperty("org.slf4j.simpleLogger.log.com.bwsw","DEBUG")
+
   //creating keyspace, metadata
   val path = randomString
   val randomKeyspace = randomString

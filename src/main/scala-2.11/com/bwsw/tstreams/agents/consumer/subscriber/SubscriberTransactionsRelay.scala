@@ -167,7 +167,8 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
                 case ProducerTransactionStatus.opened =>
                   break()
                 case ProducerTransactionStatus.closed =>
-                  logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${key.timestamp()} curr_amount=$totalAmount\n")
+                  logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${key.timestamp()}" +
+                    s" last_consumed=${lastConsumedTransaction.timestamp()} curr_amount=$totalAmount\n")
                   totalAmount += 1
                   queue.put(key)
               }

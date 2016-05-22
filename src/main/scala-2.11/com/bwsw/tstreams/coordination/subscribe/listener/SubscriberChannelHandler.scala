@@ -8,11 +8,13 @@ import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.MessageToMessageDecoder
 import io.netty.util.ReferenceCountUtil
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
 
 @Sharable
 class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopicMessage] {
+  private val logger = LoggerFactory.getLogger(this.getClass)
   private var count = 0
   private val callbacks = new ListBuffer[(ProducerTopicMessage)=>Unit]()
   private val lockCallbacks = new ReentrantLock(true)
@@ -38,10 +40,12 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
   }
 
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
+    logger.debug(s"[READ BEFORELOCK PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}")
     lockCallbacks.lock()
+    logger.debug(s"[READ AFTERLOCK PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}")
     callbacks.foreach(c=>c(msg))
     lockCallbacks.unlock()
-    ReferenceCountUtil.release(msg)
+    ReferenceCountUtil.release(msg)//TODO
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {
