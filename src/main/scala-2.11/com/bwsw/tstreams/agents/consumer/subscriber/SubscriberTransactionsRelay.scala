@@ -40,7 +40,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   private val updateCallback = (msg : ProducerTopicMessage) => {
     if (msg.partition == partition) {
       lock.lock()
-      logger.debug(s"[UPDATE_CALLBACK PARTITION_${msg.partition}}] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
+      logger.debug(s"[UPDATE_CALLBACK PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
         s" status:{${msg.status}}\n")
       if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp())
         transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
@@ -62,6 +62,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
         latch.countDown()
         while (isRunning.get()) {
           val txn = queue.get()
+          logger.debug(s"[QUEUE_CONSUMER PARTITION_$partition] consumed msg with uuid:{${txn.timestamp()}}")
           callback.onEvent(subscriber, partition, txn)
         }
       }
@@ -143,7 +144,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
    */
   def startUpdate() : Unit = {
     val latch = new CountDownLatch(1)
-    var totalAmount = 0 //just for log
+    var totalAmount = 1 //just for log
 
     updateThread =
     new Thread(new Runnable {

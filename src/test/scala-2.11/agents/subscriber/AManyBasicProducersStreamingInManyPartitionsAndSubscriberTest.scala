@@ -107,10 +107,12 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
       map(partition) = ListBuffer.empty[UUID]
     }
 
+    var cnt = 0
     val callback = new BasicSubscriberCallback[Array[Byte], String] {
       override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
         lock.lock()
         map(partition) += transactionUuid
+        cnt += 1
         lock.unlock()
       }
       override val frequency: Int = 1
@@ -124,6 +126,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     producersThreads.foreach(x=>x.start())
     producersThreads.foreach(x=>x.join(timeoutForWaiting*1000L))
     Thread.sleep(20*1000)
+    println(s"cnt=$cnt")
 
     assert(map.values.map(x=>x.size).sum == totalTxn*producersAmount)
     map foreach { case(_,list) =>

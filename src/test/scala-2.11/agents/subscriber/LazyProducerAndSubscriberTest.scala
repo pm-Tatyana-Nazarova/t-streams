@@ -102,9 +102,12 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
       map(partition) = ListBuffer.empty[UUID]
     }
 
+    var cnt = 0
+
     val callback = new BasicSubscriberCallback[Array[Byte], String] {
       override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
         lock.lock()
+        cnt += 1
         map(partition) += transactionUuid
         lock.unlock()
       }
@@ -117,7 +120,7 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
     subscriber.start()
     producersThreads.foreach(x=>x.join(timeoutForWaiting*1000L))
     Thread.sleep(30*1000)
-
+    println(s"cnt=$cnt")
     assert(map.values.map(x=>x.size).sum == totalTxn*producersAmount)
     map foreach {case(_,list) =>
       list.map(x=>(x,x.timestamp())).sortBy(_._2).map(x=>x._1) shouldEqual list
