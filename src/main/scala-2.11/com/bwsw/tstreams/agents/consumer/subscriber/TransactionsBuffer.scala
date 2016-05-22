@@ -14,7 +14,7 @@ class TransactionsBuffer() {
 
   def update(txnUuid : UUID, status: ProducerTransactionStatus, ttl : Int) : Unit = {
     if (map.exist(txnUuid)){
-      if (map.get(txnUuid)._1 == ProducerTransactionStatus.closed) {
+      if (map.get(txnUuid)._1 != ProducerTransactionStatus.opened) {
         return
       }
     }
