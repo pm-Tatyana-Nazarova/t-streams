@@ -2,7 +2,7 @@ package com.bwsw.tstreams.coordination.subscribe.listener
 
 import java.util
 import java.util.UUID
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue}
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.common.serializer.JsonSerializer
@@ -30,8 +30,10 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
   }
 
   def startCallBack() = {
+    val sync = new CountDownLatch(1)
     callbackThread = new Thread(new Runnable {
       override def run(): Unit = {
+        sync.countDown()
         while(isCallback.get()) {
           val msg = queue.take()
           callbacks.foreach(x => x(msg))
@@ -39,6 +41,7 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
       }
     })
     callbackThread.start()
+    sync.await()
   }
 
   def stopCallback() = {
