@@ -45,6 +45,14 @@ class ConsumerCoordinator(agentAddress : String,
     listener.start()
   }
 
+  def startCallback() = {
+    listener.startCallback()
+  }
+
+  def stopCallback() = {
+    listener.stopCallback()
+  }
+
   def registerSubscriber(streamName : String, partition : Int) = {
     zkService.create(s"/subscribers/agents/$streamName/$partition/subscriber_", agentAddress, CreateMode.EPHEMERAL_SEQUENTIAL)
   }

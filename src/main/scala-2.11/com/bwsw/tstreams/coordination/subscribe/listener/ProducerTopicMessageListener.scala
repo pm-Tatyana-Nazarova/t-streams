@@ -35,6 +35,14 @@ class ProducerTopicMessageListener(port : Int) {
     channelHandler.getCount()
   }
 
+  def startCallback() = {
+    channelHandler.startCallBack()
+  }
+
+  def stopCallback() = {
+    channelHandler.stopCallback()
+  }
+
   def start() = {
     assert(listenerThread == null || !listenerThread.isAlive)
     val syncPoint = new CountDownLatch(1)

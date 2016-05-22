@@ -44,17 +44,18 @@ class BroadcasterChannelHandler(broadcaster : Broadcaster) extends SimpleChannel
   }
 
   def broadcast(msg : ProducerTopicMessage) = {
-    group.writeAndFlush(msg)
+    logger.debug(s"[BROADCASTER PUBLISH] partition=${msg.partition} status=${msg.status} uuid=${msg.txnUuid.timestamp()}\n")
+    group.writeAndFlush(msg).await()
   }
 
   def updateSubscribers(newSubscribers : List[String]): Unit = {
     lock.lock()
     logger.debug(s"[BROADCASTER] start updating subscribers:{${addressToId.keys.mkString(",")}}" +
-      s" using newSubscribers:{${newSubscribers.mkString(",")}}")
+      s" using newSubscribers:{${newSubscribers.mkString(",")}}\n")
     newSubscribers.diff(addressToId.keys.toList) foreach { subscriber =>
       broadcaster.connect(subscriber)
     }
-    logger.debug(s"[BROADCASTER] updated subscribers:{${addressToId.keys.mkString(",")}}, current group size: {${group.size()}}")
+    logger.debug(s"[BROADCASTER] updated subscribers:{${addressToId.keys.mkString(",")}}, current group size: {${group.size()}}\n")
     lock.unlock()
   }
 

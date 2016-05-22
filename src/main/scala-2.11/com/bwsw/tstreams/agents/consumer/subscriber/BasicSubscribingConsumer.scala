@@ -84,6 +84,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     }
 
     coordinator.synchronize(stream.getName, (0 until stream.getPartitions).toList)
+
+    coordinator.startCallback()
   }
 
   /**
@@ -95,6 +97,7 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     relays.foreach(_.stop())
     relays.clear()
     isStarted = false
+    coordinator.stopCallback()
     coordinator.stop()
   }
 }

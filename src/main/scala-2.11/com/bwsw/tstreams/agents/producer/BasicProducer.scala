@@ -151,6 +151,7 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
       status = ProducerTransactionStatus.opened,
       partition = partition)
 
+    logger.debug(s"[GETLOCALTXN PRODUCER] update with msg partition=$partition uuid=${transactionUuid.timestamp()} opened")
     coordinator.publish(msg)
     transactionUuid
   }

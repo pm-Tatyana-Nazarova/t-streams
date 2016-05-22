@@ -1,9 +1,12 @@
 package com.bwsw.tstreams.coordination.subscribe.listener
 
 import java.util
+import java.util.UUID
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import com.bwsw.tstreams.common.serializer.JsonSerializer
-import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
+import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.MessageToMessageDecoder
@@ -17,13 +20,31 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
   private val logger = LoggerFactory.getLogger(this.getClass)
   private var count = 0
   private val callbacks = new ListBuffer[(ProducerTopicMessage)=>Unit]()
-  private val lockCallbacks = new ReentrantLock(true)
   private val lockCount = new ReentrantLock(true)
+  private val queue = new LinkedBlockingQueue[ProducerTopicMessage]()
+  private var callbackThread : Thread = null
+  private val isCallback = new AtomicBoolean(true)
 
   def addCallback(callback : (ProducerTopicMessage)=>Unit) = {
-    lockCallbacks.lock()
     callbacks += callback
-    lockCallbacks.unlock()
+  }
+
+  def startCallBack() = {
+    callbackThread = new Thread(new Runnable {
+      override def run(): Unit = {
+        while(isCallback.get()) {
+          val msg = queue.take()
+          callbacks.foreach(x => x(msg))
+        }
+      }
+    })
+    callbackThread.start()
+  }
+
+  def stopCallback() = {
+    isCallback.set(false)
+    queue.put(ProducerTopicMessage(UUID.randomUUID(),0,ProducerTransactionStatus.cancelled,-1))
+    callbackThread.join()
   }
 
   def getCount(): Int = {
@@ -40,12 +61,9 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
   }
 
   override def channelRead0(ctx: ChannelHandlerContext, msg: ProducerTopicMessage): Unit = {
-    logger.debug(s"[READ BEFORELOCK PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}")
-    lockCallbacks.lock()
-    logger.debug(s"[READ AFTERLOCK PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}")
-    callbacks.foreach(c=>c(msg))
-    lockCallbacks.unlock()
-    ReferenceCountUtil.release(msg)//TODO
+    logger.debug(s"[READ PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} ttl=${msg.ttl} status=${msg.status}")
+    queue.put(msg)
+    ReferenceCountUtil.release(msg)
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) = {

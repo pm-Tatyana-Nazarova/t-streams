@@ -1,15 +1,11 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
-import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue, TimeUnit}
 import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import scala.language.postfixOps
 import scala.util.control.Breaks._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Transaction retrieved by BasicProducer.newTransaction method
@@ -50,11 +46,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   private var part = 0
 
   /**
-   * Max awaiting time on Await.ready() method for futures
-   */
-  private val TIMEOUT = 2 seconds
-
-  /**
    * All inserts (can be async) in storage (must be waited before closing this transaction)
    */
   private var jobs = ListBuffer[() => Unit]()
@@ -65,9 +56,9 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   private val updateQueue = new LinkedBlockingQueue[Boolean](10)
 
   /**
-   * Future to keep this transaction alive
+   * Thread to keep this transaction alive
    */
-  private val updateFuture: Future[Unit] = startAsyncKeepAlive()
+  private val updateThread: Thread = startAsyncKeepAlive()
 
   /**
    * Send data to storage
@@ -132,16 +123,16 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
     updateQueue.put(true)
 
-    //await till update future will close
-    Await.ready(updateFuture, TIMEOUT)
+    //await till update thread will be stoped
+    updateThread.join()
 
     val msg = ProducerTopicMessage(txnUuid = transactionUuid,
       ttl = -1, status = ProducerTransactionStatus.cancelled, partition = partition)
 
     basicProducer.coordinator.publish(msg)
+    logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
 
     closed = true
-    logger.debug(s"Cancel transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
   }
 
   /**
@@ -170,8 +161,8 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
     updateQueue.put(true)
 
-    //await till update future will close
-    Await.ready(updateFuture, TIMEOUT)
+    //await till update thread will be stoped
+    updateThread.join()
 
     //close transaction using stream ttl
     if (part > 0) {
@@ -190,10 +181,10 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
       //publish that current txn is closed
       basicProducer.coordinator.publish(msg)
+      logger.debug(s"[CHECKPOINT PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
     }
 
     closed = true
-    logger.debug(s"Close transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
   }
 
   /**
@@ -205,33 +196,41 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   /**
    * Async job for keeping alive current transaction
    */
-  private def startAsyncKeepAlive() : Future[Unit] = {
+  private def startAsyncKeepAlive() : Thread = {
+    val latch = new CountDownLatch(1)
+    val updater = new Thread(new Runnable {
+      override def run(): Unit = {
+        latch.countDown()
+        logger.debug(s"[START KEEP_ALIVE THREAD PARTITION=$partition UUID=${transactionUuid.timestamp()}")
+        breakable { while (true) {
+          val value = updateQueue.poll(basicProducer.producerOptions.transactionKeepAliveInterval * 1000, TimeUnit.MILLISECONDS)
 
-    Future {
-      breakable { while (true) {
+          if (value)
+            break()
 
-        val value = updateQueue.poll(basicProducer.producerOptions.transactionKeepAliveInterval * 1000, TimeUnit.MILLISECONDS)
+          //-1 here indicate that transaction is started but is not finished yet
+          basicProducer.stream.metadataStorage.producerCommitEntity.commit(
+            streamName = basicProducer.stream.getName,
+            partition = partition,
+            transaction = transactionUuid,
+            totalCnt = -1,
+            ttl = basicProducer.producerOptions.transactionTTL)
 
-        if (value)
-          break()
+          //TODO Ivan approach
+          val msg = ProducerTopicMessage(
+            txnUuid = transactionUuid,
+            ttl = basicProducer.producerOptions.transactionTTL,
+            status = ProducerTransactionStatus.opened,
+            partition = partition)
 
-        //-1 here indicate that transaction is started but is not finished yet
-        basicProducer.stream.metadataStorage.producerCommitEntity.commit(
-          streamName = basicProducer.stream.getName,
-          partition = partition,
-          transaction = transactionUuid,
-          totalCnt = -1,
-          ttl = basicProducer.producerOptions.transactionTTL)
-
-        val msg = ProducerTopicMessage(
-          txnUuid = transactionUuid,
-          ttl = basicProducer.producerOptions.transactionTTL,
-          status = ProducerTransactionStatus.opened,
-          partition = partition)
-
-        //publish that current txn is being updating
-        basicProducer.coordinator.publish(msg)
-      }}
-    }
+          //publish that current txn is being updating
+          basicProducer.coordinator.publish(msg)
+          logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
+        }}
+      }
+    })
+    updater.start()
+    latch.await()
+    updater
   }
 }

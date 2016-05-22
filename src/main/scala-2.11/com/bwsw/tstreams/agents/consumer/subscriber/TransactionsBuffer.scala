@@ -12,7 +12,12 @@ class TransactionsBuffer() {
   private val map : SortedExpiringMap[UUID, (ProducerTransactionStatus, Long)] =
     new SortedExpiringMap(new UUIDComparator, new SubscriberExpirationPolicy)
 
-  def update(txnUuid : UUID, status: ProducerTransactionStatus, ttl : Int) = {
+  def update(txnUuid : UUID, status: ProducerTransactionStatus, ttl : Int) : Unit = {
+    if (map.exist(txnUuid)){
+      if (map.get(txnUuid)._1 == ProducerTransactionStatus.closed) {
+        return
+      }
+    }
     status match {
       case ProducerTransactionStatus.opened =>
         map.put(txnUuid, (status, ttl))

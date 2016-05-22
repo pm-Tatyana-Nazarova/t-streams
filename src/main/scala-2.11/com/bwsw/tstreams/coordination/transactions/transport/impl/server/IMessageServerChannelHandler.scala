@@ -63,7 +63,7 @@ class IMessageServerChannelHandler extends SimpleChannelInboundHandler[IMessage]
     if (addressToId.contains(responseAddress)){
       val id = addressToId(responseAddress)
       val channel = idToChannel(id)
-      channel.writeAndFlush(msg)
+      channel.writeAndFlush(msg).await()
     }
     lock.unlock()
   }
