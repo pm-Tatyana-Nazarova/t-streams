@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.UUID
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinatorSettings, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationSettings, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
@@ -99,7 +99,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
-    ConsumerCoordinatorSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
+    new ConsumerCoordinationSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -111,7 +111,6 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
   val callback = new BasicSubscriberCallback[Array[Byte], String] {
     override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
       lock.lock()
-      println(acc)
       acc += 1
       lock.unlock()
     }
@@ -140,7 +139,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     }
     Thread.sleep(10000)
 
-    subscribeConsumer.stop()
+//    subscribeConsumer.stop()
 
     acc shouldEqual totalMsg
   }

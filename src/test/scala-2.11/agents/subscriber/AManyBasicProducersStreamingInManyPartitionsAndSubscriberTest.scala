@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinatorSettings, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationSettings, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -89,7 +89,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
       RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = (0 until totalPartitions).toList,
         stream = streamInst),
-      ConsumerCoordinatorSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
+      new ConsumerCoordinationSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
       Oldest,
       LocalGeneratorCreator.getGen(),
       useLastOffset = false)
@@ -114,7 +114,6 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
       callback,
       path)
     subscriber.start()
-
     producersThreads.foreach(x=>x.start())
     producersThreads.foreach(x=>x.join(timeoutForWaiting*1000L))
     Thread.sleep(20*1000)

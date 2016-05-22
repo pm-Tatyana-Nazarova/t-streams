@@ -26,7 +26,7 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
                                               val consumerKeepAliveInterval : Int,
                                               val converter : IConverter[DATATYPE,USERTYPE],
                                               val readPolicy : AbstractPolicy,
-                                              val consumerCoordinatorSettings: ConsumerCoordinatorSettings,
+                                              val consumerCoordinatorSettings: ConsumerCoordinationSettings,
                                               val offset : IOffset,
                                               val txnGenerator: IUUIDGenerator,
                                               val useLastOffset : Boolean = true) {
@@ -41,7 +41,7 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
 }
 
 
-case class ConsumerCoordinatorSettings(agentAddress : String,
-                                      prefix : String,
-                                      zkHosts : List[InetSocketAddress],
-                                      zkSessionTimeout : Int)
+class ConsumerCoordinationSettings(val agentAddress : String,
+                                  val prefix : String,
+                                  val zkHosts : List[InetSocketAddress],
+                                  val zkSessionTimeout : Int)

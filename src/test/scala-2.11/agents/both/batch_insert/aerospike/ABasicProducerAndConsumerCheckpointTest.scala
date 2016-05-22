@@ -3,7 +3,7 @@ package agents.both.batch_insert.aerospike
 import java.net.InetSocketAddress
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinatorSettings, BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationSettings, BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
@@ -19,15 +19,6 @@ import testutils._
 
 class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   //creating keyspace, metadata
-  val agentSettings = new ProducerCoordinationSettings(
-    agentAddress = "localhost:8888",
-    zkHosts = List(new InetSocketAddress("localhost", 2181)),
-    zkRootPath = "/unit",
-    zkTimeout = 7000,
-    isLowPriorityToBeMaster = false,
-    transport = new TcpTransport,
-    transportTimeout = 5)
-
   val randomKeyspace = randomString
   val cluster = Cluster.builder().addContactPoint("localhost").build()
   val session = cluster.connect()
@@ -78,6 +69,15 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     description = "some_description")
 
   //producer/consumer options
+  val agentSettings = new ProducerCoordinationSettings(
+    agentAddress = "localhost:8888",
+    zkHosts = List(new InetSocketAddress("localhost", 2181)),
+    zkRootPath = "/unit",
+    zkTimeout = 7000,
+    isLowPriorityToBeMaster = false,
+    transport = new TcpTransport,
+    transportTimeout = 5)
+
   val producerOptions = new BasicProducerOptions[String, Array[Byte]](
     transactionTTL = 6,
     transactionKeepAliveInterval = 2,
@@ -94,7 +94,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
-    ConsumerCoordinatorSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
+    new ConsumerCoordinationSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -127,8 +127,17 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
       checkVal &= data == dataToSend
     }
 
+    val newStreamForConsumer = new BasicStream[Array[Byte]](
+      name = "test_stream",
+      partitions = 3,
+      metadataStorage = metadataStorageInstForConsumer,
+      dataStorage = storageFactory.getInstance(aerospikeOptions),
+      ttl = 60 * 10,
+      description = "some_description")
+
+    consumer.stop()
     //reinitialization (should begin read from the latest checkpoint)
-    consumer = new BasicConsumer("test_consumer", streamForConsumer, consumerOptions)
+    consumer = new BasicConsumer("test_consumer", newStreamForConsumer, consumerOptions)
 
     (0 until secondPart) foreach { _ =>
       val txn: BasicConsumerTransaction[Array[Byte], String] = consumer.getTransaction.get
@@ -137,7 +146,7 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
     }
 
     //assert that is nothing to read
-    (0 until streamForConsumer.getPartitions) foreach { _=>
+    (0 until newStreamForConsumer.getPartitions) foreach { _=>
       checkVal &= consumer.getTransaction.isEmpty
     }
 
@@ -145,6 +154,8 @@ class ABasicProducerAndConsumerCheckpointTest extends FlatSpec with Matchers wit
   }
 
   override def afterAll(): Unit = {
+    producer.stop()
+    consumer.stop()
     val zkService = new ZkService("/unit", List(new InetSocketAddress("localhost",2181)), 7000)
     zkService.deleteRecursive("")
     zkService.close()
