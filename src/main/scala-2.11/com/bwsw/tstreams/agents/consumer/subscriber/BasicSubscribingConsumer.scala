@@ -40,6 +40,9 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
 
     coordinator.startListen()
 
+    //TODO [THINK HERE] mb move it above [split callback on partitions] MAP[partition, queue[txn]]
+    coordinator.startCallback()
+
     (0 until stream.getPartitions) foreach { partition =>
       //getting last txn for concrete partition
       val lastTransactionOpt = getLastTransaction(partition)
@@ -84,8 +87,6 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
     }
 
     coordinator.synchronize(stream.getName, (0 until stream.getPartitions).toList)
-
-    coordinator.startCallback()
   }
 
   /**
