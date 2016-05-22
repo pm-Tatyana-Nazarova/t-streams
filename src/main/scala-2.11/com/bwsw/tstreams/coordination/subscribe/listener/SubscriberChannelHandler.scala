@@ -24,9 +24,12 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
   private val queue = new LinkedBlockingQueue[ProducerTopicMessage]()
   private var callbackThread : Thread = null
   private val isCallback = new AtomicBoolean(true)
+  private val lock = new ReentrantLock(true)
 
   def addCallback(callback : (ProducerTopicMessage)=>Unit) = {
+    lock.lock()
     callbacks += callback
+    lock.unlock()
   }
 
   def startCallBack() = {
@@ -36,7 +39,9 @@ class SubscriberChannelHandler extends SimpleChannelInboundHandler[ProducerTopic
         sync.countDown()
         while(isCallback.get()) {
           val msg = queue.take()
+          lock.lock()
           callbacks.foreach(x => x(msg))
+          lock.unlock()
         }
       }
     })
