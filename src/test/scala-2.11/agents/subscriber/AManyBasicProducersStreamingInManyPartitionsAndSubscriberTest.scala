@@ -4,6 +4,7 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
+import java.util.logging.LogManager
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
@@ -24,6 +25,12 @@ import scala.collection.mutable.ListBuffer
 
 class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   var port = 8000
+
+  LogManager.getLogManager.reset()
+  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
+  System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")
+  System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
+  System.setProperty("org.slf4j.simpleLogger.log.com.bwsw","DEBUG")
 
   //creating keyspace, metadata
   val path = randomString
@@ -119,7 +126,7 @@ class AManyBasicProducersStreamingInManyPartitionsAndSubscriberTest extends Flat
     Thread.sleep(20*1000)
 
     assert(map.values.map(x=>x.size).sum == totalTxn*producersAmount)
-    map foreach {case(_,list) =>
+    map foreach { case(_,list) =>
       list.map(x=>(x,x.timestamp())).sortBy(_._2).map(x=>x._1) shouldEqual list
     }
   }

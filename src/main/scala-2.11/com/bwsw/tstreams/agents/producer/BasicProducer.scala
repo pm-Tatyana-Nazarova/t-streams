@@ -62,11 +62,9 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     if (!(partition >= 0 && partition < stream.getPartitions))
       throw new IllegalArgumentException("invalid partition")
 
-    logger.debug(s"Start new BasicProducerTransaction for BasicProducer " +
-      s"with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions} on partition $partition\n")
-
     val transaction = {
       val txnUUID = agent.getNewTxn(partition)
+      logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}\n")
       val txn = new BasicProducerTransaction[USERTYPE, DATATYPE](partition, txnUUID, this)
       if (mapPartitions.contains(partition)) {
         val prevTxn = mapPartitions(partition)

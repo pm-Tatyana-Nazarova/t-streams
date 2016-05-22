@@ -8,6 +8,8 @@ import com.bwsw.tstreams.coordination.subscribe.ConsumerCoordinator
 import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTopicMessage, ProducerTransactionStatus}
 import ProducerTransactionStatus._
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
+import org.slf4j.LoggerFactory
+import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks._
 
 
@@ -29,7 +31,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
                                                      callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
                                                      queue : PersistentTransactionQueue) {
 
-
+  private val logger = LoggerFactory.getLogger(this.getClass)
   private val transactionBuffer  = new TransactionsBuffer
   private val lock = new ReentrantLock(true)
   private var lastConsumedTransaction : UUID = subscriber.options.txnGenerator.getTimeUUID(0)
@@ -38,6 +40,8 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
   private val updateCallback = (msg : ProducerTopicMessage) => {
     if (msg.partition == partition) {
       lock.lock()
+      logger.debug(s"[UPDATE_CALLBACK PARTITION_${msg.partition}}] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
+        s" status:{${msg.status}}\n")
       if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp())
         transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
       lock.unlock()
@@ -87,8 +91,11 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
           leftBorder = offset,
           rightBorder = transactionUUID)
 
+        logger.debug(s"[BEFORE_OR_EQUAL_LAST PARTITION_$partition] Start consume queue with size: {${transactions.size}}\n")
+
         while (transactions.nonEmpty && isRunning.get()) {
           val uuid = transactions.dequeue().txnUuid
+          logger.debug(s"[BEFORE_OR_EQUAL_LAST PARTITION_$partition] consumed txn with uuid:{${uuid.timestamp()}}\n")
           queue.put(uuid)
           lasttxn = uuid
         }
@@ -115,6 +122,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
 
     lock.lock()
     messagesGreaterThanLast foreach { m =>
+      logger.debug(s"[MORE_LAST PARTITION_$partition] consumed txn with uuid:{${m.txnUuid.timestamp()}}\n")
       transactionBuffer.update(m.txnUuid, ProducerTransactionStatus.closed, m.ttl)
     }
     lock.unlock()
@@ -135,6 +143,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
    */
   def startUpdate() : Unit = {
     val latch = new CountDownLatch(1)
+    var totalAmount = 0 //just for log
 
     updateThread =
     new Thread(new Runnable {
@@ -144,6 +153,8 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
         //start handling map
         while (isRunning.get()) {
           lock.lock()
+
+          logBuffer() //TODO remove after hard debug
 
           val it = transactionBuffer.getIterator()
           breakable {
@@ -155,6 +166,8 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
                 case ProducerTransactionStatus.opened =>
                   break()
                 case ProducerTransactionStatus.closed =>
+                  logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${key.timestamp()} curr_amount=$totalAmount\n")
+                  totalAmount += 1
                   queue.put(key)
               }
 
@@ -182,5 +195,17 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
     updateThread.join()
     transactionsConsumerBeforeLast.join()
     queueConsumer.join()
+  }
+
+
+  //TODO remove after hard debug
+  def logBuffer() = {
+    val lb = ListBuffer[(Long, ProducerTransactionStatus)]()
+    val it = transactionBuffer.getIterator()
+    while (it.hasNext){
+      val entry = it.next()
+      lb += ((entry.getKey.timestamp(), entry.getValue._1))
+    }
+    logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${lb.toList}\n")
   }
 }

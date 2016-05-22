@@ -5,6 +5,7 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
+import java.util.logging.LogManager
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}

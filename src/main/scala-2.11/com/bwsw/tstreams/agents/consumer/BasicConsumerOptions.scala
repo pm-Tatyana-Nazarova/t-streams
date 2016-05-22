@@ -42,6 +42,6 @@ class BasicConsumerOptions[DATATYPE,USERTYPE](val transactionsPreload : Int,
 
 
 class ConsumerCoordinationSettings(val agentAddress : String,
-                                  val prefix : String,
-                                  val zkHosts : List[InetSocketAddress],
-                                  val zkSessionTimeout : Int)
+                                   val prefix : String,
+                                   val zkHosts : List[InetSocketAddress],
+                                   val zkSessionTimeout : Int)
