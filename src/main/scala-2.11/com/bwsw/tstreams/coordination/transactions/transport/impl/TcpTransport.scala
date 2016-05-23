@@ -95,4 +95,14 @@ class TcpTransport extends ITransport{
   override def unbindLocalAddress(): Unit = {
     listener.stop()
   }
+
+  /**
+   * Request to publish event about Txn
+   * @param msg Message
+   * @param timeout Timeout to wait master
+   */
+  override def publishRequest(msg: PublishRequest, timeout: Int): IMessage = {
+    val response: IMessage = sender.sendAndWaitResponse(msg, timeout)
+    response
+  }
 }

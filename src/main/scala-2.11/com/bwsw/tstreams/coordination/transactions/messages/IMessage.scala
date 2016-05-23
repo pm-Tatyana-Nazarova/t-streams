@@ -1,6 +1,7 @@
 package com.bwsw.tstreams.coordination.transactions.messages
 
 import java.util.UUID
+import com.bwsw.tstreams.coordination.subscribe.messages.ProducerTopicMessage
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
 
@@ -18,6 +19,8 @@ import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
   new Type(value = classOf[SetMasterResponse], name = "SetMasterResponse"),
   new Type(value = classOf[PingRequest], name = "PingRequest"),
   new Type(value = classOf[PingResponse], name = "PingResponse"),
+  new Type(value = classOf[PublishRequest], name = "PublishRequest"),
+  new Type(value = classOf[PublishResponse], name = "PublishResponse"),
   new Type(value = classOf[EmptyResponse], name = "EmptyResponse"),
   new Type(value = classOf[EmptyRequest], name = "EmptyRequest")
 ))
@@ -39,6 +42,14 @@ case class SetMasterResponse(senderID : String, receiverID : String, partition :
 
 case class PingRequest(senderID : String, receiverID : String, partition : Int) extends IMessage
 case class PingResponse(senderID : String, receiverID : String, partition : Int) extends IMessage
+
+case class PublishRequest(senderID : String, receiverID : String, msg : ProducerTopicMessage) extends IMessage {
+  override val partition: Int = msg.partition
+}
+
+case class PublishResponse(senderID : String, receiverID : String, msg : ProducerTopicMessage) extends IMessage {
+  override val partition: Int = msg.partition
+}
 
 case class EmptyResponse(senderID : String, receiverID : String, partition : Int) extends IMessage
 

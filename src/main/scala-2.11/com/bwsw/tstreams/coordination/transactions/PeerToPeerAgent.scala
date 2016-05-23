@@ -7,6 +7,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{CountDownLatch, ExecutorService, Executors}
 
 import com.bwsw.tstreams.agents.producer.BasicProducer
+import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
 import com.bwsw.tstreams.coordination.transactions.messages._
 import com.bwsw.tstreams.coordination.transactions.transport.traits.ITransport
 import com.bwsw.tstreams.common.zkservice.ZkService
@@ -318,7 +319,7 @@ class PeerToPeerAgent(agentAddress : String,
     logger.debug(s"[GETTXN] Start retrieve txn for agent with address:{$agentAddress}," +
       s"stream:{$streamName},partition:{$partition} from [MASTER:{$localMaster}]\n")
     if (condition){
-      val txnResponse = transport.transactionRequest(new TransactionRequest(agentAddress, localMaster, partition), transportTimeout)
+      val txnResponse = transport.transactionRequest(TransactionRequest(agentAddress, localMaster, partition), transportTimeout)
       txnResponse match {
         case null =>
           updateMaster(partition, init = false)
@@ -338,6 +339,37 @@ class PeerToPeerAgent(agentAddress : String,
     } else {
       updateMaster(partition, init = false)
       getNewTxn(partition)
+    }
+  }
+
+  //TODO new feature
+  def publish(msg : ProducerTopicMessage) : Unit = {
+    lockLocalMasters.lock()
+    val condition = localMasters.contains(msg.partition)
+    val localMaster = if (condition) localMasters(msg.partition) else null
+    lockLocalMasters.unlock()
+    logger.debug(s"[PUBLISH] SEND PTM:{$msg} to [MASTER:{$localMaster}] from agent:{$agentAddress}," +
+      s"stream:{$streamName}\n")
+    if (condition){
+      val txnResponse = transport.publishRequest(PublishRequest(agentAddress, localMaster, msg), transportTimeout)
+      txnResponse match {
+        case null =>
+          updateMaster(msg.partition, init = false)
+          publish(msg)
+
+        case EmptyResponse(snd,rcv,p) =>
+          assert(p == msg.partition)
+          updateMaster(msg.partition, init = false)
+          publish(msg)
+
+        case PublishResponse(snd, rcv, m) =>
+          assert(msg.partition == m.partition)
+          logger.debug(s"[PUBLISH] PUBLISHED PTM:{$msg} to [MASTER:{$localMaster}] from agent:{$agentAddress}," +
+            s"stream:{$streamName}\n")
+      }
+    } else {
+      updateMaster(msg.partition, init = false)
+      publish(msg)
     }
   }
 
@@ -449,6 +481,22 @@ class PeerToPeerAgent(agentAddress : String,
                 TransactionResponse(rcv, snd, txnUUID, partition)
               } else
                 EmptyResponse(rcv, snd, partition)
+            }
+            lockLocalMasters.unlock()
+            response.msgID = request.msgID
+            transport.response(response)
+
+          //TODO new feature; test harder
+          case PublishRequest(snd, rcv, msg) =>
+            lockLocalMasters.lock()
+            assert(rcv == agentAddress)
+            val response = {
+              if (localMasters.contains(msg.partition) && localMasters(msg.partition) == agentAddress) {
+                producer.coordinator.publish(msg)
+                PublishResponse(rcv, snd,
+                  ProducerTopicMessage(UUID.randomUUID(),0,ProducerTransactionStatus.opened,msg.partition))
+              } else
+                EmptyResponse(rcv, snd, msg.partition)
             }
             lockLocalMasters.unlock()
             response.msgID = request.msgID

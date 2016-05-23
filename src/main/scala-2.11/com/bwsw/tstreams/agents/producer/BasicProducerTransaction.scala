@@ -129,7 +129,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
     val msg = ProducerTopicMessage(txnUuid = transactionUuid,
       ttl = -1, status = ProducerTransactionStatus.cancelled, partition = partition)
 
-    basicProducer.coordinator.publish(msg)
+    basicProducer.agent.publish(msg)
     logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
 
     closed = true
@@ -180,7 +180,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
         partition = partition)
 
       //publish that current txn is closed
-      basicProducer.coordinator.publish(msg)
+      basicProducer.agent.publish(msg)
       logger.debug(s"[CHECKPOINT PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
     }
 
@@ -216,7 +216,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
             totalCnt = -1,
             ttl = basicProducer.producerOptions.transactionTTL)
 
-          //TODO Ivan approach
           val msg = ProducerTopicMessage(
             txnUuid = transactionUuid,
             ttl = basicProducer.producerOptions.transactionTTL,
@@ -224,7 +223,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
             partition = partition)
 
           //publish that current txn is being updating
-          basicProducer.coordinator.publish(msg)
+          basicProducer.agent.publish(msg)
           logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
         }}
       }
