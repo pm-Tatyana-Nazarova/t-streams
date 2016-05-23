@@ -29,7 +29,7 @@ libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.
 
 //COORDINATION
 resolvers += "twitter resolver" at "http://maven.twttr.com"
-libraryDependencies += "com.twitter.common.zookeeper" % "lock" % "0.0.7"
+libraryDependencies += "com.twitter.common.zookeeper" % "lock" % "0.0.40"
 
 
 //ASSEMBLY STRATEGY
