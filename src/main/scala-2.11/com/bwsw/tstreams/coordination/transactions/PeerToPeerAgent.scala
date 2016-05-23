@@ -344,6 +344,7 @@ class PeerToPeerAgent(agentAddress : String,
 
   //TODO new feature
   def publish(msg : ProducerTopicMessage) : Unit = {
+    assert(msg.status != ProducerTransactionStatus.updated)
     lockLocalMasters.lock()
     val condition = localMasters.contains(msg.partition)
     val localMaster = if (condition) localMasters(msg.partition) else null

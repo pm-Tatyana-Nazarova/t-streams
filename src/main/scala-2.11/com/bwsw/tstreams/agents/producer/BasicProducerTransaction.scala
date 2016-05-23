@@ -219,11 +219,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
           val msg = ProducerTopicMessage(
             txnUuid = transactionUuid,
             ttl = basicProducer.producerOptions.transactionTTL,
-            status = ProducerTransactionStatus.opened,
+            status = ProducerTransactionStatus.updated,
             partition = partition)
 
           //publish that current txn is being updating
-          basicProducer.agent.publish(msg)
+          basicProducer.coordinator.publish(msg)
           logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
         }}
       }

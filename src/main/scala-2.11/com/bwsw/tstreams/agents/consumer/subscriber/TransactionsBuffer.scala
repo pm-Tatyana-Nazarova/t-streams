@@ -13,8 +13,11 @@ class TransactionsBuffer() {
     new SortedExpiringMap(new UUIDComparator, new SubscriberExpirationPolicy)
 
   def update(txnUuid : UUID, status: ProducerTransactionStatus, ttl : Int) : Unit = {
+    if (!map.exist(txnUuid) && status == ProducerTransactionStatus.updated){
+      return
+    }
     if (map.exist(txnUuid)){
-      if (map.get(txnUuid)._1 != ProducerTransactionStatus.opened) {
+      if (map.get(txnUuid)._1 == ProducerTransactionStatus.closed) {
         return
       }
     }

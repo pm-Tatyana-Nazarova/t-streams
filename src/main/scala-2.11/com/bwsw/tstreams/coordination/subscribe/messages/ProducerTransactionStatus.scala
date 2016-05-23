@@ -7,18 +7,23 @@ object ProducerTransactionStatus extends Enumeration {
   type ProducerTransactionStatus = Value
 
   /**
-   * If transaction opened
+   * If transaction is opened
    */
   val opened = Value
 
   /**
-   * If transaction closed
+   * If transaction is closed
    */
   val closed = Value
 
   /**
-   * If transaction cancelled
+   * If transaction is cancelled
    */
   val cancelled = Value
+
+  /**
+   * If transaction is updated
+   */
+  val updated = Value
 
 }
