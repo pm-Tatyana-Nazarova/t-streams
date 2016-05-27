@@ -5,8 +5,8 @@ import java.net.InetSocketAddress
 
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions, BasicConsumerTransaction, Offsets}
-import com.bwsw.tstreams.agents.producer.InsertionType.{BatchInsert}
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, PeerToPeerAgentSettings, ProducerPolicies}
 import com.bwsw.tstreams.common.JsonSerializer
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
 import com.bwsw.tstreams.coordination.Coordinator
@@ -14,6 +14,7 @@ import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
+import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.RoundRobinPolicy
 import com.bwsw.tstreams.streams.BasicStream
@@ -128,6 +129,14 @@ object SingleConsumerFromOnePartition extends MetricsCalculator with MetadataCre
 
       // Fill stream with data
       println("Filling stream with data...")
+      val agentSettings = new PeerToPeerAgentSettings(
+        agentAddress = "localhost:8000",
+        zkHosts = List(new InetSocketAddress("localhost", 2181)),
+        zkRootPath = "/unit",
+        zkTimeout = 7000,
+        isLowPriorityToBeMaster = false,
+        transport = new TcpTransport,
+        transportTimeout = 5)
       val stringToArrayByteConverter = new StringToArrayByteConverter
       val producerOptions = new BasicProducerOptions[String, Array[Byte]](
         transactionTTL = 60,
@@ -136,6 +145,7 @@ object SingleConsumerFromOnePartition extends MetricsCalculator with MetadataCre
         writePolicy = policy,
         insertType = BatchInsert(10),
         txnGenerator = new LocalTimeUUIDGenerator(),
+        agentSettings,
         stringToArrayByteConverter)
       val producer: BasicProducer[String, Array[Byte]] = new BasicProducer("Some_producer", stream, producerOptions)
       (0 until configFile.TransactionsNumber).foreach { _ =>

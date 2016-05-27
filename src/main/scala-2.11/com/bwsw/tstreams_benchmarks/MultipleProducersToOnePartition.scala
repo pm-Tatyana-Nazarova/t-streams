@@ -3,10 +3,11 @@ package com.bwsw.tstreams_benchmarks
 import java.net.InetSocketAddress
 import java.util.concurrent.{Callable, FutureTask, RunnableFuture}
 import java.util.concurrent.locks.ReentrantLock
+import java.util.logging.LogManager
 
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.producer.InsertionType.{BatchInsert, SingleElementInsert}
-import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.{BasicProducer, BasicProducerOptions, PeerToPeerAgentSettings, ProducerPolicies}
 import com.bwsw.tstreams.common.JsonSerializer
 import com.bwsw.tstreams.converter.StringToArrayByteConverter
 import com.bwsw.tstreams.coordination.Coordinator
@@ -14,6 +15,7 @@ import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageFactory, CassandraStorageOptions}
 import com.bwsw.tstreams.generator.LocalTimeUUIDGenerator
+import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.policy.RoundRobinPolicy
 import com.bwsw.tstreams.streams.BasicStream
@@ -97,6 +99,7 @@ object MultipleProducersToOnePartition extends BenchmarkBase with MetricsCalcula
     *             2) Path to result folder
     */
   def main(args: Array[String]) {
+    LogManager.getLogManager().reset()
     checkParams(args)
     val configFilePath = args(0)
     val resultDirectoryPath = args(1)
@@ -195,6 +198,14 @@ object MultipleProducersToOnePartition extends BenchmarkBase with MetricsCalcula
 
             val batchInsert = configFile.InsertType("batchInsert").asInstanceOf[Boolean]
             val batchSize = if (batchInsert) configFile.InsertType("batchSize").asInstanceOf[Int] else 1
+            val agentSettings = new PeerToPeerAgentSettings(
+              agentAddress = s"localhost:800${i-1}",
+              zkHosts = List(new InetSocketAddress("localhost", 2181)),
+              zkRootPath = "/unit",
+              zkTimeout = 7000,
+              isLowPriorityToBeMaster = false,
+              transport = new TcpTransport,
+              transportTimeout = 5)
             val stringToArrayByteConverter = new StringToArrayByteConverter
 
             val producerOptions = new BasicProducerOptions[String, Array[Byte]](
@@ -204,6 +215,7 @@ object MultipleProducersToOnePartition extends BenchmarkBase with MetricsCalcula
               writePolicy = policy,
               insertType = if (batchInsert) BatchInsert(batchSize) else SingleElementInsert,
               txnGenerator = new LocalTimeUUIDGenerator(),
+              agentSettings,
               stringToArrayByteConverter)
 
             val producer = new BasicProducer(s"Producer_" + i, stream, producerOptions)
