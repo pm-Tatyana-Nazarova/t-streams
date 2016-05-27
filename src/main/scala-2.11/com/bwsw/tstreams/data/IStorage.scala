@@ -62,34 +62,40 @@ trait IStorage[T] {
    * @param partNum Data unique number
    * @param ttl Time of records expiration in seconds
    */
-  def putInBuffer(streamName : String, partition : Int, transaction : java.util.UUID, ttl : Int, data : T, partNum : Int) : Unit =
-    buffer += dataToPush(streamName, partition, transaction, ttl, data, partNum)
+  def putInBuffer(streamName : String, partition : Int, transaction : java.util.UUID, ttl : Int, data : T, partNum : Int) : Unit = {
+    if (!buffer.contains(transaction)){
+      buffer(transaction) = scala.collection.mutable.ListBuffer[dataToPush]()
+    }
+    buffer(transaction) += dataToPush(streamName, partition, transaction, ttl, data, partNum)
+  }
 
 
   /**
    * Save all info from buffer in IStorage
    * @return Lambda which indicate done or not putting request(if request was async) null else
    */
-  def saveBuffer() : () => Unit
+  def saveBuffer(txn : java.util.UUID) : () => Unit
 
 
   /**
    * Clear current producer buffer
    */
-  def clearBuffer() : Unit =
-    buffer.clear()
+  def clearBuffer(txn : java.util.UUID) : Unit =
+    if (buffer.contains(txn))
+      buffer(txn).clear()
 
 
   /**
    * @return Buffer size
    */
-  def getBufferSize() : Int =
-    buffer.size
+  def getBufferSize(txn : java.util.UUID) : Int = {
+    if (!buffer.contains(txn)) 0 else buffer(txn).size
+  }
 
   /**
    * Buffer for buffering data to push it with saveBuffer()
    */
-  protected val buffer = scala.collection.mutable.ListBuffer[dataToPush]()
+  protected val buffer = scala.collection.mutable.Map[java.util.UUID, scala.collection.mutable.ListBuffer[dataToPush]]()
 
   /**
    * Helper class for buffering data
@@ -102,4 +108,19 @@ trait IStorage[T] {
    */
   protected case class dataToPush(streamName: String, partition: Int, transaction: UUID, ttl: Int, data: T, partNum: Int)
 
+
+  /**
+   * Flag indicating binded this IStorage or not
+   */
+  private var isBinded = false
+
+
+  /**
+   * Bind this storage for agent
+   */
+  def bind() = {
+    if (isBinded)
+      throw new IllegalStateException("storage is already binded")
+    isBinded = true
+  }
 }

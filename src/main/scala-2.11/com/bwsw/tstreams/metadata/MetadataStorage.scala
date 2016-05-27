@@ -29,22 +29,22 @@ class MetadataStorage(cluster: Cluster, session: Session, keyspace: String) {
   /**
    * Stream entity instance
    */
-  lazy val streamEntity = new StreamEntity("streams", session)
+  val streamEntity = new StreamEntity("streams", session)
 
   /**
    * Commit entity instance
    */
-  lazy val commitEntity = new CommitEntity("commit_log", session)
+  val commitEntity = new CommitEntity("commit_log", session)
 
   /**
    * Commit entity instance for producer async txn update
    */
-  lazy val producerCommitEntity = new CommitEntity("commit_log", session)
+  val producerCommitEntity = new CommitEntity("commit_log", session)
 
   /**
    * Consumer entity instance
    */
-  lazy val consumerEntity = new ConsumerEntity("consumers", session)
+  val consumerEntity = new ConsumerEntity("consumers", session)
 
   /**
    * Group commit entity instance

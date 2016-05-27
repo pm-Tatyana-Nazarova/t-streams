@@ -1,23 +1,19 @@
 package agents.both.batch_insert.cassandra
 
 import java.net.InetSocketAddress
-
-import agents.both.batch_insert.TestUtils
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationSettings, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{PeerToPeerAgentSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.cassandra.{CassandraStorageOptions, CassandraStorageFactory}
-import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
-import com.bwsw.tstreams.interaction.zkservice.ZkService
+import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Config, Redisson}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{CassandraHelper, LocalGeneratorCreator, RandomStringCreator, RoundRobinPolicyCreator}
+import testutils._
 
 
 class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
@@ -38,12 +34,6 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
   //converters to convert usertype->storagetype; storagetype->usertype
   val arrayByteToStringConverter = new ArrayByteToStringConverter
   val stringToArrayByteConverter = new StringToArrayByteConverter
-
-  //coordinator for coordinating producer/consumer
-  val config = new Config()
-  config.useSingleServer().setAddress("localhost:6379")
-  val redissonClient = Redisson.create(config)
-  val coordinator = new Coordinator("some_path", redissonClient)
 
   //cassandra storage options
   val cassandraStorageOptions = new CassandraStorageOptions(List(new InetSocketAddress("localhost",9042)), randomKeyspace)
@@ -79,6 +69,7 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
       RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = List(0),
         stream = streamInst),
+      new ConsumerCoordinationSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
       Oldest,
       LocalGeneratorCreator.getGen(),
       useLastOffset = false)
@@ -120,7 +111,7 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
   def getProducer: BasicProducer[String,Array[Byte]] = {
     val stream = getStream
 
-    val agentSettings = new PeerToPeerAgentSettings(
+    val agentSettings = new ProducerCoordinationSettings(
       agentAddress = s"localhost:$port",
       zkHosts = List(new InetSocketAddress("localhost", 2181)),
       zkRootPath = "/unit",
@@ -157,7 +148,6 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
       partitions = 1,
       metadataStorage = metadataStorageInst,
       dataStorage = dataStorageInst,
-      coordinator = coordinator,
       ttl = 60 * 10,
       description = "some_description")
   }
@@ -171,6 +161,5 @@ class CManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
     cluster.close()
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
-    redissonClient.shutdown()
   }
 }

@@ -6,19 +6,17 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.UUID
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.BasicConsumerOptions
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationSettings, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.producer.{PeerToPeerAgentSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
 import com.bwsw.tstreams.converter.{StringToArrayByteConverter, ArrayByteToStringConverter}
-import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageOptions, AerospikeStorageFactory}
-import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
-import com.bwsw.tstreams.interaction.zkservice.ZkService
+import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Redisson, Config}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{LocalGeneratorCreator, RoundRobinPolicyCreator, CassandraHelper, RandomStringCreator}
 
@@ -58,19 +56,12 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     cassandraHosts = List(new InetSocketAddress("localhost", 9042)),
     keyspace = randomKeyspace)
 
-  //coordinator for coordinating producer/consumer
-  val config = new Config()
-  config.useSingleServer().setAddress("localhost:6379")
-  val redissonClient = Redisson.create(config)
-  val coordinator = new Coordinator("some_path", redissonClient)
-
   //stream instances for producer/consumer
   val streamForProducer: BasicStream[Array[Byte]] = new BasicStream[Array[Byte]](
     name = "test_stream",
     partitions = 3,
     metadataStorage = metadataStorageInstForProducer,
     dataStorage = aerospikeInstForProducer,
-    coordinator = coordinator,
     ttl = 60 * 10,
     description = "some_description")
 
@@ -79,11 +70,10 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     partitions = 3,
     metadataStorage = metadataStorageInstForConsumer,
     dataStorage = aerospikeInstForConsumer,
-    coordinator = coordinator,
     ttl = 60 * 10,
     description = "some_description")
 
-  val agentSettings = new PeerToPeerAgentSettings(
+  val agentSettings = new ProducerCoordinationSettings(
     agentAddress = s"localhost:8000",
     zkHosts = List(new InetSocketAddress("localhost", 2181)),
     zkRootPath = "/unit",
@@ -109,6 +99,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     consumerKeepAliveInterval = 5,
     arrayByteToStringConverter,
     RoundRobinPolicyCreator.getRoundRobinPolicy(streamForConsumer, List(0,1,2)),
+    new ConsumerCoordinationSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
     Oldest,
     LocalGeneratorCreator.getGen(),
     useLastOffset = true)
@@ -126,7 +117,12 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     override val frequency: Int = 1
   }
   val path = randomString
-  val subscribeConsumer = new BasicSubscribingConsumer[Array[Byte],String]("test_consumer", streamForConsumer, consumerOptions, callback, path)
+  val subscribeConsumer = new BasicSubscribingConsumer[Array[Byte],String](
+    "test_consumer",
+    streamForConsumer,
+    consumerOptions,
+    callback,
+    path)
 
   "subscribe consumer" should "retrieve all sent messages" in {
     val totalMsg = 30
@@ -134,7 +130,6 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     val data = randomString
 
     subscribeConsumer.start()
-
     (0 until totalMsg) foreach { x=>
       val txn = producer.newTransaction(ProducerPolicies.errorIfOpen)
       (0 until dataInTxn) foreach { _ =>
@@ -144,7 +139,7 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     }
     Thread.sleep(10000)
 
-    subscribeConsumer.stop()
+//    subscribeConsumer.stop()
 
     acc shouldEqual totalMsg
   }
@@ -158,7 +153,6 @@ class BasicSubscriberTotalAmountTest extends FlatSpec with Matchers with BeforeA
     cluster.close()
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
-    redissonClient.shutdown()
     val file = new File(path)
     remove(file)
   }

@@ -5,29 +5,33 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
-import agents.both.batch_insert.TestUtils
+import java.util.logging.LogManager
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
 import com.bwsw.tstreams.agents.consumer.subscriber.{BasicSubscriberCallback, BasicSubscribingConsumer}
-import com.bwsw.tstreams.agents.consumer.BasicConsumerOptions
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationSettings, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{PeerToPeerAgentSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
+import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, BasicProducer, BasicProducerOptions, ProducerPolicies}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
-import com.bwsw.tstreams.interaction.zkservice.ZkService
+import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Config, Redisson}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{CassandraHelper, LocalGeneratorCreator, RandomStringCreator, RoundRobinPolicyCreator}
+import testutils._
 import scala.collection.mutable.ListBuffer
 
 //TODO check this test harder
 class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAndAfterAll with TestUtils{
   var port = 8000
+
+  LogManager.getLogManager.reset()
+  System.setProperty(org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "WARN")
+  System.setProperty("org.slf4j.simpleLogger.logFile","testlog.log")
+  System.setProperty("org.slf4j.simpleLogger.showDateTime","false")
+  System.setProperty("org.slf4j.simpleLogger.log.com.bwsw","DEBUG")
 
   //creating keyspace, metadata
   val path = randomString
@@ -44,12 +48,6 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
   //converters to convert usertype->storagetype; storagetype->usertype
   val arrayByteToStringConverter = new ArrayByteToStringConverter
   val stringToArrayByteConverter = new StringToArrayByteConverter
-
-  //coordinator for coordinating producer/consumer
-  val config = new Config()
-  config.useSingleServer().setAddress("localhost:6379")
-  val redissonClient = Redisson.create(config)
-  val coordinator = new Coordinator("some_path", redissonClient)
 
   //aerospike storage options
   val hosts = List(
@@ -99,6 +97,7 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
       RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = (0 until totalPartitions).toList,
         stream = streamInst),
+      new ConsumerCoordinationSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
       Oldest,
       LocalGeneratorCreator.getGen(),
       useLastOffset = false)
@@ -109,9 +108,12 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
       map(partition) = ListBuffer.empty[UUID]
     }
 
+    var cnt = 0
+
     val callback = new BasicSubscriberCallback[Array[Byte], String] {
       override def onEvent(subscriber : BasicSubscribingConsumer[Array[Byte], String], partition: Int, transactionUuid: UUID): Unit = {
         lock.lock()
+        cnt += 1
         map(partition) += transactionUuid
         lock.unlock()
       }
@@ -124,7 +126,7 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
     subscriber.start()
     producersThreads.foreach(x=>x.join(timeoutForWaiting*1000L))
     Thread.sleep(30*1000)
-
+    println(s"cnt=$cnt")
     assert(map.values.map(x=>x.size).sum == totalTxn*producersAmount)
     map foreach {case(_,list) =>
       list.map(x=>(x,x.timestamp())).sortBy(_._2).map(x=>x._1) shouldEqual list
@@ -134,7 +136,7 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
   def getProducer(usedPartitions : List[Int], totalPartitions : Int) : BasicProducer[String,Array[Byte]] = {
     val stream = getStream(totalPartitions)
 
-    val agentSettings = new PeerToPeerAgentSettings(
+    val agentSettings = new ProducerCoordinationSettings(
       agentAddress = s"localhost:$port",
       zkHosts = List(new InetSocketAddress("localhost", 2181)),
       zkRootPath = "/unit",
@@ -171,7 +173,6 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
       partitions = partitions,
       metadataStorage = metadataStorageInst,
       dataStorage = dataStorageInst,
-      coordinator = coordinator,
       ttl = 60 * 10,
       description = "some_description")
   }
@@ -185,7 +186,6 @@ class LazyProducerAndSubscriberTest extends FlatSpec with Matchers with BeforeAn
     cluster.close()
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
-    redissonClient.shutdown()
     val file = new File(path)
     remove(file)
   }

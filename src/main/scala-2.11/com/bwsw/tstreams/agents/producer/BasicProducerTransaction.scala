@@ -1,18 +1,11 @@
 package com.bwsw.tstreams.agents.producer
 
 import java.util.UUID
-import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
-import com.bwsw.tstreams.common.JsonSerializer
-import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage}
-import org.redisson.core.RTopic
+import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue, TimeUnit}
+import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
 import org.slf4j.LoggerFactory
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import scala.language.postfixOps
 import scala.util.control.Breaks._
-import scala.concurrent.ExecutionContext.Implicits.global
-
 
 /**
  * Transaction retrieved by BasicProducer.newTransaction method
@@ -30,7 +23,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
    * BasicProducerTransaction logger for logging
    */
   private val logger = LoggerFactory.getLogger(this.getClass)
-  logger.info(s"Open transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
+  logger.debug(s"Open transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
 
   /**
    * Return transaction partition
@@ -53,16 +46,6 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   private var part = 0
 
   /**
-   * Serializer to serialize ProducerTopicMessages
-   */
-  private val serializer = new JsonSerializer
-
-  /**
-   * Max awaiting time on Await.ready() method for futures
-   */
-  private val TIMEOUT = 2 seconds
-
-  /**
    * All inserts (can be async) in storage (must be waited before closing this transaction)
    */
   private var jobs = ListBuffer[() => Unit]()
@@ -73,15 +56,9 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   private val updateQueue = new LinkedBlockingQueue[Boolean](10)
 
   /**
-   * Topic reference for concrete producer on concrete stream/partition to publish events(cancel,close,update)
+   * Thread to keep this transaction alive
    */
-  private val topicRef: RTopic[String] =
-    basicProducer.stream.coordinator.getTopic[String](s"${basicProducer.stream.getName}/$partition/events")
-
-  /**
-   * Future to keep this transaction alive
-   */
-  private val updateFuture: Future[Unit] = startAsyncKeepAlive()
+  private val updateThread: Thread = startAsyncKeepAlive()
 
   /**
    * Send data to storage
@@ -100,11 +77,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
           basicProducer.stream.getTTL,
           basicProducer.producerOptions.converter.convert(obj),
           part)
-        if (basicProducer.stream.dataStorage.getBufferSize() == size) {
-          val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer()
+        if (basicProducer.stream.dataStorage.getBufferSize(transactionUuid) == size) {
+          val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer(transactionUuid)
           if (job != null)
             jobs += job
-          basicProducer.stream.dataStorage.clearBuffer()
+          basicProducer.stream.dataStorage.clearBuffer(transactionUuid)
         }
 
       case InsertionType.SingleElementInsert =>
@@ -136,7 +113,7 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       case InsertionType.SingleElementInsert =>
 
       case InsertionType.BatchInsert(_) =>
-        basicProducer.stream.dataStorage.clearBuffer()
+        basicProducer.stream.dataStorage.clearBuffer(transactionUuid)
 
       case _ =>
         throw new IllegalStateException("Insert Type can't be resolved")
@@ -146,15 +123,16 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
     updateQueue.put(true)
 
-    //await till update future will close
-    Await.ready(updateFuture, TIMEOUT)
+    //await till update thread will be stoped
+    updateThread.join()
 
-    val msg = ProducerTopicMessage(txnUuid = transactionUuid, ttl = -1, status = ProducerTransactionStatus.cancelled)
+    val msg = ProducerTopicMessage(txnUuid = transactionUuid,
+      ttl = -1, status = ProducerTransactionStatus.cancelled, partition = partition)
 
-    topicRef.publish(serializer.serialize(msg))
+    basicProducer.agent.publish(msg)
+    logger.debug(s"[CANCEL PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
 
     closed = true
-    logger.info(s"Cancel transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
   }
 
   /**
@@ -168,11 +146,11 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       case InsertionType.SingleElementInsert =>
 
       case InsertionType.BatchInsert(size) =>
-        if (basicProducer.stream.dataStorage.getBufferSize() > 0) {
-          val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer()
+        if (basicProducer.stream.dataStorage.getBufferSize(transactionUuid) > 0) {
+          val job: () => Unit = basicProducer.stream.dataStorage.saveBuffer(transactionUuid)
           if (job != null)
             jobs += job
-          basicProducer.stream.dataStorage.clearBuffer()
+          basicProducer.stream.dataStorage.clearBuffer(transactionUuid)
         }
 
       case _ =>
@@ -183,8 +161,8 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
 
     updateQueue.put(true)
 
-    //await till update future will close
-    Await.ready(updateFuture, TIMEOUT)
+    //await till update thread will be stoped
+    updateThread.join()
 
     //close transaction using stream ttl
     if (part > 0) {
@@ -198,14 +176,15 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
       val msg = ProducerTopicMessage(
         txnUuid = transactionUuid,
         ttl = -1,
-        status = ProducerTransactionStatus.closed)
+        status = ProducerTransactionStatus.closed,
+        partition = partition)
 
       //publish that current txn is closed
-      topicRef.publish(serializer.serialize(msg))
+      basicProducer.agent.publish(msg)
+      logger.debug(s"[CHECKPOINT PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
     }
 
     closed = true
-    logger.info(s"Close transaction for stream,partition : {${basicProducer.stream.getName}},{$partition}\n")
   }
 
   /**
@@ -217,32 +196,40 @@ class BasicProducerTransaction[USERTYPE,DATATYPE](partition : Int,
   /**
    * Async job for keeping alive current transaction
    */
-  private def startAsyncKeepAlive() : Future[Unit] = {
+  private def startAsyncKeepAlive() : Thread = {
+    val latch = new CountDownLatch(1)
+    val updater = new Thread(new Runnable {
+      override def run(): Unit = {
+        latch.countDown()
+        logger.debug(s"[START KEEP_ALIVE THREAD PARTITION=$partition UUID=${transactionUuid.timestamp()}")
+        breakable { while (true) {
+          val value = updateQueue.poll(basicProducer.producerOptions.transactionKeepAliveInterval * 1000, TimeUnit.MILLISECONDS)
 
-    Future {
-      breakable { while (true) {
+          if (value)
+            break()
 
-        val value = updateQueue.poll(basicProducer.producerOptions.transactionKeepAliveInterval * 1000, TimeUnit.MILLISECONDS)
+          //-1 here indicate that transaction is started but is not finished yet
+          basicProducer.stream.metadataStorage.producerCommitEntity.commit(
+            streamName = basicProducer.stream.getName,
+            partition = partition,
+            transaction = transactionUuid,
+            totalCnt = -1,
+            ttl = basicProducer.producerOptions.transactionTTL)
 
-        if (value)
-          break()
+          val msg = ProducerTopicMessage(
+            txnUuid = transactionUuid,
+            ttl = basicProducer.producerOptions.transactionTTL,
+            status = ProducerTransactionStatus.updated,
+            partition = partition)
 
-        //-1 here indicate that transaction is started but not finished yet
-        basicProducer.stream.metadataStorage.producerCommitEntity.commit(
-          streamName = basicProducer.stream.getName,
-          partition = partition,
-          transaction = transactionUuid,
-          totalCnt = -1,
-          ttl = basicProducer.producerOptions.transactionTTL)
-
-        val msg = ProducerTopicMessage(
-          txnUuid = transactionUuid,
-          ttl = basicProducer.producerOptions.transactionTTL,
-          status = ProducerTransactionStatus.opened)
-
-        //publish that current txn is being updating
-        topicRef.publish(serializer.serialize(msg))
-      }}
-    }
+          //publish that current txn is being updating
+          basicProducer.coordinator.publish(msg)
+          logger.debug(s"[KEEP_ALIVE THREAD PARTITION_${msg.partition}] ts=${msg.txnUuid.timestamp()} status=${msg.status}")
+        }}
+      }
+    })
+    updater.start()
+    latch.await()
+    updater
   }
 }

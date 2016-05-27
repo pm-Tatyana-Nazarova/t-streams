@@ -2,7 +2,6 @@ package com.bwsw.tstreams.streams
 
 import com.bwsw.tstreams.data.IStorage
 import com.bwsw.tstreams.metadata.MetadataStorage
-import com.bwsw.tstreams.coordination.Coordinator
 
 
 /**
@@ -13,14 +12,12 @@ import com.bwsw.tstreams.coordination.Coordinator
  * @param dataStorage Data storage which will be using stream
  * @param ttl Time of transaction time expiration in seconds
  * @param description Some additional info about stream
- * @param coordinator Redisson configured client and common prefix for all its entites
  * @tparam T Storage data type
  */
 class BasicStream[T](val name : String,
                   private var partitions : Int,
                   val metadataStorage: MetadataStorage,
                   val dataStorage : IStorage[T],
-                  val coordinator: Coordinator,
                   private var ttl : Int,
                   private var description : String){
   /**

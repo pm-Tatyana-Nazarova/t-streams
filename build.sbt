@@ -15,7 +15,8 @@ libraryDependencies ++= Seq(
   "com.aerospike" % "aerospike-client" % "3.2.1",
   "org.apache.commons" % "commons-collections4" % "4.1",
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.6.3",
-  "net.openhft" % "chronicle-queue" % "4.2.6"
+  "net.openhft" % "chronicle-queue" % "4.2.6",
+  "org.slf4j" % "slf4j-simple" % "1.7.5" //remove
 )
 
 libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0")
@@ -27,15 +28,8 @@ libraryDependencies += ("com.datastax.cassandra" % "cassandra-driver-core" % "3.
 
 
 //COORDINATION
-libraryDependencies += ("org.redisson" % "redisson" % "2.2.11")
-  .exclude("io.netty", "netty-common")
-  .exclude("io.netty", "netty-codec")
-  .exclude("io.netty", "netty-transport")
-  .exclude("io.netty", "netty-buffer")
-  .exclude("io.netty", "netty-handler")
-
 resolvers += "twitter resolver" at "http://maven.twttr.com"
-libraryDependencies += "com.twitter.common.zookeeper" % "lock" % "0.0.7"
+libraryDependencies += "com.twitter.common.zookeeper" % "lock" % "0.0.40"
 
 
 //ASSEMBLY STRATEGY

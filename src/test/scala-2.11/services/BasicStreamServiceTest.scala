@@ -2,13 +2,11 @@ package services
 
 import java.net.InetSocketAddress
 import com.aerospike.client.Host
-import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.services.BasicStreamService
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Redisson, Config}
 import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
 import testutils.{CassandraHelper, RandomStringCreator}
 
@@ -21,10 +19,6 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
   CassandraHelper.createKeyspace(temporarySession, randomKeyspace)
   CassandraHelper.createMetadataTables(temporarySession, randomKeyspace)
 
-  val config = new Config()
-  config.useSingleServer().setAddress("localhost:6379")
-  val redissonClient = Redisson.create(config)
-  val coordinator = new Coordinator("some_path", redissonClient)
   val dataStorageFactory = new AerospikeStorageFactory
   val metadataStorageFactory = new MetadataStorageFactory
   
@@ -50,8 +44,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       ttl = 100,
       description = "some_description",
       metadataStorage = metadataStorageInst,
-      dataStorage = storageInst,
-      coordinator = coordinator)
+      dataStorage = storageInst)
 
     val checkVal = stream.isInstanceOf[BasicStream[_]]
 
@@ -68,8 +61,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       ttl = 100,
       description = "some_description",
       metadataStorage = metadataStorageInst,
-      dataStorage = storageInst,
-      coordinator = coordinator)
+      dataStorage = storageInst)
 
       BasicStreamService.createStream(
         streamName = name,
@@ -77,8 +69,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
         ttl = 100,
         description = "some_description",
         metadataStorage = metadataStorageInst,
-        dataStorage = storageInst,
-        coordinator = coordinator)
+        dataStorage = storageInst)
     }
   }
 
@@ -91,10 +82,9 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       ttl = 100,
       description = "some_description",
       metadataStorage = metadataStorageInst,
-      dataStorage = storageInst,
-      coordinator = coordinator)
+      dataStorage = storageInst)
 
-    val stream: BasicStream[_] = BasicStreamService.loadStream(name, metadataStorageInst, storageInst, coordinator)
+    val stream: BasicStream[_] = BasicStreamService.loadStream(name, metadataStorageInst, storageInst)
     val checkVal = stream.isInstanceOf[BasicStream[_]]
     checkVal shouldBe true
   }
@@ -109,8 +99,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       ttl = 100,
       description = "some_description",
       metadataStorage = metadataStorageInst,
-      dataStorage = storageInst,
-      coordinator = coordinator)
+      dataStorage = storageInst)
 
     val isExist = BasicStreamService.isExist(name, metadataStorageInst)
     val isNotExist = BasicStreamService.isExist(notExistName, metadataStorageInst)
@@ -123,7 +112,7 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
     val name = randomString
 
     intercept[IllegalArgumentException] {
-      BasicStreamService.loadStream(name, metadataStorageInst, storageInst, coordinator)
+      BasicStreamService.loadStream(name, metadataStorageInst, storageInst)
     }
   }
 
@@ -136,13 +125,12 @@ class BasicStreamServiceTest extends FlatSpec with Matchers with BeforeAndAfterA
       ttl = 100,
       description = "some_description",
       metadataStorage = metadataStorageInst,
-      dataStorage = storageInst,
-      coordinator = coordinator)
+      dataStorage = storageInst)
 
     BasicStreamService.deleteStream(name, metadataStorageInst)
 
     intercept[IllegalArgumentException] {
-      BasicStreamService.loadStream(name, metadataStorageInst, storageInst, coordinator)
+      BasicStreamService.loadStream(name, metadataStorageInst, storageInst)
     }
   }
 

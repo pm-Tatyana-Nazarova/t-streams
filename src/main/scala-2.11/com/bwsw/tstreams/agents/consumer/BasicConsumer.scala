@@ -2,12 +2,11 @@ package com.bwsw.tstreams.agents.consumer
 
 import java.util.UUID
 import com.bwsw.tstreams.agents.group.{ConsumerCommitInfo, CommitInfo, Agent}
-import com.bwsw.tstreams.coordination.Coordinator
+import com.bwsw.tstreams.coordination.subscribe.ConsumerCoordinator
 import com.bwsw.tstreams.entities.TransactionSettings
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
 import org.slf4j.LoggerFactory
-
 import scala.collection.mutable.ListBuffer
 
 
@@ -23,13 +22,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
                                         val stream : BasicStream[DATATYPE],
                                         val options : BasicConsumerOptions[DATATYPE, USERTYPE]) extends Agent{
 
-
-  /**
-   * BasicConsumer logger for logging
-   */
   private val logger = LoggerFactory.getLogger(this.getClass)
-
-  logger.info(s"Start new Basic consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
   /**
    * Temporary checkpoints (will be cleared after every checkpoint() invokes)
@@ -42,9 +35,27 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
   protected val currentOffsets = scala.collection.mutable.Map[Int, UUID]()
 
   /**
+   * Buffer for transactions preload
+   */
+  private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[TransactionSettings]]()
+
+  /**
    * Indicate set offsets or not
    */
   private var isSet = false
+
+  protected val coordinator = new ConsumerCoordinator(
+    options.consumerCoordinatorSettings.agentAddress,
+    options.consumerCoordinatorSettings.prefix,
+    options.consumerCoordinatorSettings.zkHosts,
+    options.consumerCoordinatorSettings.zkSessionTimeout)
+  private val streamLock = coordinator.getStreamLock(stream.getName)
+
+  stream.dataStorage.bind()
+
+  streamLock.lock()
+
+  logger.info(s"Start new Basic consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
     //set consumer offsets
   if(!stream.metadataStorage.consumerEntity.exist(name) || !options.useLastOffset){
@@ -70,7 +81,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
           offsetsForCheckpoint(i) = options.txnGenerator.getTimeUUID(dateTime.startTime.getTime)
         }
 
-      case offset : Offsets.UUID =>
+      case offset : Offsets.CustomUUID =>
         for (i <- 0 until stream.getPartitions) {
           currentOffsets(i) = offset.startUUID
           offsetsForCheckpoint(i) = offset.startUUID
@@ -89,10 +100,6 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
     }
   }
 
-  /**
-   * Buffer for transactions preload
-   */
-  private val transactionBuffer = scala.collection.mutable.Map[Int, scala.collection.mutable.Queue[TransactionSettings]]()
   //fill transaction buffer using current offsets
   for (i <- 0 until stream.getPartitions)
     transactionBuffer(i) = stream.metadataStorage.commitEntity.getTransactionsMoreThan(
@@ -100,6 +107,8 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
       i,
       currentOffsets(i),
       options.transactionsPreload)
+
+  streamLock.unlock()
 
   /**
    * Helper function for getTransaction() method
@@ -153,7 +162,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * @return Consumed transaction of None if nothing to consume
    */
   def getTransaction: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
-    logger.info(s"Start new transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+    logger.debug(s"Start new transaction for consumer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
 
     options.readPolicy.startNewRound()
     val txn: Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = getTxnOpt
@@ -195,7 +204,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    * @return BasicConsumerTransaction
    */
     def getTransactionById(partition : Int, uuid : UUID): Option[BasicConsumerTransaction[DATATYPE, USERTYPE]] = {
-      logger.info(s"Start retrieving new historic transaction for consumer with" +
+      logger.debug(s"Start retrieving new historic transaction for consumer with" +
         s" name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
       val txnOpt = updateTransaction(uuid, partition)
       if (txnOpt.isDefined){
@@ -270,8 +279,7 @@ class BasicConsumer[DATATYPE, USERTYPE](val name : String,
    */
   override def getMetadataRef(): MetadataStorage = stream.metadataStorage
 
-  /**
-   * @return Coordinator link
-   */
-  override def getCoordinationRef(): Coordinator = stream.coordinator
+  def stop() = {
+    coordinator.stop()
+  }
 }

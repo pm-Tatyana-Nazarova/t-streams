@@ -32,6 +32,6 @@ object Offsets {
    * Offset for data retrieving from custom UUID
    * @param startUUID Start offset in uuid
    */
-  case class UUID(startUUID : java.util.UUID) extends IOffset
+  case class CustomUUID(startUUID : java.util.UUID) extends IOffset
 }
 

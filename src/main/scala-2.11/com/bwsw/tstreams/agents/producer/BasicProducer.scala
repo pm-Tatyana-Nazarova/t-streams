@@ -3,13 +3,12 @@ package com.bwsw.tstreams.agents.producer
 import java.util.UUID
 import com.bwsw.tstreams.agents.group.{CommitInfo, Agent}
 import com.bwsw.tstreams.agents.producer.ProducerPolicies.ProducerPolicy
-import com.bwsw.tstreams.common.JsonSerializer
-import com.bwsw.tstreams.coordination.{ProducerTransactionStatus, ProducerTopicMessage, Coordinator}
-import com.bwsw.tstreams.interaction.PeerToPeerAgent
-import com.bwsw.tstreams.interaction.transport.traits.Interaction
+import com.bwsw.tstreams.coordination.subscribe.ProducerCoordinator
+import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTransactionStatus, ProducerTopicMessage}
+import com.bwsw.tstreams.coordination.transactions.PeerToPeerAgent
+import com.bwsw.tstreams.coordination.transactions.transport.traits.Interaction
 import com.bwsw.tstreams.metadata.MetadataStorage
 import com.bwsw.tstreams.streams.BasicStream
-import org.redisson.core.RTopic
 import org.slf4j.LoggerFactory
 
 /**
@@ -24,13 +23,22 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
                                        val stream : BasicStream[DATATYPE],
                                        val producerOptions: BasicProducerOptions[USERTYPE,DATATYPE]) extends Agent with Interaction{
 
-  private val serializer = new JsonSerializer
+  stream.dataStorage.bind()
 
-  /**
-   * BasicProducer logger for logging
-   */
   private val logger = LoggerFactory.getLogger(this.getClass)
   logger.info(s"Start new Basic producer with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions}\n")
+
+  val coordinator = new ProducerCoordinator(
+    producerOptions.producerCoordinationSettings.zkRootPath,
+    stream.getName,
+    producerOptions.writePolicy.getUsedPartition(),
+    producerOptions.producerCoordinationSettings.zkHosts,
+    producerOptions.producerCoordinationSettings.zkTimeout)
+
+  private val streamLock = coordinator.getStreamLock(stream.getName)
+
+  streamLock.lock()
+  streamLock.unlock()
 
   /**
    * Map for memorize opened transaction on partitions
@@ -54,11 +62,9 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     if (!(partition >= 0 && partition < stream.getPartitions))
       throw new IllegalArgumentException("invalid partition")
 
-    logger.info(s"Start new BasicProducerTransaction for BasicProducer " +
-      s"with name : $name, streamName : ${stream.getName}, streamPartitions : ${stream.getPartitions} on partition $partition\n")
-
     val transaction = {
       val txnUUID = agent.getNewTxn(partition)
+      logger.debug(s"[NEW_TRANSACTION PARTITION_$partition] uuid=${txnUUID.timestamp()}\n")
       val txn = new BasicProducerTransaction[USERTYPE, DATATYPE](partition, txnUUID, this)
       if (mapPartitions.contains(partition)) {
         val prevTxn = mapPartitions(partition)
@@ -125,17 +131,11 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
   override def getMetadataRef(): MetadataStorage = stream.metadataStorage
 
   /**
-   * @return Coordinator link
-   */
-  override def getCoordinationRef(): Coordinator = stream.coordinator
-
-  /**
-   * Method to implement for concrete producer
+   * Method to implement for concrete producer [[PeerToPeerAgent]] method
    * Need only if this producer is master
    * @return UUID
    */
   override def getLocalTxn(partition : Int): UUID = {
-    val topicRef: RTopic[String] = stream.coordinator.getTopic[String](s"${stream.getName}/$partition/events")
     val transactionUuid = producerOptions.txnGenerator.getTimeUUID()
 
     stream.metadataStorage.commitEntity.commit(
@@ -148,9 +148,11 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
     val msg = ProducerTopicMessage(
       txnUuid = transactionUuid,
       ttl = producerOptions.transactionTTL,
-      status = ProducerTransactionStatus.opened)
+      status = ProducerTransactionStatus.opened,
+      partition = partition)
 
-    topicRef.publish(serializer.serialize(msg))
+    logger.debug(s"[GET_LOCAL_TXN PRODUCER] update with msg partition=$partition uuid=${transactionUuid.timestamp()} opened")
+    coordinator.publish(msg)
     transactionUuid
   }
 
@@ -158,13 +160,18 @@ class BasicProducer[USERTYPE,DATATYPE](val name : String,
    * P2P Agent for producers interaction
    */
   override val agent: PeerToPeerAgent = new PeerToPeerAgent(
-    agentAddress = producerOptions.peerToPeerAgentSettings.agentAddress,
-    zkHosts = producerOptions.peerToPeerAgentSettings.zkHosts,
-    zkRootPath = producerOptions.peerToPeerAgentSettings.zkRootPath,
-    zkTimeout = producerOptions.peerToPeerAgentSettings.zkTimeout,
+    agentAddress = producerOptions.producerCoordinationSettings.agentAddress,
+    zkHosts = producerOptions.producerCoordinationSettings.zkHosts,
+    zkRootPath = producerOptions.producerCoordinationSettings.zkRootPath,
+    zkTimeout = producerOptions.producerCoordinationSettings.zkTimeout,
     producer = this,
     usedPartitions = producerOptions.writePolicy.getUsedPartition(),
-    isLowPriorityToBeMaster = producerOptions.peerToPeerAgentSettings.isLowPriorityToBeMaster,
-    transport = producerOptions.peerToPeerAgentSettings.transport,
-    transportTimeout = producerOptions.peerToPeerAgentSettings.transportTimeout)
+    isLowPriorityToBeMaster = producerOptions.producerCoordinationSettings.isLowPriorityToBeMaster,
+    transport = producerOptions.producerCoordinationSettings.transport,
+    transportTimeout = producerOptions.producerCoordinationSettings.transportTimeout)
+
+  def stop() = {
+    agent.stop()
+    coordinator.stop()
+  }
 }

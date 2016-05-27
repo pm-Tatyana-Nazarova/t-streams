@@ -2,23 +2,20 @@ package agents.both.batch_insert.aerospike
 
 import java.net.InetSocketAddress
 import java.util.UUID
-import agents.both.batch_insert.TestUtils
 import com.aerospike.client.Host
 import com.bwsw.tstreams.agents.consumer.Offsets.Oldest
-import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
+import com.bwsw.tstreams.agents.consumer.{ConsumerCoordinationSettings, BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.agents.producer.InsertionType.BatchInsert
-import com.bwsw.tstreams.agents.producer.{PeerToPeerAgentSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
+import com.bwsw.tstreams.agents.producer.{ProducerCoordinationSettings, ProducerPolicies, BasicProducer, BasicProducerOptions}
 import com.bwsw.tstreams.converter.{ArrayByteToStringConverter, StringToArrayByteConverter}
-import com.bwsw.tstreams.coordination.Coordinator
 import com.bwsw.tstreams.data.aerospike.{AerospikeStorageFactory, AerospikeStorageOptions}
-import com.bwsw.tstreams.interaction.transport.impl.TcpTransport
-import com.bwsw.tstreams.interaction.zkservice.ZkService
+import com.bwsw.tstreams.coordination.transactions.transport.impl.TcpTransport
+import com.bwsw.tstreams.common.zkservice.ZkService
 import com.bwsw.tstreams.metadata.MetadataStorageFactory
 import com.bwsw.tstreams.streams.BasicStream
 import com.datastax.driver.core.Cluster
-import org.redisson.{Redisson, Config}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import testutils.{RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper}
+import testutils.{TestUtils, RoundRobinPolicyCreator, LocalGeneratorCreator, CassandraHelper}
 
 import scala.collection.mutable.ListBuffer
 
@@ -40,12 +37,6 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
   //converters to convert usertype->storagetype; storagetype->usertype
   val arrayByteToStringConverter = new ArrayByteToStringConverter
   val stringToArrayByteConverter = new StringToArrayByteConverter
-
-  //coordinator for coordinating producer/consumer
-  val config = new Config()
-  config.useSingleServer().setAddress("localhost:6379")
-  val redissonClient = Redisson.create(config)
-  val coordinator = new Coordinator("some_path", redissonClient)
 
   //aerospike storage options
   val hosts = List(
@@ -86,6 +77,7 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
       RoundRobinPolicyCreator.getRoundRobinPolicy(
         usedPartitions = List(0),
         stream = streamInst),
+      new ConsumerCoordinationSettings("localhost:8588", "/unit", List(new InetSocketAddress("localhost",2181)), 7000),
       Oldest,
       LocalGeneratorCreator.getGen(),
       useLastOffset = false)
@@ -128,7 +120,7 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
   def getProducer: BasicProducer[String,Array[Byte]] = {
     val stream = getStream
 
-    val agentSettings = new PeerToPeerAgentSettings(
+    val agentSettings = new ProducerCoordinationSettings(
       agentAddress = s"localhost:$port",
       zkHosts = List(new InetSocketAddress("localhost", 2181)),
       zkRootPath = "/unit",
@@ -165,7 +157,6 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
       partitions = 1,
       metadataStorage = metadataStorageInst,
       dataStorage = dataStorageInst,
-      coordinator = coordinator,
       ttl = 60 * 10,
       description = "some_description")
   }
@@ -179,6 +170,5 @@ class AManyBasicProducersStreamingInOnePartitionAndConsumerTest extends FlatSpec
     cluster.close()
     metadataStorageFactory.closeFactory()
     storageFactory.closeFactory()
-    redissonClient.shutdown()
   }
 }

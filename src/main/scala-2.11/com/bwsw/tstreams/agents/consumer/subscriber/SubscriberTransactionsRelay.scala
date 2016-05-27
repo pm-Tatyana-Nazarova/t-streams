@@ -4,70 +4,65 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
-import com.bwsw.tstreams.common.JsonSerializer
-import com.bwsw.tstreams.coordination.ProducerTransactionStatus._
-import com.bwsw.tstreams.coordination.{ProducerTopicMessage, ProducerTransactionStatus}
+import com.bwsw.tstreams.coordination.subscribe.ConsumerCoordinator
+import com.bwsw.tstreams.coordination.subscribe.messages.{ProducerTopicMessage, ProducerTransactionStatus}
+import ProducerTransactionStatus._
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
-import org.redisson.core.{MessageListener, RTopic}
+import org.slf4j.LoggerFactory
+import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks._
 
 
+/**
+ * Class for consuming transactions on concrete partition from concrete offset
+ * @param subscriber Subscriber instance which instantiate this relay
+ * @param offset Offset from which to start
+ * @param partition Partition from which to consume
+ * @param coordinator Coordinator instance for maintaining new transactions updates
+ * @param callback Callback on consumed transactions
+ * @param queue Queue for maintain consumed transactions
+ * @tparam DATATYPE
+ * @tparam USERTYPE
+ */
 class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribingConsumer[DATATYPE,USERTYPE],
                                                      offset: UUID,
                                                      partition : Int,
+                                                     coordinator: ConsumerCoordinator,
                                                      callback: BasicSubscriberCallback[DATATYPE, USERTYPE],
-                                                     queue : PersistentTransactionQueue,
-                                                     isQueueConsumed : AtomicBoolean) {
+                                                     queue : PersistentTransactionQueue) {
 
-
-  private val DELAY = 5000
-
-  /**
-   * Serializer to serialize/deserialize incoming messages
-   */
-  private val serializer = new JsonSerializer
-
-  /**
-   * Buffer to maintain all available transactions
-   */
+  private val logger = LoggerFactory.getLogger(this.getClass)
   private val transactionBuffer  = new TransactionsBuffer
-
-  /**
-   * Fair lock for locking access to transaction buffer
-   */
-  private val fairLock = new ReentrantLock(true)
-
-  /**
-   * Last consumed transaction from map
-   */
+  private val lock = new ReentrantLock(true)
   private var lastConsumedTransaction : UUID = subscriber.options.txnGenerator.getTimeUUID(0)
-
-  /**
-   * Name of the stream
-   */
   private val streamName = subscriber.stream.getName
+  private val isRunning = new AtomicBoolean(true)
+  private val updateCallback = (msg : ProducerTopicMessage) => {
+    if (msg.partition == partition) {
+      lock.lock()
+      logger.debug(s"[UPDATE_CALLBACK PARTITION_$partition] consumed msg with uuid:{${msg.txnUuid.timestamp()}}," +
+        s" status:{${msg.status}}\n")
+      if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp())
+        transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
+      lock.unlock()
+    }
+  }
 
-  /**
-   * Listener for this relay (!only one must be)
-   */
-  private var listener : Option[Int] = None
-
-  /**
-   * Event topic
-   */
-  private val topic: RTopic[String] = subscriber.stream.coordinator.getTopic[String](s"$streamName/$partition/events")
+  private var queueConsumer : Thread = null
+  private var transactionsConsumerBeforeLast : Thread = null
+  private var updateThread : Thread = null
 
   /**
    * Start consume transaction queue async
    */
   def startConsumeAndCallbackQueueAsync() = {
-    isQueueConsumed.set(true)
     val latch = new CountDownLatch(1)
-    val queueConsumer = new Thread(new Runnable {
+    queueConsumer = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
-        while (isQueueConsumed.get()) {
+        while (isRunning.get()) {
           val txn = queue.get()
+          logger.debug(s"[QUEUE_CONSUMER PARTITION_$partition] consumed msg with uuid:{${txn.timestamp()}}")
           callback.onEvent(subscriber, partition, txn)
         }
       }
@@ -87,7 +82,7 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
     //TODO DEBUG ONLY
     var lasttxn : UUID = null
 
-    val transactionsConsumerBeforeLast = new Thread(new Runnable {
+    transactionsConsumerBeforeLast = new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
 
@@ -97,8 +92,11 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
           leftBorder = offset,
           rightBorder = transactionUUID)
 
-        while (transactions.nonEmpty) {
+        logger.debug(s"[BEFORE_OR_EQUAL_LAST PARTITION_$partition] Start consume queue with size: {${transactions.size}}\n")
+
+        while (transactions.nonEmpty && isRunning.get()) {
           val uuid = transactions.dequeue().txnUuid
+          logger.debug(s"[BEFORE_OR_EQUAL_LAST PARTITION_$partition] consumed txn with uuid:{${uuid.timestamp()}}\n")
           queue.put(uuid)
           lasttxn = uuid
         }
@@ -123,61 +121,41 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
           partition,
           transactionUUID)
 
-    fairLock.lock()
+    lock.lock()
     messagesGreaterThanLast foreach { m =>
+      logger.debug(s"[MORE_LAST PARTITION_$partition] consumed txn with uuid:{${m.txnUuid.timestamp()}}\n")
       transactionBuffer.update(m.txnUuid, ProducerTransactionStatus.closed, m.ttl)
     }
-    fairLock.unlock()
+    lock.unlock()
   }
 
   /**
-   * Starting listen updates from producers about incoming transactions
+   * Update producers subscribers info
    * @return Listener ID
    */
-  def startListen() : Unit = {
-    if (listener.isDefined)
-      throw new IllegalStateException("listener for this stream/partition already exist")
-    
-    val listenerId = topic.addListener(new MessageListener[String] {
-      override def onMessage(channel: String, rawMsg: String): Unit = {
-        fairLock.lock()
-
-        val msg = serializer.deserialize[ProducerTopicMessage](rawMsg)
-
-        if (msg.txnUuid.timestamp() > lastConsumedTransaction.timestamp())
-          transactionBuffer.update(msg.txnUuid, msg.status, msg.ttl)
-
-        fairLock.unlock()
-      }
-    })
-    //wait until listener start
-    Thread.sleep(DELAY)
-
-    listener = Some(listenerId)
+  def notifyProducers() : Unit = {
+    coordinator.addCallback(updateCallback)
+    coordinator.registerSubscriber(subscriber.stream.getName, partition)
+    coordinator.notifyProducers(subscriber.stream.getName, partition)
   }
-
-  /**
-   * Remove topic listener
-   * @param listenerId Listener ID which can be acquired by [[startListen()]]
-   */
-  def removeListener(listenerId : Int) =
-    topic.removeListener(listenerId)
-
 
   /**
    * Start pushing data in persistent queue from transaction buffer
    */
   def startUpdate() : Unit = {
     val latch = new CountDownLatch(1)
+    var totalAmount = 1 //just for log
 
-    val updateThread =
+    updateThread =
     new Thread(new Runnable {
       override def run(): Unit = {
         latch.countDown()
 
         //start handling map
-        while (isQueueConsumed.get()) {
-          fairLock.lock()
+        while (isRunning.get()) {
+          lock.lock()
+
+          logBuffer() //TODO remove after hard debug
 
           val it = transactionBuffer.getIterator()
           breakable {
@@ -188,7 +166,12 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
               status match {
                 case ProducerTransactionStatus.opened =>
                   break()
+                case ProducerTransactionStatus.updated =>
+                  break()
                 case ProducerTransactionStatus.closed =>
+                  logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${key.timestamp()}" +
+                    s" last_consumed=${lastConsumedTransaction.timestamp()} curr_amount=$totalAmount\n")
+                  totalAmount += 1
                   queue.put(key)
               }
 
@@ -201,17 +184,32 @@ class SubscriberTransactionsRelay[DATATYPE,USERTYPE](subscriber : BasicSubscribi
             }
           }
 
-          fairLock.unlock()
+          lock.unlock()
           Thread.sleep(callback.frequency * 1000L)
         }
 
-        if (listener.isEmpty)
-          throw new IllegalStateException("listener on this stage must be defined")
-        
-        topic.removeListener(listener.get)
       }
     })
     updateThread.start()
     latch.await()
+  }
+
+  def stop() = {
+    isRunning.set(false)
+    updateThread.join()
+    transactionsConsumerBeforeLast.join()
+    queueConsumer.join()
+  }
+
+
+  //TODO remove after hard debug
+  def logBuffer() = {
+    val lb = ListBuffer[(Long, ProducerTransactionStatus)]()
+    val it = transactionBuffer.getIterator()
+    while (it.hasNext){
+      val entry = it.next()
+      lb += ((entry.getKey.timestamp(), entry.getValue._1))
+    }
+    logger.debug(s"[QUEUE_UPDATER PARTITION_$partition] ${lb.toList}\n")
   }
 }

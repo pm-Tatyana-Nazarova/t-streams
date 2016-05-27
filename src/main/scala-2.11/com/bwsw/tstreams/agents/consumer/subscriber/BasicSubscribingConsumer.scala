@@ -1,9 +1,10 @@
 package com.bwsw.tstreams.agents.consumer.subscriber
 
-import java.util.concurrent.atomic.AtomicBoolean
 import com.bwsw.tstreams.agents.consumer.{BasicConsumer, BasicConsumerOptions}
 import com.bwsw.tstreams.streams.BasicStream
 import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
+
+import scala.collection.mutable.ListBuffer
 
 /**
  * Basic consumer with subscribe option
@@ -14,7 +15,6 @@ import com.bwsw.tstreams.txnqueue.PersistentTransactionQueue
  * @tparam DATATYPE Storage data type
  * @tparam USERTYPE User data type
  */
-//TODO add logging
 class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
                                                    stream : BasicStream[DATATYPE],
                                                    options : BasicConsumerOptions[DATATYPE,USERTYPE],
@@ -27,10 +27,8 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
    */
   private var isStarted = false
 
-  /**
-   * Indicate active subscriber or not
-   */
-  private val isQueueConsumed = new AtomicBoolean(false)
+
+  private var relays = ListBuffer[SubscriberTransactionsRelay[_,_]]()
 
   /**
    * Start to consume messages
@@ -38,8 +36,12 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
   def start() = {
     if (isStarted)
       throw new IllegalStateException("subscriber already started")
-
     isStarted = true
+
+    coordinator.startListen()
+
+    //TODO [THINK HERE] mb move it above [split callback on partitions] MAP[partition, queue[txn]]
+    coordinator.startCallback()
 
     (0 until stream.getPartitions) foreach { partition =>
       //getting last txn for concrete partition
@@ -55,7 +57,14 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
           new PersistentTransactionQueue(persistentQueuePath + s"/$partition", null)
         }
 
-      val transactionsRelay = new SubscriberTransactionsRelay(this, currentOffsets(partition), partition, callBack, queue, isQueueConsumed)
+      val transactionsRelay = new SubscriberTransactionsRelay(subscriber = this,
+        offset = currentOffsets(partition),
+        partition = partition,
+        coordinator = coordinator,
+        callback = callBack,
+        queue = queue)
+
+      relays += transactionsRelay
 
       //start tread to consume queue and doing callback's on it
       transactionsRelay.startConsumeAndCallbackQueueAsync()
@@ -64,29 +73,32 @@ class BasicSubscribingConsumer[DATATYPE, USERTYPE](name : String,
       if (lastTransactionOpt.isDefined)
         transactionsRelay.consumeTransactionsLessOrEqualThanAsync(lastTransactionOpt.get.getTxnUUID)
 
-      transactionsRelay.startListen()
+      transactionsRelay.notifyProducers()
 
       //consume all messages greater than last
       if (lastTransactionOpt.isDefined)
         transactionsRelay.consumeTransactionsMoreThan(lastTransactionOpt.get.getTxnUUID)
-      else{
+      else {
         val oldestUuid = options.txnGenerator.getTimeUUID(0)
         transactionsRelay.consumeTransactionsMoreThan(oldestUuid)
       }
 
       transactionsRelay.startUpdate()
     }
+
+    coordinator.synchronize(stream.getName, (0 until stream.getPartitions).toList)
   }
 
   /**
    * Stop consumer handle incoming messages
    */
-  //TODO add in txnsrelay threads join
-  def stop() = {
+  override def stop() = {
     if (!isStarted)
-      throw new IllegalStateException("subscriber not started")
-
-    isQueueConsumed.set(false)
+      throw new IllegalStateException("subscriber is not started")
+    relays.foreach(_.stop())
+    relays.clear()
     isStarted = false
+    coordinator.stopCallback()
+    coordinator.stop()
   }
 }
